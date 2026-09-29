@@ -732,14 +732,14 @@ const acctVal=a=>num(a.balance)+holdMV(a.id);
 const PX_TTL=15*60e3; let pxBusy=false;
 async function refreshPrices(force){
   const C=window.CLOUD, hs=liveH(); if(pxBusy||!hs.length)return;
-  if(!(C&&C.prices)){if(force)toast("Live prices work in the phone app when you're signed in");return}
+  if(!(C&&C.prices)){S.pxErr=window.CLOUD?"Sign in under Settings → Sync & share to get live prices":"Live prices only work in the phone app";if(force)toast(S.pxErr);return}
   if(!force&&S.pxAt&&Date.now()-S.pxAt<PX_TTL)return;
   const keys=[...new Set(hs.map(hKey))]; if(hs.some(h=>hCur(h)==="USD"))keys.push("USD/CAD");
   pxBusy=true; if(force)toast("Updating prices…");
   try{const r=await C.prices(keys);S.px=S.px||{};let bad=0;
     Object.entries(r.prices||{}).forEach(([k,v])=>{if(v&&v.p>0)S.px[k]={p:v.p,t:v.t};else bad++});
-    S.pxAt=Date.now();pxBusy=false;commit(force?(bad?bad+" price"+(bad>1?"s":"")+" unavailable. Enter them by hand.":"Prices updated"):"")}
-  catch(e){pxBusy=false;S.pxAt=Date.now()-PX_TTL+60e3;if(force)toast("Couldn't get prices: "+String((e&&e.message)||e).slice(0,60))}
+    S.pxAt=Date.now();S.pxErr=bad?bad+" ticker"+(bad>1?"s":"")+" had no price. Check the ticker and exchange, or type the price in.":"";pxBusy=false;commit(force?(bad?bad+" price"+(bad>1?"s":"")+" unavailable. Enter them by hand.":"Prices updated"):"")}
+  catch(e){pxBusy=false;S.pxAt=Date.now()-PX_TTL+60e3;S.pxErr="Couldn't get prices: "+String((e&&e.message)||e).slice(0,90);render();if(force)toast(S.pxErr)}
 }
 const ago=t=>{if(!t)return "not yet";const m=Math.round((Date.now()-t)/6e4);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":D(iso(new Date(t))).toLocaleDateString("en-CA",{month:"short",day:"numeric"})};
 function invSection(){
@@ -759,6 +759,7 @@ function invSection(){
   const fx=fxRate();
   return `<section class="panel" id="invPanel">
     <div class="phead"><h2>Investments</h2><span class="muted small">Prices updated ${ago(S.pxAt)} <button class="btn sm" data-act="pxRefresh" style="margin-left:6px">Refresh</button></span></div>
+    ${S.pxErr&&hs.length?`<p class="note bad" style="margin:0 0 12px">${esc(S.pxErr)}</p>`:""}
     <div class="bigline">
       <div><h3>Market value</h3><span class="v">${fmt0(mv)}</span></div>
       <div><h3>Gain / loss</h3><span class="v" style="color:${col(g)}">${sg(g).replace(/\.\d\d$/,"")}</span></div>

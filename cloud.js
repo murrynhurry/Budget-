@@ -22,7 +22,10 @@ C.join=async code=>{const r=await sb.rpc("join_household",{code:String(code||"")
 if(!hasSession)return;
 window.CLOUD_READY=true;
 /* live prices come from the "prices" Edge Function, which keeps the market-data API key on the server */
-C.prices=async symbols=>{const r=await sb.functions.invoke("prices",{body:{symbols}});if(r.error)throw r.error;return r.data};
+C.prices=async symbols=>{const r=await sb.functions.invoke("prices",{body:{symbols}});
+  if(r.error){const x=r.error.context,st=x&&x.status;let m=r.error.message;try{const b=await x.json();if(b&&(b.error||b.message))m=b.error||b.message}catch(e){}
+    if(st===404||r.error.name==="FunctionsFetchError")m="The price service isn't set up in Supabase yet";else if(st===401)m="Sign in again to get prices";throw new Error(m)}
+  return r.data};
 
 let uid=null;
 const ready=C.ready=sb.auth.getSession().then(({data})=>{const s=data&&data.session;if(!s)return null;uid=s.user.id;C.email=s.user.email;return uid}).catch(()=>null);

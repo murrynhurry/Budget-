@@ -185,7 +185,7 @@ input.num{font-family:var(--f-num)}
 .empty{padding:22px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:16px}
 .monthnav{display:flex;align-items:center;gap:8px}
 .catedit{display:grid;grid-template-columns:minmax(0,1fr) 96px auto auto;gap:8px;align-items:center;margin-bottom:6px}
-.chk{display:inline-flex;align-items:center;gap:5px;font-size:.8rem;color:var(--muted);font-weight:700;cursor:pointer;white-space:nowrap}
+.chk{display:inline-flex;align-items:center;gap:5px;font-size:.8rem;color:var(--muted);font-weight:700;cursor:pointer}
 .chk input{width:auto;accent-color:var(--lav)}
 .pill.share{background:var(--lav-soft);color:var(--lav)}
 .pill.bill{background:var(--accent-soft);color:var(--accent)}
@@ -292,6 +292,23 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
   .toast{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 }
 @media (prefers-reduced-motion:reduce){.sheet{animation:none}.txw .tx{transition:none}}
+
+@media (max-width:760px){
+  html,body{overflow-x:hidden}
+  .tbl-wrap{overflow:visible}
+  table.cardtbl,table.cardtbl tbody{display:block;width:100%}
+  table.cardtbl thead{display:none}
+  table.cardtbl tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;padding:12px 0;border-bottom:2px dotted var(--line);align-items:end}
+  table.cardtbl td{display:flex;flex-direction:column;gap:3px;padding:0;border:0;min-width:0;text-align:left}
+  table.cardtbl td[data-l]::before{content:attr(data-l);font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  table.cardtbl input,table.cardtbl select{width:100%!important;min-width:0!important;text-align:left!important}
+  table.cardtbl td:last-child{grid-column:1 / -1;flex-direction:row;justify-content:flex-end;align-items:center;gap:8px}
+  table.cardtbl td:last-child .x{border:2px solid var(--line);width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center}
+  table.billtbl td:first-child{grid-column:1 / -1}
+  table.billtbl tr.paused td{opacity:1}
+  table.billtbl tr.paused{opacity:.6}
+  table.debttbl td:first-child{grid-column:1 / -1}
+}
 
 html,body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
 :root{padding-top:env(safe-area-inset-top,0px)}
@@ -902,11 +919,11 @@ function viewBills(){
   const due=dueRestOfMonth(), nx=upcoming(60)[0];
   const opts=sel=>S.categories.map(c=>`<option value="${c.id}" ${c.id===sel?"selected":""}>${esc(c.name)}${c.shared?" (split)":""}</option>`).join("");
   const rows=bills.map(b=>{const n=nextDue(b);return `<tr class="${b.paused?"paused":""}">
-    <td><input data-bill="${b.id}" data-f="name" value="${esc(b.name)}" aria-label="Bill name" style="min-width:130px"></td>
-    <td class="r"><input class="num" data-bill="${b.id}" data-f="amount" inputmode="decimal" value="${b.amount}" aria-label="Amount" style="width:100px;text-align:right"></td>
-    <td><select data-bill-sel="${b.id}" data-f="freq" aria-label="How often">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}" ${k===b.freq?"selected":""}>${v}</option>`).join("")}</select></td>
-    <td><select data-bill-sel="${b.id}" data-f="cat" aria-label="Category">${opts(b.cat)}</select></td>
-    <td style="white-space:nowrap">${b.paused?`<span class="pill paused">Paused</span>`:n?whenLabel(n):"—"}${isShared(b.cat)&&!b.paused?`<br><span class="muted small">your share ${fmt(billShare(b))}</span>`:""}</td>
+    <td data-l="Bill"><input data-bill="${b.id}" data-f="name" value="${esc(b.name)}" aria-label="Bill name" style="min-width:130px"></td>
+    <td class="r" data-l="Amount"><input class="num" data-bill="${b.id}" data-f="amount" inputmode="decimal" value="${b.amount}" aria-label="Amount" style="width:100px;text-align:right"></td>
+    <td data-l="How often"><select data-bill-sel="${b.id}" data-f="freq" aria-label="How often">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}" ${k===b.freq?"selected":""}>${v}</option>`).join("")}</select></td>
+    <td data-l="Category"><select data-bill-sel="${b.id}" data-f="cat" aria-label="Category">${opts(b.cat)}</select></td>
+    <td style="white-space:nowrap" data-l="Next due">${b.paused?`<span class="pill paused">Paused</span>`:n?whenLabel(n):"—"}${isShared(b.cat)&&!b.paused?`<br><span class="muted small">your share ${fmt(billShare(b))}</span>`:""}</td>
     <td style="white-space:nowrap"><button class="btn sm" data-act="pauseBill" data-id="${b.id}">${b.paused?"Resume":"Pause"}</button><button class="x" data-act="delBill" data-id="${b.id}" aria-label="Delete ${esc(b.name)}">×</button></td></tr>`}).join("");
   const n=new Date(), defDue=iso(new Date(n.getFullYear(),n.getMonth()+1,1));
   return `<div class="stack">
@@ -918,7 +935,7 @@ function viewBills(){
       <div><h3>Next up</h3><span class="v">${nx?esc(nx.b.name):"—"}</span><span class="muted small">${nx?whenLabel(nx.d)+" · "+fmt(billShare(nx.b)):""}</span></div>
     </div>
     <p class="note" style="margin:0 0 14px">Each bill is added to your spending on its due date, so it counts toward its category budget. Bills that haven't come out yet are already taken off your "left this month" number.</p>
-    ${bills.length?`<div class="tbl-wrap"><table><thead><tr><th>Bill</th><th class="r">Amount</th><th>How often</th><th>Category</th><th>Next due</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No bills yet. Add rent, phone, insurance, subscriptions and anything else that comes out regularly.</div>`}
+    ${bills.length?`<div class="tbl-wrap"><table class="cardtbl billtbl"><thead><tr><th>Bill</th><th class="r">Amount</th><th>How often</th><th>Category</th><th>Next due</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No bills yet. Add rent, phone, insurance, subscriptions and anything else that comes out regularly.</div>`}
   </section>
   <section class="panel">
     <div class="phead"><h2>Add a bill</h2></div>
@@ -1040,11 +1057,11 @@ function viewDebt(){
   const owed=sum(S.debts,d=>num(d.balance)), mins=sum(S.debts,d=>num(d.min));
   const saveM=base.months-p.months, saveI=base.interest-p.interest;
   const rows=S.debts.map(d=>{const r=p.ds.find(x=>x.id===d.id);const when=r&&r.done!==null?(r.done===0?"Paid":addMonthsLabel(r.done)):(num(d.balance)>0?"—":"Paid");
-    return `<tr><td><input data-debt="${d.id}" data-f="name" value="${esc(d.name)}" aria-label="Loan name"></td>
-    <td class="r"><input class="num" data-debt="${d.id}" data-f="balance" inputmode="decimal" value="${d.balance}" aria-label="Balance" style="width:110px;text-align:right"></td>
-    <td class="r"><input class="num" data-debt="${d.id}" data-f="rate" inputmode="decimal" value="${d.rate}" aria-label="Interest rate" style="width:74px;text-align:right"></td>
-    <td class="r"><input class="num" data-debt="${d.id}" data-f="min" inputmode="decimal" value="${d.min}" aria-label="Minimum payment" style="width:90px;text-align:right"></td>
-    <td class="num">${when}</td><td><button class="x" data-act="delDebt" data-id="${d.id}" aria-label="Delete ${esc(d.name)}">×</button></td></tr>`}).join("");
+    return `<tr><td data-l="Loan"><input data-debt="${d.id}" data-f="name" value="${esc(d.name)}" aria-label="Loan name"></td>
+    <td class="r" data-l="Balance"><input class="num" data-debt="${d.id}" data-f="balance" inputmode="decimal" value="${d.balance}" aria-label="Balance" style="width:110px;text-align:right"></td>
+    <td class="r" data-l="Rate %"><input class="num" data-debt="${d.id}" data-f="rate" inputmode="decimal" value="${d.rate}" aria-label="Interest rate" style="width:74px;text-align:right"></td>
+    <td class="r" data-l="Min / month"><input class="num" data-debt="${d.id}" data-f="min" inputmode="decimal" value="${d.min}" aria-label="Minimum payment" style="width:90px;text-align:right"></td>
+    <td class="num" data-l="Paid off">${when}</td><td><button class="x" data-act="delDebt" data-id="${d.id}" aria-label="Delete ${esc(d.name)}">×</button></td></tr>`}).join("");
   const neverNote=p.never?`<p class="note bad">At these payments the balance never goes down. Your monthly payments don't cover the interest. Raise the extra payment or the minimums.</p>`:"";
   return `<div class="stack">
   <section class="panel">
@@ -1067,7 +1084,7 @@ function viewDebt(){
   </section>
   <section class="panel">
     <div class="phead"><h2>Loans and debts</h2><span class="num">${fmt0(owed)} owed</span></div>
-    ${S.debts.length?`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th class="r">Balance</th><th class="r">Rate %</th><th class="r">Min / month</th><th>Paid off</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:""}
+    ${S.debts.length?`<div class="tbl-wrap"><table class="cardtbl debttbl"><thead><tr><th>Name</th><th class="r">Balance</th><th class="r">Rate %</th><th class="r">Min / month</th><th>Paid off</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:""}
     <form class="row" id="debtForm" style="margin-top:14px">
       <label class="f">Name<input id="dName" placeholder="e.g. Canada Student Loan" required></label>
       <label class="f" style="flex:0 1 120px">Balance<input id="dBal" class="num" inputmode="decimal" required></label>

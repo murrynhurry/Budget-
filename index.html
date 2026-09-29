@@ -337,6 +337,7 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
   nav.tabs button,nav.tabs button[aria-selected="true"]{font-size:.6rem}
   nav.tabs button .ti{width:32px;padding:3px 6px}
 }
+@media (max-width:420px){nav.tabs button,nav.tabs button[aria-selected="true"]{font-size:.55rem;letter-spacing:-.02em}nav.tabs button .ti{width:30px;padding:3px 5px}}
 
 html,body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
 :root{padding-top:env(safe-area-inset-top,0px)}
@@ -413,7 +414,8 @@ input,select,textarea{font-size:16px}
     <button role="tab" data-tab="income" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.2c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2s1.2 1.6 2.8 2 2.8.8 2.8 2-1.2 2.2-2.8 2.2c-1.3 0-2.4-.6-2.9-1.6M12 6.3v1.5M12 16.2v1.5"/></svg><span class="tl">Income</span><span class="tlong">Income</span></button>
     <button role="tab" data-tab="shared" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19.5s-7-4.3-7-9.2A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7 2.3c0 4.9-7 9.2-7 9.2z"/></svg><span class="tl">Shared</span><span class="tlong">Shared</span></button>
     <button role="tab" data-tab="savings" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.4 5 5.4.6-4 3.7 1.1 5.4L12 15.5l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6z"/></svg><span class="tl">Save</span><span class="tlong">Savings</span></button>
-    <button role="tab" data-tab="debt" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.3c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.2v-4.3M21.5 9.5v5"/></svg><span class="tl">Loans</span><span class="tlong">Loans &amp; cards</span></button>
+    <button role="tab" data-tab="debt" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.3c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.2v-4.3M21.5 9.5v5"/></svg><span class="tl">Loans</span><span class="tlong">Loan payoff</span></button>
+    <button role="tab" data-tab="cards" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg><span class="tl">Cards</span><span class="tlong">Credit cards</span></button>
     <button role="tab" data-tab="wait" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10M7 20.5h10M8 3.5c0 4.5 4 5 4 8.5s-4 4-4 8.5M16 3.5c0 4.5-4 5-4 8.5s4 4 4 8.5"/></svg><span class="tl">Wait</span><span class="tlong">Wait list</span><span class="badge" id="waitBadge" hidden></span></button>
     <button role="tab" data-tab="settings" aria-selected="false" class="navset"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 0 0-2.6-1.5L14 2.6h-4l-.5 2.5A7.7 7.7 0 0 0 6.9 6.6l-2.3-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.7 7.7 0 0 0 2.6-1.5l2.3 1 2-3.4z"/></svg><span class="tl">Settings</span><span class="tlong">Settings</span></button>
   </nav>
@@ -1392,7 +1394,6 @@ function viewDebt(){
     <td class="num" data-l="Paid off">${when}</td><td><button class="x" data-act="delDebt" data-id="${d.id}" aria-label="Delete ${esc(d.name)}">×</button></td></tr>`}).join("");
   const neverNote=p.never?`<p class="note bad">At these payments the balance never goes down. Your monthly payments don't cover the interest. Raise the extra payment or the minimums.</p>`:"";
   return `<div class="stack">
-  ${cardsSection()}
   <section class="panel">
     <div class="phead"><h2>Your payoff plan</h2>
       <div class="seg" role="group" aria-label="Payoff order"><button data-act="strat" data-v="avalanche" aria-pressed="${S.strategy==="avalanche"}">Highest interest first</button><button data-act="strat" data-v="snowball" aria-pressed="${S.strategy==="snowball"}">Smallest balance first</button></div>
@@ -1490,7 +1491,7 @@ function render(){
   if(ae&&ae.dataset){if(ae.dataset.card)focusSel=`[data-card="${ae.dataset.card}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.src)focusSel=`[data-src="${ae.dataset.src}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.acct)focusSel=`[data-acct="${ae.dataset.acct}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.bill)focusSel=`[data-bill="${ae.dataset.bill}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.debt)focusSel=`[data-debt="${ae.dataset.debt}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.catName)focusSel=`[data-cat-name="${ae.dataset.catName}"]`;else if(ae.dataset.catLimit)focusSel=`[data-cat-limit="${ae.dataset.catLimit}"]`;}
   const v=$("#view");
   const keep={}; if(!skipKeep)v.querySelectorAll("form input[id],form select[id]").forEach(el=>{keep[el.id]=el.type==="checkbox"?el.checked:el.value});
-  v.innerHTML=tab==="overview"?viewOverview():tab==="spending"?viewSpending():tab==="wants"?viewWants():tab==="settings"?viewSettings():tab==="bills"?viewBills():tab==="income"?viewIncome():tab==="shared"?viewShared():tab==="savings"?viewSavings():tab==="debt"?viewDebt():viewWait();
+  v.innerHTML=tab==="overview"?viewOverview():tab==="spending"?viewSpending():tab==="wants"?viewWants():tab==="settings"?viewSettings():tab==="bills"?viewBills():tab==="income"?viewIncome():tab==="shared"?viewShared():tab==="savings"?viewSavings():tab==="debt"?viewDebt():tab==="cards"?`<div class="stack">${cardsSection()}</div>`:viewWait();
   Object.entries(keep).forEach(([id,val])=>{const el=document.getElementById(id);if(!el)return;if(el.type==="checkbox")el.checked=val;else if(el.value!==val)el.value=val});
   {const bc=$("#bCat"),bw=$("#bPaidWrap");if(bc&&bw)bw.hidden=!isShared(bc.value)}
   if(tab==="spending"){document.querySelectorAll('[data-act="txType"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===txType));syncSplitRow();}
@@ -1543,7 +1544,7 @@ document.addEventListener("click",e=>{
     case "copyBackup":{const t=JSON.stringify({app:"budget-tracker",v:1,savedAt:new Date().toISOString(),state:privateCopy()});
       navigator.clipboard.writeText(t).then(()=>toast("Backup copied. Paste it into a note to keep it safe."),()=>{$("#impText").value=t;$("#impText").select();toast("Select all in the box and copy it")});break}
     case "reload":location.reload();break;
-    case "goCards":tab="debt";render();window.scrollTo({top:0});break;
+    case "goCards":tab="cards";render();window.scrollTo({top:0});break;
     case "delCard":S.cards=(S.cards||[]).filter(x=>x.id!==id);commit("Card removed");break;
     case "cardPaid":{const c=get(S.cards||[]),v=num((document.querySelector(`[data-card-amt="${id}"]`)||{}).value)||num(c&&c.stmt);if(!c)break;if(v<=0){toast("Enter the amount you paid");break}
       payCard(c,v,todayISO(),((document.querySelector(`[data-card-note="${id}"]`)||{}).value||"").trim());commit(`${fmt(v)} paid on ${c.name}`,true);break}

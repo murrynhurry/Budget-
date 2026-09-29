@@ -56,7 +56,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 header.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
 .brand{display:flex;flex-direction:column;gap:2px;flex:1 1 200px;min-width:0}
 h1{font-family:var(--f-display);font-weight:700;font-size:2.1rem;letter-spacing:-.03em;margin:0;color:var(--accent);line-height:1.1;display:flex;align-items:flex-start;gap:6px}
-.h1txt{color:var(--accent)}
+.h1txt{background:linear-gradient(100deg,var(--accent) 0%,var(--lav) 45%,var(--accent) 60%,var(--accent) 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 6s ease-in-out infinite}
 @keyframes shimmer{0%,100%{background-position:100% 0}50%{background-position:0 0}}
 .h1spark{width:20px;height:20px;color:var(--gold);animation:twinkle 2.4s ease-in-out infinite;flex:0 0 auto;margin-top:-2px}
 .h1spark svg,.spark svg{width:100%;height:100%;display:block}
@@ -312,6 +312,7 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 
 html,body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
 :root{padding-top:env(safe-area-inset-top,0px)}
+@media (display-mode: standalone){.wrap{padding-top:34px}}
 body{min-height:100vh}
 input,select,textarea{font-size:16px}
 </style>

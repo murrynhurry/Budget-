@@ -3,7 +3,7 @@
    shared/private logic is identical to the Claude version. */
 (function(){
 "use strict";
-const CFG={url:"__SUPABASE_URL__",key:"__SUPABASE_KEY__"};
+const CFG={url:"https://crrkwfolrkaruoolfyqm.supabase.co",key:"sb_publishable_6bIJ88uhx2IkXAj9Gbc_8g_5GByxg19"};
 window.CLOUD=null; window.CLOUD_READY=false;
 if(!window.supabase||!CFG.url||CFG.url.indexOf("__")===0)return;
 

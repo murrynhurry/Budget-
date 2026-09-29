@@ -751,7 +751,7 @@ function invSection(){
     <td data-l="Holding"><b>${esc(h.sym)}</b> <span class="muted small">${EXCH[h.ex]||h.ex} · ${hCur(h)} · ${esc(a?a.name:"")}</span></td>
     <td class="r" data-l="Shares"><input class="num" data-hold="${h.id}" data-f="shares" inputmode="decimal" value="${num(h.shares)}" style="width:90px;text-align:right"></td>
     <td class="r" data-l="Avg cost"><input class="num" data-hold="${h.id}" data-f="avg" inputmode="decimal" value="${num(h.avg)}" style="width:90px;text-align:right"></td>
-    <td class="r num" data-l="Cost basis">${fmt(num(h.cb))}</td>
+    <td class="r" data-l="Total paid"><input class="num" data-hold="${h.id}" data-f="cb" inputmode="decimal" value="${num(h.cb)}" style="width:100px;text-align:right"></td>
     <td class="r" data-l="Price">${live?`<span class="num">${fmt(p)}</span>`:`<input class="num" data-hold="${h.id}" data-f="mp" inputmode="decimal" value="${h.mp||""}" placeholder="no live price" style="width:100px;text-align:right">`}</td>
     <td class="r num" data-l="Market value">${fmt(m)}</td>
     <td class="r num" data-l="Gain / loss" style="color:${col(gl)}">${sg(gl)}${num(h.cb)>0?` (${(gl/num(h.cb)*100).toFixed(1)}%)`:""}</td>
@@ -765,13 +765,14 @@ function invSection(){
       <div><h3>Return</h3><span class="v" style="color:${col(g)}">${cb>0?(g/cb*100).toFixed(1):"0.0"}%</span></div>
       <div><h3>Net contributions</h3><span class="v">${fmt0(contrib-wd)}</span><span class="muted small">${fmt0(contrib)} in · ${fmt0(wd)} out</span></div>
     </div>
-    ${rows?`<div class="tbl-wrap"><table class="cardtbl"><thead><tr><th>Holding</th><th class="r">Shares</th><th class="r">Avg cost</th><th class="r">Cost basis</th><th class="r">Price</th><th class="r">Market value</th><th class="r">Gain / loss</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No holdings yet. Add stocks or ETFs below and their value updates from live market prices.</div>`}
+    ${rows?`<div class="tbl-wrap"><table class="cardtbl"><thead><tr><th>Holding</th><th class="r">Shares</th><th class="r">Avg cost</th><th class="r">Total paid</th><th class="r">Price</th><th class="r">Market value</th><th class="r">Gain / loss</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No holdings yet. Add each stock or ETF below with the shares you bought and what you paid. Bought it more than once? Add each purchase and the average is worked out for you.</div>`}
     ${accts.length?`<form class="row" id="holdForm" style="margin-top:14px">
       <label class="f" style="flex:0 1 150px">Account<select id="hAcct">${accts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></label>
       <label class="f" style="flex:0 1 110px">Ticker<input id="hSym" placeholder="e.g. XEQT" required autocapitalize="characters"></label>
       <label class="f" style="flex:0 1 150px">Exchange<select id="hEx">${Object.entries(EXCH).map(([k,v])=>`<option value="${k}" ${k==="TSX"?"selected":""}>${v}</option>`).join("")}</select></label>
       <label class="f" style="flex:0 1 100px">Shares<input id="hSh" class="num" inputmode="decimal" required></label>
-      <label class="f" style="flex:0 1 120px">Avg cost / share<input id="hAvg" class="num" inputmode="decimal" required></label>
+      <label class="f" style="flex:0 1 130px">Price paid / share<input id="hAvg" class="num" inputmode="decimal" placeholder="e.g. 25.40"></label>
+      <label class="f" style="flex:0 1 130px">or total paid<input id="hTot" class="num" inputmode="decimal" placeholder="e.g. 2540"></label>
       <label class="chk" style="flex-basis:100%"><input type="checkbox" id="hCash">Paid with cash already in this account (moves it out of cash)</label>
       <button class="btn pri" type="submit">Add holding</button>
     </form>`:`<p class="muted small" style="margin:12px 0 0">Add an account below first, then add its holdings here.</p>`}
@@ -1653,12 +1654,15 @@ document.addEventListener("submit",e=>{
   if(f.id==="acctForm"){const t=todayISO(),room=$("#aRoom").value.trim(),nx=$("#aNext").value;
     S.accounts=S.accounts||[];S.accounts.push({id:uid(),name:$("#aName").value.trim(),type:$("#aType").value,balance:num($("#aBal").value),camount:num($("#aAmt").value),cfreq:$("#aFreq").value,canchor:nx,cchecked:nx&&nx<t?addDays(nx,-1):t,room:room===""?null:num(room),roomAt:t,hist:[]});
     postDueSavings();commit("Account added!",true);return}
-  if(f.id==="holdForm"){let sym=$("#hSym").value.trim().toUpperCase(),ex=$("#hEx").value;const sh=num($("#hSh").value),avg=num($("#hAvg").value);
+  if(f.id==="holdForm"){let sym=$("#hSym").value.trim().toUpperCase(),ex=$("#hEx").value;const sh=num($("#hSh").value),tot=num($("#hTot").value),avg=num($("#hAvg").value)||(sh>0?tot/sh:0);
     const m=sym.match(/^(.+?)\.(TO|V|NE)$/);if(m){sym=m[1];ex={TO:"TSX",V:"TSXV",NE:"NEO"}[m[2]]}
-    if(!sym||sh<=0){toast("Enter a ticker and shares");return}
-    const h={id:uid(),acct:$("#hAcct").value,sym,ex,shares:sh,avg,cb:Math.round(sh*avg*100)/100};S.holdings=S.holdings||[];S.holdings.push(h);
-    if($("#hCash").checked){const a=(S.accounts||[]).find(x=>x.id===h.acct);if(a)a.balance=num(a.balance)-h.cb*hFx(h)}
-    S.pxAt=0;commit(sym+" added");refreshPrices(false);return}
+    if(!sym||sh<=0||avg<=0){toast("Enter a ticker, shares and what you paid");return}
+    const cost=Math.round((tot||sh*avg)*100)/100,acct=$("#hAcct").value;S.holdings=S.holdings||[];
+    let h=S.holdings.find(x=>x.acct===acct&&x.sym===sym&&x.ex===ex),merged=!!h;
+    if(h){h.shares=num(h.shares)+sh;h.cb=Math.round((num(h.cb)+cost)*100)/100;h.avg=Math.round(h.cb/h.shares*10000)/10000}
+    else{h={id:uid(),acct,sym,ex,shares:sh,avg,cb:cost};S.holdings.push(h)}
+    if($("#hCash").checked){const a=(S.accounts||[]).find(x=>x.id===acct);if(a)a.balance=num(a.balance)-cost*hFx(h)}
+    S.pxAt=0;commit(merged?"Purchase added to "+sym+". New average "+fmt(h.avg):sym+" added");refreshPrices(false);return}
   if(f.id==="cardForm"){S.cards=S.cards||[];S.cards.push({id:uid(),name:$("#cName").value.trim(),last4:$("#cLast4").value.replace(/\D/g,"").slice(-4),limit:num($("#cLimit").value),bal:num($("#cBal").value),stmt:num($("#cStmt").value),
     stmtDate:$("#cStmtDate").value,due:$("#cDue").value,min:num($("#cMin").value),apr:num($("#cApr").value),ap:$("#cAp").value,apType:$("#cApType").value,apAmt:num($("#cApAmt").value),hist:[]});postDueCards();commit("Card added!",true);return}
   if(f.id==="incForm"){const v=num($("#iAmt").value);if(v<=0){toast("Enter an amount");return}S.inc=S.inc||[];S.inc.push({id:uid(),date:$("#iDate").value||todayISO(),amount:v,note:$("#iNote").value.trim()||"Income"});incMonth=($("#iDate").value||todayISO()).slice(0,7);commit("Income added",true);return}
@@ -1680,7 +1684,7 @@ document.addEventListener("input",e=>{
   else if(t.id==="extraPay"){S.extra=num(t.value);changed=true}
   else if(t.id==="setPartner"){S.partner=t.value;changed=true}
   else if(t.dataset.src){const x=(S.incomes||[]).find(q=>q.id===t.dataset.src);if(x){x[t.dataset.f]=t.dataset.f==="amount"?num(t.value):t.value;changed=true}}
-  else if(t.dataset.hold){const h=(S.holdings||[]).find(q=>q.id===t.dataset.hold);if(h){h[t.dataset.f]=num(t.value);h.cb=Math.round(num(h.shares)*num(h.avg)*100)/100;changed=true}}
+  else if(t.dataset.hold){const h=(S.holdings||[]).find(q=>q.id===t.dataset.hold);if(h){const f=t.dataset.f;h[f]=num(t.value);if(f==="cb")h.avg=num(h.shares)>0?Math.round(h.cb/num(h.shares)*10000)/10000:0;else if(f!=="mp")h.cb=Math.round(num(h.shares)*num(h.avg)*100)/100;changed=true}}
   else if(t.dataset.card){const c=(S.cards||[]).find(q=>q.id===t.dataset.card);if(c){const f=t.dataset.f;c[f]=f==="name"?t.value:f==="last4"?t.value.replace(/\D/g,"").slice(-4):num(t.value);changed=true}}
   else if(t.dataset.acct){const x=(S.accounts||[]).find(q=>q.id===t.dataset.acct);if(x){const f=t.dataset.f;if(f==="room"){x.room=t.value.trim()===""?null:num(t.value);x.roomAt=todayISO()}else x[f]=num(t.value);changed=true}}
   else if(t.dataset.bill){const b=S.bills.find(x=>x.id===t.dataset.bill);if(b){const v=t.dataset.f==="amount"?num(t.value):t.value;if(b.sh)shUpdBill(b.id,{[t.dataset.f]:v});else b[t.dataset.f]=v;changed=true}}

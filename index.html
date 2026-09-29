@@ -379,6 +379,7 @@ input,select,textarea{font-size:16px}
   <nav class="tabs" role="tablist" id="tabs">
     <button role="tab" data-tab="overview" aria-selected="true"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></svg><span class="tl">Home</span><span class="tlong">Overview</span></button>
     <button role="tab" data-tab="spending" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 8h6M9 11.5h6M9 15h4"/></svg><span class="tl">Spend</span><span class="tlong">Spending</span></button>
+    <button role="tab" data-tab="wants" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17z"/><path d="M12 3.5v17M12 12h8.5"/></svg><span class="tl">Wants</span><span class="tlong">Needs &amp; wants</span></button>
     <button role="tab" data-tab="bills" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg><span class="tl">Bills</span><span class="tlong">Bills</span></button>
     <button role="tab" data-tab="shared" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19.5s-7-4.3-7-9.2A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7 2.3c0 4.9-7 9.2-7 9.2z"/></svg><span class="tl">Shared</span><span class="tlong">Shared</span></button>
     <button role="tab" data-tab="savings" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.4 5 5.4.6-4 3.7 1.1 5.4L12 15.5l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6z"/></svg><span class="tl">Save</span><span class="tlong">Savings</span></button>
@@ -766,7 +767,7 @@ function calendarHTML(){
     const lbl=d>today?"":cls==="none"?"no spending":cls==="want"?"spent on wants":"needs only";
     h+=`<div class="d ${cls}${d===today?" today":""}" title="${k}${lbl?": "+lbl:""}">${d}</div>`;
   }
-  return `<div class="cal">${h}</div><div class="legend"><span style="--c:var(--accent)">No spending</span><span style="--c:var(--accent-soft)">Needs only</span><span style="--c:var(--want-soft)">Spent on wants</span></div>`;
+  return `<div class="cal">${h}</div><div class="legend"><span style="--c:var(--mint)">No spending</span><span style="--c:var(--mint-soft)">Needs only</span><span style="--c:var(--want-soft)">Spent on wants</span></div>`;
 }
 
 function viewOverview(){
@@ -812,19 +813,9 @@ function viewOverview(){
     ${u.length?`<div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0 18px">${u.slice(0,8).map(x=>`<div class="due"><div class="when">${whenLabel(x.d)}<span>${D(x.d).toLocaleDateString("en-CA",{weekday:"short"})}</span></div><div class="what"><b>${esc(x.b.name)}</b><span class="muted small">${esc(catName(x.b.cat))}</span></div><span class="num">${fmt(billShare(x.b))}</span></div>`).join("")}</div>`:`<div class="empty">No bills due in the next two weeks. Add your rent, phone and subscriptions on the Bills tab.</div>`}
   </section>`})()}
 
-  <section class="grid2">
-    <div class="panel">
-      <div class="phead"><h2>Category budgets</h2><span class="muted small">${esc(monthLabel(k))}</span></div>
-      <div class="cats">${catList(k)}</div>
-    </div>
-    <div class="panel">
-      <div class="phead"><h2>Needs vs. wants</h2><span class="muted small">this month</span></div>
-      ${spent>0?`<div class="split"><i style="width:${needs/spent*100}%;background:var(--accent)"></i><i style="width:${wants/spent*100}%;background:var(--want)"></i></div>
-      <div class="small" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span><span class="pill need">Needs</span> <span class="num">${fmt0(needs)}</span></span><span><span class="pill want">Wants</span> <span class="num">${fmt0(wants)}</span> (${Math.round(wants/spent*100)}%)</span></div>`:`<div class="empty">No spending logged this month yet.</div>`}
-      <div class="phead" style="margin-top:20px;margin-bottom:0"><h2>Spending calendar</h2></div>
-      <p class="muted small" style="margin:2px 0 0">Aim for more solid green days.</p>
-      ${calendarHTML()}
-    </div>
+  <section class="panel">
+    <div class="phead"><h2>Category budgets</h2><span class="muted small">${esc(monthLabel(k))}</span></div>
+    <div class="cats">${catList(k)}</div>
   </section>
 
   ${window.LOCAL_APP?"":`<section class="panel">
@@ -997,6 +988,42 @@ function viewShared(){
   </section></div>`;
 }
 
+function viewWants(){
+  const k=monthKey(new Date()), tx=txIn(k), spent=sum(tx,myAmt);
+  const needs=sum(tx.filter(t=>t.type==="need"),myAmt), wants=spent-needs, st=streak();
+  const today=new Date().getDate(), noSpend=[...Array(today)].filter((_,i)=>dayStatus(iso(new Date(new Date().getFullYear(),new Date().getMonth(),i+1)))==="none").length;
+  const wantDays=[...Array(today)].filter((_,i)=>dayStatus(iso(new Date(new Date().getFullYear(),new Date().getMonth(),i+1)))==="want").length;
+  const byCat={}; tx.filter(t=>t.type==="want").forEach(t=>{byCat[t.cat]=(byCat[t.cat]||0)+myAmt(t)});
+  const cats=Object.entries(byCat).sort((x,y)=>y[1]-x[1]), top=cats.length?cats[0][1]:0;
+  const big=tx.filter(t=>t.type==="want").sort((x,y)=>myAmt(y)-myAmt(x)).slice(0,8);
+  return `<div class="stack">
+  <section class="panel">
+    <div class="phead"><h2>Needs vs. wants</h2><span class="muted small">${esc(monthLabel(k))}</span></div>
+    ${spent>0?`<div class="split"><i style="width:${needs/spent*100}%;background:var(--mint)"></i><i style="width:${wants/spent*100}%;background:var(--want)"></i></div>
+    <div class="bigline" style="margin:10px 0 0">
+      <div><h3>Needs</h3><span class="v" style="color:var(--good)">${fmt0(needs)}</span><span class="muted small">${Math.round(needs/spent*100)}% of spending</span></div>
+      <div><h3>Wants</h3><span class="v" style="color:var(--want)">${fmt0(wants)}</span><span class="muted small">${Math.round(wants/spent*100)}% of spending</span></div>
+    </div>`:`<div class="empty">No spending logged this month yet.</div>`}
+  </section>
+  <section class="panel">
+    <div class="phead"><h2>Spending calendar</h2><span class="muted small">Aim for more green days</span></div>
+    <div class="bigline" style="margin:0 0 6px">
+      <div><h3>No-spend days</h3><span class="v" style="font-size:1.4rem">${noSpend}</span></div>
+      <div><h3>Days with wants</h3><span class="v" style="font-size:1.4rem;color:var(--want)">${wantDays}</span></div>
+      <div><h3>No-wants streak</h3><span class="v" style="font-size:1.4rem">${st} day${st===1?"":"s"}</span></div>
+    </div>
+    ${calendarHTML()}
+  </section>
+  <section class="panel">
+    <div class="phead"><h2>Where your wants went</h2><span class="muted small">this month</span></div>
+    ${cats.length?`<div class="cats">${cats.map(([c,v])=>`<div class="cat"><div class="row"><span>${esc(catName(c))}</span><span class="num">${fmt0(v)}</span></div><div class="bar"><i class="warn" style="width:${v/top*100}%"></i></div></div>`).join("")}</div>`:`<div class="empty">No wants this month. Pach is impressed!</div>`}
+  </section>
+  ${big.length?`<section class="panel"><div class="phead"><h2>Biggest wants</h2></div>
+    ${big.map(t=>`<div class="tx"><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · ${D(t.date).toLocaleDateString("en-CA",{month:"short",day:"numeric"})}</span></div><span class="num">${fmt(myAmt(t))}</span><span></span></div>`).join("")}
+  </section>`:""}
+  </div>`;
+}
+
 function viewSavings(){
   const cards=S.goals.map(g=>{
     const t=num(g.target),s=num(g.saved),pct=t>0?Math.min(100,s/t*100):0;
@@ -1156,7 +1183,7 @@ function render(){
   if(ae&&ae.dataset){if(ae.dataset.bill)focusSel=`[data-bill="${ae.dataset.bill}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.debt)focusSel=`[data-debt="${ae.dataset.debt}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.catName)focusSel=`[data-cat-name="${ae.dataset.catName}"]`;else if(ae.dataset.catLimit)focusSel=`[data-cat-limit="${ae.dataset.catLimit}"]`;}
   const v=$("#view");
   const keep={}; if(!skipKeep)v.querySelectorAll("form input[id],form select[id]").forEach(el=>{keep[el.id]=el.type==="checkbox"?el.checked:el.value});
-  v.innerHTML=tab==="overview"?viewOverview():tab==="spending"?viewSpending():tab==="bills"?viewBills():tab==="shared"?viewShared():tab==="savings"?viewSavings():tab==="debt"?viewDebt():viewWait();
+  v.innerHTML=tab==="overview"?viewOverview():tab==="spending"?viewSpending():tab==="wants"?viewWants():tab==="bills"?viewBills():tab==="shared"?viewShared():tab==="savings"?viewSavings():tab==="debt"?viewDebt():viewWait();
   Object.entries(keep).forEach(([id,val])=>{const el=document.getElementById(id);if(!el)return;if(el.type==="checkbox")el.checked=val;else if(el.value!==val)el.value=val});
   {const bc=$("#bCat"),bw=$("#bPaidWrap");if(bc&&bw)bw.hidden=!isShared(bc.value)}
   if(tab==="spending"){document.querySelectorAll('[data-act="txType"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===txType));syncSplitRow();}

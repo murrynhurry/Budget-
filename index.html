@@ -13,6 +13,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="cloud.js"></script>
 <script>window.LOCAL_APP=true;
 if("serviceWorker" in navigator){
   let reloaded=false;
@@ -516,7 +518,7 @@ async function flush(){
   if(saving||!dirty)return; saving=true; dirty=false;
   const body=privateCopy(); body.savedAt=Date.now(); if(body.savedAt<=lastSeen)body.savedAt=lastSeen+1; lastSaved=body.savedAt; lastSeen=body.savedAt;
   try{
-    if(dbRef){await dbRef.set(body);setStatus("Saved")}
+    if(dbRef){await dbRef.set(body);if(window.LOCAL_APP)lsSet(body);setStatus(window.CLOUD_READY?"Synced":"Saved")}
     else if(lsSet(body)){setStatus(window.LOCAL_APP?"Saved on this phone":"Saved in this browser only")}
     else setStatus("Not saved: storage unavailable here");
   }catch(e){
@@ -530,7 +532,8 @@ let bootWhy="";
 async function waitForRuntime(ms){const t0=Date.now();while(!(window.claude&&window.claude.use)&&Date.now()-t0<ms)await new Promise(r=>setTimeout(r,100));return !!(window.claude&&window.claude.use)}
 async function initStore(){
   let loaded=false;
-  if(window.LOCAL_APP){
+  if(window.LOCAL_APP&&window.CLOUD_READY){const id=await window.CLOUD.ready;if(!id)window.CLOUD_READY=false;}
+  if(window.LOCAL_APP&&!window.CLOUD_READY){
     boot="ready";bootWhy="";
     try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
     const l=lsGet(); if(l){adopt(l);loaded=true}
@@ -553,7 +556,7 @@ async function initStore(){
         const snap=await dbRef.get();
         boot="ready";bootWhy="";
         if(snap.exists){const d0=snap.data();lastSeen=num(d0.savedAt);adopt(d0);loaded=true}
-        else{const l=lsGet();if(l){adopt(l);loaded=true;scheduleSave()}else{takeLegacy()}}
+        else{const l=lsGet();if(l){l.sharedMoved=false;adopt(l);loaded=true;scheduleSave()}else{takeLegacy()}}
         storeKind="db";
         try{
           if(!SH.meta){const m={cats:legacyShared&&legacyShared.cats.length?{}:DEFAULT_SHARED,members:{[id]:{joined:true}}};await SH.metaRef.set(m);SH.meta=JSON.parse(JSON.stringify(m))}
@@ -913,6 +916,21 @@ function viewSettings(){
   </section>`}
 
   ${window.LOCAL_APP?`<section class="panel">
+    <div class="phead"><h2>Sync &amp; share</h2><span class="pill ${window.CLOUD_READY?"need":"paused"}">${window.CLOUD_READY?"On":"Off"}</span></div>
+    ${!window.CLOUD?`<p class="small" style="margin:0">Syncing isn't set up yet. Your budget is saved on this phone.</p>`:
+      window.CLOUD_READY?`<p class="small" style="margin:0 0 10px">Signed in as <b>${esc(window.CLOUD.email||"")}</b>. Your budget saves to your account, and shared expenses sync with ${esc(pName())}. Your personal spending stays private.</p>
+      <div class="note" style="margin:0 0 12px"><div class="small">Your invite code for ${esc(pName())}</div><div class="num" style="font-size:1.6rem;letter-spacing:.12em">${esc(window.CLOUD.invite||"…")}</div>
+        <div class="small">He opens this app, creates his own account, then enters this code below "Join a shared space".</div>
+        <div class="confirm"><button class="btn sm" data-act="copyInvite">Copy code</button></div></div>
+      <h3 style="margin-bottom:6px">Join a shared space</h3>
+      <div class="row-form"><input id="joinCode" placeholder="Enter a code" autocomplete="off" autocapitalize="characters" style="flex:1 1 140px"><button class="btn pri sm" data-act="cloudJoin">Join</button></div>
+      <div class="confirm" style="margin-top:14px"><button class="btn sm" data-act="cloudOut">Sign out</button></div>`:
+      `<p class="small" style="margin:0 0 10px">Sign in to save your budget to your account and share expenses with ${esc(pName())}. Use the same email and password on any device.</p>
+      <div class="row-form"><label class="f">Email<input id="cEmail" type="email" autocomplete="email" autocapitalize="off"></label><label class="f">Password<input id="cPw" type="password" autocomplete="current-password" placeholder="6+ characters"></label></div>
+      <div class="confirm"><button class="btn pri sm" data-act="cloudIn">Sign in</button><button class="btn sm" data-act="cloudUp">Create account</button></div>
+      <p class="muted small" style="margin:8px 0 0">The first time you sign in, the budget on this phone moves into your account.</p>`}
+  </section>
+  <section class="panel">
     <div class="phead"><h2>Your data</h2><span class="muted small">Saved on this phone</span></div>
     <p class="small" style="margin:0 0 10px">Moving over from the Claude version? In that version, tap the gear, then <b>Copy my data</b>, then come back here, tap <b>Paste my data</b> and choose <b>Import</b>.</p>
     <textarea id="impText" rows="3" placeholder="Paste your data here" style="width:100%;font:inherit;font-size:.85rem;border:2px solid var(--line);border-radius:14px;padding:10px;background:var(--surface);color:var(--ink)"></textarea>
@@ -1124,7 +1142,7 @@ function viewShared(){
     </div>
     <div class="panel">
       <div class="phead"><h2>Settings</h2></div>
-      ${SH.on?(otherId()?`<p class="note" style="margin:0 0 12px"><b>${P} has joined.</b> You're both seeing the same shared expenses.</p>`:`<p class="note" style="margin:0 0 12px"><b>Only you so far.</b> Share this app with ${P} using the Share button at the top of the page. Invite him as an Editor so what he adds is saved.</p>`):`<p class="note bad" style="margin:0 0 12px">Shared syncing isn't available here, so shared expenses are only saved for you.</p>`}
+      ${SH.on?(otherId()?`<p class="note" style="margin:0 0 12px"><b>${P} has joined.</b> You're both seeing the same shared expenses.</p>`:`<p class="note" style="margin:0 0 12px"><b>Only you so far.</b> ${window.CLOUD?`Send ${P} the app link, then have him create an account and enter your invite code: <b class="num">${esc(window.CLOUD.invite||"…")}</b> (Settings → Sync &amp; share).`:`Share this app with ${P} using the Share button at the top of the page. Invite him as an Editor so what he adds is saved.`}</p>`):`<p class="note bad" style="margin:0 0 12px">Shared syncing isn't available here, so shared expenses are only saved for you.</p>`}
       <div class="stack" style="gap:10px">
         ${SH.on?`<label class="f">Your name (what ${P} sees)<input id="setMyName" value="${esc(((SH.meta&&SH.meta.members&&SH.meta.members[SH.uid])||{}).name||"")}" placeholder="e.g. Mary"></label>`:""}
         ${SH.on&&otherId()?"":`<label class="f">Partner's name<input id="setPartner" value="${esc(S.partner)}" placeholder="e.g. Jordan"></label>`}
@@ -1442,6 +1460,13 @@ document.addEventListener("click",e=>{
     case "acctIn":case "acctOut":{const x=get(S.accounts||[]),inp=document.querySelector(`[data-acct-amt="${id}"]`),v=num(inp&&inp.value);if(!x||v<=0){toast("Enter an amount first");break}
       x.hist=x.hist||[];x.balance=num(x.balance)+(a==="acctIn"?v:-v);x.hist.push({id:uid(),date:todayISO(),amount:v,kind:a==="acctIn"?"in":"out"});
       commit(a==="acctIn"?`Yay! ${fmt(v)} added to ${x.name}`:`Took ${fmt(v)} out of ${x.name}`,a==="acctIn");break}
+    case "cloudIn":case "cloudUp":{const em=($("#cEmail").value||"").trim(),pw=$("#cPw").value||"";
+      if(!em||pw.length<6){toast("Enter your email and a password (6+ characters)");break}
+      b.disabled=true;(a==="cloudIn"?window.CLOUD.signIn(em,pw):window.CLOUD.signUp(em,pw)).then(()=>{toast("Signed in!");setTimeout(()=>location.reload(),400)},e=>{b.disabled=false;toast((e&&e.message)||"Couldn't sign in. Check your email and password.")});break}
+    case "cloudOut":window.CLOUD.signOut().then(()=>location.reload());break;
+    case "cloudJoin":{const c=($("#joinCode").value||"").trim();if(!c){toast("Enter the invite code");break}
+      window.CLOUD.join(c).then(()=>{toast("Joined! Loading your shared space…");setTimeout(()=>location.reload(),600)},e=>toast((e&&e.message)||"That code didn't work"));break}
+    case "copyInvite":{const c=window.CLOUD&&window.CLOUD.invite||"";navigator.clipboard.writeText(c).then(()=>toast("Code copied"),()=>toast("Your code is "+c));break}
     case "pasteData":(async()=>{try{const t=await navigator.clipboard.readText();$("#impText").value=t;toast("Pasted. Now tap Import.")}catch(e){toast("Tap and hold the box, then choose Paste");$("#impText").focus()}})();break;
     case "importData":importText($("#impText").value);break;
     case "copyBackup":{const t=JSON.stringify({app:"budget-tracker",v:1,savedAt:new Date().toISOString(),state:privateCopy()});

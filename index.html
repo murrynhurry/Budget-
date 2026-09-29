@@ -720,7 +720,7 @@ function payCard(c,a,date,note){c.hist=c.hist||[];c.hist.push({id:uid(),date,amo
 function postDueCards(){const t=todayISO();(S.cards||[]).forEach(c=>{if(c.ap!=="on"||!c.due||c.due>t||!(num(c.stmt)>0))return;
   const s=num(c.stmt),a=c.apType==="min"?Math.min(num(c.min),s):c.apType==="custom"?num(c.apAmt):s;if(a>0)payCard(c,a,c.due,"Autopay")})}
 /* ---------- investments: holdings valued at live prices (via the Supabase "prices" function) ---------- */
-const EXCH={US:"U.S.",TSX:"TSX",TSXV:"TSX-V",NEO:"Cboe Canada"};
+const EXCH={US:"U.S.",TSX:"TSX",TSXV:"TSX-V",NEO:"Cboe Canada",MF:"Mutual fund"};
 const hKey=h=>h.ex==="US"?h.sym:h.sym+":"+h.ex, hCur=h=>h.ex==="US"?"USD":"CAD";
 const fxRate=()=>{const x=(S.px||{})["USD/CAD"];return x&&x.p>0?x.p:null};
 const hFx=h=>hCur(h)==="USD"?(fxRate()||1.37):1;
@@ -734,7 +734,7 @@ async function refreshPrices(force){
   const C=window.CLOUD, hs=liveH(); if(pxBusy||!hs.length)return;
   if(!(C&&C.prices)){S.pxErr=window.CLOUD?"Sign in under Settings → Sync & share to get live prices":"Live prices only work in the phone app";if(force)toast(S.pxErr);return}
   if(!force&&S.pxAt&&Date.now()-S.pxAt<PX_TTL)return;
-  const keys=[...new Set(hs.map(hKey))]; if(hs.some(h=>hCur(h)==="USD"))keys.push("USD/CAD");
+  const keys=[...new Set(hs.filter(h=>h.ex!=="MF").map(hKey))];if(!keys.length){if(force)toast("Mutual fund prices are entered by hand");return} if(hs.some(h=>hCur(h)==="USD"))keys.push("USD/CAD");
   pxBusy=true; if(force)toast("Updating prices…");
   try{const r=await C.prices(keys);S.px=S.px||{};let bad=0;
     Object.entries(r.prices||{}).forEach(([k,v])=>{if(v&&v.p>0)S.px[k]={p:v.p,t:v.t};else bad++});
@@ -754,7 +754,7 @@ function invSection(){
     <td class="r" data-l="Shares"><input class="num" data-hold="${h.id}" data-f="shares" inputmode="decimal" value="${num(h.shares)}" style="width:90px;text-align:right"></td>
     <td class="r" data-l="Avg cost"><input class="num" data-hold="${h.id}" data-f="avg" inputmode="decimal" value="${num(h.avg)}" style="width:90px;text-align:right"></td>
     <td class="r" data-l="Total paid"><input class="num" data-hold="${h.id}" data-f="cb" inputmode="decimal" value="${num(h.cb)}" style="width:100px;text-align:right"></td>
-    <td class="r" data-l="Price">${live?`<span class="num">${fmt(p)}</span>`:`<input class="num" data-hold="${h.id}" data-f="mp" inputmode="decimal" value="${h.mp||""}" placeholder="no live price" style="width:100px;text-align:right">`}</td>
+    <td class="r" data-l="Price">${live?`<span class="num">${fmt(p)}</span>`:`<input class="num" data-hold="${h.id}" data-f="mp" inputmode="decimal" value="${h.mp||""}" placeholder="${h.ex==="MF"?"unit price (NAV)":"no live price"}" style="width:100px;text-align:right">`}</td>
     <td class="r num" data-l="Market value">${fmt(m)}</td>
     <td class="r num" data-l="Gain / loss" style="color:${col(gl)}">${sg(gl)}${num(h.cb)>0?` (${(gl/num(h.cb)*100).toFixed(1)}%)`:""}</td>
     <td><button class="x" data-act="delHold" data-id="${h.id}" aria-label="Delete ${esc(h.sym)}">×</button></td></tr>`}).join("");
@@ -779,7 +779,7 @@ function invSection(){
       <label class="chk" style="flex-basis:100%"><input type="checkbox" id="hCash">Paid with cash already in this account (moves it out of cash)</label>
       <button class="btn pri" type="submit">Add holding</button>
     </form>`:`<p class="muted small" style="margin:12px 0 0">Add an account below first, then add its holdings here.</p>`}
-    <p class="muted small" style="margin:10px 0 0">Buying and selling don't count as contributions. Net contributions only count money you add or take out of your accounts. Totals are in CAD${fx?`, with U.S. holdings converted at ${fx.toFixed(4)} USD/CAD`:""}. Gain/loss and return compare market value with cost basis.</p>
+    <p class="muted small" style="margin:10px 0 0">Buying and selling don't count as contributions. Net contributions only count money you add or take out of your accounts. Mutual funds don't have live prices, so type in the unit price (NAV) from your statement or fund page. Totals are in CAD${fx?`, with U.S. holdings converted at ${fx.toFixed(4)} USD/CAD`:""}. Gain/loss and return compare market value with cost basis.</p>
   </section>`;
 }
 const fmtK=v=>v>=1000?"$"+(v/1000).toFixed(v>=10000?0:1).replace(/\.0$/,"")+"k":"$"+Math.round(v);

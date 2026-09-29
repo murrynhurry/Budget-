@@ -748,7 +748,9 @@ function invSection(){
   let contrib=0,wd=0;accts.forEach(a=>(a.hist||[]).forEach(x=>{if(x.kind==="out")wd+=num(x.amount);else contrib+=num(x.amount)}));
   const col=v=>v<0?"var(--bad)":"var(--good)", sg=v=>(v<0?"−":"+")+fmt(Math.abs(v));
   const rows=hs.map(h=>{const p=hPrice(h),live=(S.px||{})[hKey(h)],m=hMV(h),gl=m-num(h.cb),a=accts.find(x=>x.id===h.acct);return `<tr>
-    <td data-l="Holding"><b>${esc(h.sym)}</b> <span class="muted small">${EXCH[h.ex]||h.ex} · ${hCur(h)} · ${esc(a?a.name:"")}</span></td>
+    <td data-l="Holding"><b>${esc(h.sym)}</b> <span class="muted small">${hCur(h)}</span></td>
+    <td data-l="Account"><select data-hold-sel="${h.id}" data-f="acct" aria-label="Account for ${esc(h.sym)}">${accts.map(x=>`<option value="${x.id}" ${x.id===h.acct?"selected":""}>${esc(x.name)}</option>`).join("")}</select></td>
+    <td data-l="Exchange"><select data-hold-sel="${h.id}" data-f="ex" aria-label="Exchange for ${esc(h.sym)}">${Object.entries(EXCH).map(([k,v])=>`<option value="${k}" ${k===h.ex?"selected":""}>${v}</option>`).join("")}</select></td>
     <td class="r" data-l="Shares"><input class="num" data-hold="${h.id}" data-f="shares" inputmode="decimal" value="${num(h.shares)}" style="width:90px;text-align:right"></td>
     <td class="r" data-l="Avg cost"><input class="num" data-hold="${h.id}" data-f="avg" inputmode="decimal" value="${num(h.avg)}" style="width:90px;text-align:right"></td>
     <td class="r" data-l="Total paid"><input class="num" data-hold="${h.id}" data-f="cb" inputmode="decimal" value="${num(h.cb)}" style="width:100px;text-align:right"></td>
@@ -766,7 +768,7 @@ function invSection(){
       <div><h3>Return</h3><span class="v" style="color:${col(g)}">${cb>0?(g/cb*100).toFixed(1):"0.0"}%</span></div>
       <div><h3>Net contributions</h3><span class="v">${fmt0(contrib-wd)}</span><span class="muted small">${fmt0(contrib)} in · ${fmt0(wd)} out</span></div>
     </div>
-    ${rows?`<div class="tbl-wrap"><table class="cardtbl"><thead><tr><th>Holding</th><th class="r">Shares</th><th class="r">Avg cost</th><th class="r">Total paid</th><th class="r">Price</th><th class="r">Market value</th><th class="r">Gain / loss</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No holdings yet. Add each stock or ETF below with the shares you bought and what you paid. Bought it more than once? Add each purchase and the average is worked out for you.</div>`}
+    ${rows?`<div class="tbl-wrap"><table class="cardtbl"><thead><tr><th>Holding</th><th>Account</th><th>Exchange</th><th class="r">Shares</th><th class="r">Avg cost</th><th class="r">Total paid</th><th class="r">Price</th><th class="r">Market value</th><th class="r">Gain / loss</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No holdings yet. Add each stock or ETF below with the shares you bought and what you paid. Bought it more than once? Add each purchase and the average is worked out for you.</div>`}
     ${accts.length?`<form class="row" id="holdForm" style="margin-top:14px">
       <label class="f" style="flex:0 1 150px">Account<select id="hAcct">${accts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></label>
       <label class="f" style="flex:0 1 110px">Ticker<input id="hSym" placeholder="e.g. XEQT" required autocapitalize="characters"></label>
@@ -1700,6 +1702,8 @@ document.addEventListener("change",e=>{
   const t=e.target;
   if(t.id==="txCat")syncSplitRow();
   if(t.dataset&&t.dataset.srcSel){const x=(S.incomes||[]).find(q=>q.id===t.dataset.srcSel);if(x){x[t.dataset.f]=t.value;commit()}}
+  if(t.dataset&&t.dataset.holdSel){const h=(S.holdings||[]).find(q=>q.id===t.dataset.holdSel);if(h){const f=t.dataset.f;h[f]=t.value;
+    if(f==="ex"){S.pxAt=0;commit("Exchange updated");refreshPrices(false)}else{const a=(S.accounts||[]).find(x=>x.id===t.value);commit(h.sym+" moved to "+(a?a.name:"account"))}}}
   if(t.dataset&&t.dataset.cardSel){const c=(S.cards||[]).find(q=>q.id===t.dataset.cardSel);if(c){c[t.dataset.f]=t.value;postDueCards();commit()}}
   if(t.dataset&&t.dataset.acctSel){const x=(S.accounts||[]).find(q=>q.id===t.dataset.acctSel);if(x){const f=t.dataset.f;x[f]=t.value;if(f==="canchor"||f==="cfreq")x.cchecked=todayISO();commit()}}
   if(t.id==="bCat"){const r=$("#bPaidWrap");if(r)r.hidden=!isShared(t.value)}

@@ -310,6 +310,15 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
   table.debttbl td:first-child{grid-column:1 / -1}
 }
 
+.brand{position:relative}
+.gear{display:none}
+@media (max-width:760px){
+  .navset{display:none!important}
+  .gear{display:flex;align-items:center;justify-content:center;position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);right:14px;z-index:26;width:42px;height:42px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;box-shadow:0 3px 0 var(--line)}
+  .gear .ti{width:22px;height:22px}
+  .gear.on{color:var(--accent);border-color:var(--accent)}
+}
+
 html,body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
 :root{padding-top:env(safe-area-inset-top,0px)}
 @media (display-mode: standalone){.wrap{padding-top:34px}}
@@ -321,6 +330,7 @@ input,select,textarea{font-size:16px}
 <div class="wrap">
   <header class="top">
     <div class="brand">
+      <button class="gear" data-act="goSettings" aria-label="Settings"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 0 0-2.6-1.5L14 2.6h-4l-.5 2.5A7.7 7.7 0 0 0 6.9 6.6l-2.3-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.7 7.7 0 0 0 2.6-1.5l2.3 1 2-3.4z"/></svg></button>
       <h1><span class="h1txt">Budget Tracker 2026</span><span class="h1spark" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 0 C11 7 13 9 20 10 C13 11 11 13 10 20 C9 13 7 11 0 10 C7 9 9 7 10 0Z" fill="currentColor"/></svg></span></h1>
       <span class="status" id="status">Loading your saved data…</span>
     </div>
@@ -385,6 +395,7 @@ input,select,textarea{font-size:16px}
     <button role="tab" data-tab="savings" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.4 5 5.4.6-4 3.7 1.1 5.4L12 15.5l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6z"/></svg><span class="tl">Save</span><span class="tlong">Savings</span></button>
     <button role="tab" data-tab="debt" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.3c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.2v-4.3M21.5 9.5v5"/></svg><span class="tl">Loans</span><span class="tlong">Loan payoff</span></button>
     <button role="tab" data-tab="wait" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10M7 20.5h10M8 3.5c0 4.5 4 5 4 8.5s-4 4-4 8.5M16 3.5c0 4.5-4 5-4 8.5s4 4 4 8.5"/></svg><span class="tl">Wait</span><span class="tlong">Wait list</span><span class="badge" id="waitBadge" hidden></span></button>
+    <button role="tab" data-tab="settings" aria-selected="false" class="navset"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 0 0-2.6-1.5L14 2.6h-4l-.5 2.5A7.7 7.7 0 0 0 6.9 6.6l-2.3-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.7 7.7 0 0 0 2.6-1.5l2.3 1 2-3.4z"/></svg><span class="tl">Settings</span><span class="tlong">Settings</span></button>
   </nav>
 
   <div class="banner" id="sampleBanner" hidden>
@@ -564,7 +575,7 @@ function pigTalk(){
   const st=streak(),ready=S.wish.filter(w=>w.status==="waiting"&&w.added+WAIT_HOURS*3600e3<=Date.now()).length;
   const over=S.categories.filter(c=>num(c.limit)>0&&sum(tx.filter(t=>t.cat===c.id),myAmt)>num(c.limit));
   let msg,mood="happy";
-  if(!num(S.income)&&!S.tx.length)msg="Hi, I'm Pach! Start by adding your monthly take-home pay on the Overview tab.";
+  if(!num(S.income)&&!S.tx.length)msg="Hi, I'm Pach! Start by adding your monthly take-home pay in Settings (the gear at the top).";
   else if(left<0){msg="Uh oh, we're "+fmt0(-left)+" over this month. Let's pause the wants for a bit.";mood="sad"}
   else if(over.length){msg=esc(over[0].name)+" is over budget. Maybe skip that one until next month?";mood="meh"}
   else if(ready)msg=ready+" thing"+(ready>1?"s are":" is")+" done waiting on your wait list. Still want "+(ready>1?"them":"it")+"?";
@@ -818,16 +829,21 @@ function viewOverview(){
     <div class="cats">${catList(k)}</div>
   </section>
 
+  </div>`;
+}
+
+function viewSettings(){
+  return `<div class="stack">
   ${window.LOCAL_APP?"":`<section class="panel">
     <div class="phead"><h2>Move to the phone app</h2></div>
-    <p class="small" style="margin:0 0 10px">Tap <b>Copy my data</b>, then open the new Budget app on your phone and paste it on its Overview tab. This copies everything, including shared expenses. Nothing is removed from here.</p>
+    <p class="small" style="margin:0 0 10px">Tap <b>Copy my data</b>, then open the new Budget app on your phone and paste it in its Settings. This copies everything, including shared expenses. Nothing is removed from here.</p>
     <textarea id="expText" rows="2" readonly hidden style="width:100%;font-size:.8rem;border:2px solid var(--line);border-radius:12px;padding:8px"></textarea>
     <button class="btn pri sm" data-act="copyAll">Copy my data</button>
   </section>`}
 
   ${window.LOCAL_APP?`<section class="panel">
     <div class="phead"><h2>Your data</h2><span class="muted small">Saved on this phone</span></div>
-    <p class="small" style="margin:0 0 10px">Moving over from the Claude version? In that version, tap <b>Copy my data</b> on the Overview tab, then come back here, tap <b>Paste my data</b> and choose <b>Import</b>.</p>
+    <p class="small" style="margin:0 0 10px">Moving over from the Claude version? In that version, tap the gear, then <b>Copy my data</b>, then come back here, tap <b>Paste my data</b> and choose <b>Import</b>.</p>
     <textarea id="impText" rows="3" placeholder="Paste your data here" style="width:100%;font:inherit;font-size:.85rem;border:2px solid var(--line);border-radius:14px;padding:10px;background:var(--surface);color:var(--ink)"></textarea>
     <div class="confirm" style="margin-top:8px">
       <button class="btn sm" data-act="pasteData">Paste my data</button>
@@ -1173,6 +1189,7 @@ function render(){
     return;
   }
   mergeShared();
+  {const g=document.querySelector(".gear");if(g)g.classList.toggle("on",tab==="settings")}
   $("#sampleBanner").hidden=!S.sample;
   pigTalk();
   document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
@@ -1183,7 +1200,7 @@ function render(){
   if(ae&&ae.dataset){if(ae.dataset.bill)focusSel=`[data-bill="${ae.dataset.bill}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.debt)focusSel=`[data-debt="${ae.dataset.debt}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.catName)focusSel=`[data-cat-name="${ae.dataset.catName}"]`;else if(ae.dataset.catLimit)focusSel=`[data-cat-limit="${ae.dataset.catLimit}"]`;}
   const v=$("#view");
   const keep={}; if(!skipKeep)v.querySelectorAll("form input[id],form select[id]").forEach(el=>{keep[el.id]=el.type==="checkbox"?el.checked:el.value});
-  v.innerHTML=tab==="overview"?viewOverview():tab==="spending"?viewSpending():tab==="wants"?viewWants():tab==="bills"?viewBills():tab==="shared"?viewShared():tab==="savings"?viewSavings():tab==="debt"?viewDebt():viewWait();
+  v.innerHTML=tab==="overview"?viewOverview():tab==="spending"?viewSpending():tab==="wants"?viewWants():tab==="settings"?viewSettings():tab==="bills"?viewBills():tab==="shared"?viewShared():tab==="savings"?viewSavings():tab==="debt"?viewDebt():viewWait();
   Object.entries(keep).forEach(([id,val])=>{const el=document.getElementById(id);if(!el)return;if(el.type==="checkbox")el.checked=val;else if(el.value!==val)el.value=val});
   {const bc=$("#bCat"),bw=$("#bPaidWrap");if(bc&&bw)bw.hidden=!isShared(bc.value)}
   if(tab==="spending"){document.querySelectorAll('[data-act="txType"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===txType));syncSplitRow();}
@@ -1198,7 +1215,7 @@ document.addEventListener("click",e=>{
   const a=b.dataset.act,id=b.dataset.id;
   const get=(arr)=>arr.find(x=>x.id===id);
   switch(a){
-    case "startFresh":S=blankState();tab="overview";commit("Examples cleared. Start with your income below.");break;
+    case "startFresh":S=blankState();tab="settings";commit("Examples cleared. Start with your take-home pay.");break;
     case "resetAsk":confirmReset=true;render();break;
     case "resetNo":confirmReset=false;render();break;
     case "resetYes":confirmReset=false;S=blankState();commit("All data erased");break;
@@ -1214,6 +1231,7 @@ document.addEventListener("click",e=>{
       const t=JSON.stringify({app:"budget-tracker",v:1,savedAt:new Date().toISOString(),state:st});
       const ta=$("#expText");
       navigator.clipboard.writeText(t).then(()=>toast("Copied! Now paste it in the phone app."),()=>{ta.hidden=false;ta.value=t;ta.focus();ta.select();toast("Tap and hold the box, choose Select All, then Copy")});break}
+    case "goSettings":tab=tab==="settings"?"overview":"settings";confirmReset=false;render();window.scrollTo({top:0});break;
     case "pasteData":(async()=>{try{const t=await navigator.clipboard.readText();$("#impText").value=t;toast("Pasted. Now tap Import.")}catch(e){toast("Tap and hold the box, then choose Paste");$("#impText").focus()}})();break;
     case "importData":importText($("#impText").value);break;
     case "copyBackup":{const t=JSON.stringify({app:"budget-tracker",v:1,savedAt:new Date().toISOString(),state:privateCopy()});

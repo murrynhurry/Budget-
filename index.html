@@ -333,6 +333,15 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .icd.today{outline:3px solid var(--accent);outline-offset:1px}
 .acct-edit summary{cursor:pointer;color:var(--accent);font-weight:700}
 .acct-edit .row-form label.f{flex:1 1 120px}
+.inv-top{padding:4px 0 14px;border-bottom:2px dotted var(--line);margin-bottom:6px}
+.hgroup{margin-top:14px}.hghead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding-bottom:4px}
+.hrow{border-bottom:2px dotted var(--line)}
+.hrow>summary{list-style:none;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;cursor:pointer}
+.hrow>summary::-webkit-details-marker{display:none}
+.hbadge{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.05rem}
+.hname,.hval{display:flex;flex-direction:column;min-width:0}.hval{text-align:right}
+.hname b{font-size:1.02rem}.hval b{font-size:1rem;white-space:nowrap}
+.hedit{display:flex;flex-wrap:wrap;gap:8px;padding:0 0 14px}.hedit label.f{flex:1 1 130px}
 @media (max-width:760px){
   nav.tabs button,nav.tabs button[aria-selected="true"]{font-size:.6rem}
   nav.tabs button .ti{width:32px;padding:3px 6px}
@@ -742,34 +751,43 @@ async function refreshPrices(force){
   catch(e){pxBusy=false;S.pxAt=Date.now()-PX_TTL+60e3;S.pxErr="Couldn't get prices: "+String((e&&e.message)||e).slice(0,90);render();if(force)toast(S.pxErr)}
 }
 const ago=t=>{if(!t)return "not yet";const m=Math.round((Date.now()-t)/6e4);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":D(iso(new Date(t))).toLocaleDateString("en-CA",{month:"short",day:"numeric"})};
+let holdOpen=new Set();
+document.addEventListener("toggle",e=>{const d=e.target;if(d.dataset&&d.dataset.hrow){d.open?holdOpen.add(d.dataset.hrow):holdOpen.delete(d.dataset.hrow)}},true);
 function invSection(){
   const hs=liveH(), accts=S.accounts||[];
   const mv=sum(hs,h=>hMV(h)*hFx(h)), cb=sum(hs,h=>num(h.cb)*hFx(h)), g=mv-cb;
   let contrib=0,wd=0;accts.forEach(a=>(a.hist||[]).forEach(x=>{if(x.kind==="out")wd+=num(x.amount);else contrib+=num(x.amount)}));
-  const col=v=>v<0?"var(--bad)":"var(--good)", sg=v=>(v<0?"−":"+")+fmt(Math.abs(v));
-  const rows=hs.map(h=>{const p=hPrice(h),live=(S.px||{})[hKey(h)],m=hMV(h),gl=m-num(h.cb),a=accts.find(x=>x.id===h.acct);return `<tr>
-    <td data-l="Holding"><b>${esc(h.sym)}</b> <span class="muted small">${hCur(h)}</span></td>
-    <td data-l="Account"><select data-hold-sel="${h.id}" data-f="acct" aria-label="Account for ${esc(h.sym)}">${accts.map(x=>`<option value="${x.id}" ${x.id===h.acct?"selected":""}>${esc(x.name)}</option>`).join("")}</select></td>
-    <td data-l="Exchange"><select data-hold-sel="${h.id}" data-f="ex" aria-label="Exchange for ${esc(h.sym)}">${Object.entries(EXCH).map(([k,v])=>`<option value="${k}" ${k===h.ex?"selected":""}>${v}</option>`).join("")}</select></td>
-    <td class="r" data-l="Shares"><input class="num" data-hold="${h.id}" data-f="shares" inputmode="decimal" value="${num(h.shares)}" style="width:90px;text-align:right"></td>
-    <td class="r" data-l="Avg cost"><input class="num" data-hold="${h.id}" data-f="avg" inputmode="decimal" value="${num(h.avg)}" style="width:90px;text-align:right"></td>
-    <td class="r" data-l="Total paid"><input class="num" data-hold="${h.id}" data-f="cb" inputmode="decimal" value="${num(h.cb)}" style="width:100px;text-align:right"></td>
-    <td class="r" data-l="Price">${live?`<span class="num">${fmt(p)}</span>`:`<input class="num" data-hold="${h.id}" data-f="mp" inputmode="decimal" value="${h.mp||""}" placeholder="${h.ex==="MF"?"unit price (NAV)":"no live price"}" style="width:100px;text-align:right">`}</td>
-    <td class="r num" data-l="Market value">${fmt(m)}</td>
-    <td class="r num" data-l="Gain / loss" style="color:${col(gl)}">${sg(gl)}${num(h.cb)>0?` (${(gl/num(h.cb)*100).toFixed(1)}%)`:""}</td>
-    <td><button class="x" data-act="delHold" data-id="${h.id}" aria-label="Delete ${esc(h.sym)}">×</button></td></tr>`}).join("");
+  const col=v=>v<0?"var(--bad)":"var(--good)", sg=v=>(v<0?"−":"+")+fmt(Math.abs(v)), pc=(v,base)=>base>0?` (${v<0?"−":"+"}${Math.abs(v/base*100).toFixed(2)}%)`:"";
+  const COLS=["#E35B8F","#9B84E0","#44B38D","#E0843A","#4A90D9","#C0567A"], colr=t=>COLS[[...t].reduce((x,c)=>x+c.charCodeAt(0),0)%COLS.length];
+  const row=h=>{const live=(S.px||{})[hKey(h)],m=hMV(h),gl=m-num(h.cb),cur=hCur(h);return `<details class="hrow" data-hrow="${h.id}" ${holdOpen.has(h.id)?"open":""}>
+    <summary><span class="hbadge" style="background:${colr(h.sym)}">${esc(h.sym.slice(0,1))}</span>
+      <span class="hname"><b>${esc(h.sym)}</b><span class="muted small">${+num(h.shares).toFixed(4)} ${h.ex==="MF"?"units":"shares"}</span></span>
+      <span class="hval"><b class="num">${fmt(m)} ${cur}</b><span class="num small" style="color:${col(gl)}">${sg(gl)}${pc(gl,num(h.cb))}</span></span></summary>
+    <div class="hedit">
+      <div class="small muted" style="flex-basis:100%">${live?`Price ${fmt(hPrice(h))} ${cur}`:(hPrice(h)?`Price ${fmt(hPrice(h))} ${cur} (entered by you)`:"No price yet")} · Avg cost ${fmt(num(h.avg))} · Paid ${fmt(num(h.cb))}</div>
+      <label class="f">Account<select data-hold-sel="${h.id}" data-f="acct">${accts.map(x=>`<option value="${x.id}" ${x.id===h.acct?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label>
+      <label class="f">Exchange<select data-hold-sel="${h.id}" data-f="ex">${Object.entries(EXCH).map(([k,v])=>`<option value="${k}" ${k===h.ex?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label class="f">${h.ex==="MF"?"Units":"Shares"}<input class="num" data-hold="${h.id}" data-f="shares" inputmode="decimal" value="${num(h.shares)}"></label>
+      <label class="f">Avg cost<input class="num" data-hold="${h.id}" data-f="avg" inputmode="decimal" value="${num(h.avg)}"></label>
+      <label class="f">Total paid<input class="num" data-hold="${h.id}" data-f="cb" inputmode="decimal" value="${num(h.cb)}"></label>
+      ${live?"":`<label class="f">${h.ex==="MF"?"Unit price (NAV)":"Price"}<input class="num" data-hold="${h.id}" data-f="mp" inputmode="decimal" value="${h.mp||""}" placeholder="enter price"></label>`}
+      <div style="flex-basis:100%;text-align:right"><button class="btn danger sm" data-act="delHold" data-id="${h.id}">Remove ${esc(h.sym)}</button></div>
+    </div></details>`};
+  const groups=accts.map(a=>{const list=hs.filter(h=>h.acct===a.id).sort((x,y)=>hMV(y)*hFx(y)-hMV(x)*hFx(x));if(!list.length)return "";
+    const am=sum(list,h=>hMV(h)*hFx(h)),ac=sum(list,h=>num(h.cb)*hFx(h));
+    return `<div class="hgroup"><div class="hghead"><h3>${esc(a.name)}</h3><span class="small num">${fmt(am)} <span style="color:${col(am-ac)}">${sg(am-ac)}${pc(am-ac,ac)}</span></span></div>${list.map(row).join("")}</div>`}).join("");
   const fx=fxRate();
   return `<section class="panel" id="invPanel">
-    <div class="phead"><h2>Investments</h2><span class="muted small">Prices updated ${ago(S.pxAt)} <button class="btn sm" data-act="pxRefresh" style="margin-left:6px">Refresh</button></span></div>
+    <div class="phead"><h2>Investments</h2><span class="muted small">Updated ${ago(S.pxAt)} <button class="btn sm" data-act="pxRefresh" style="margin-left:6px">Refresh</button></span></div>
     ${S.pxErr&&hs.length?`<p class="note bad" style="margin:0 0 12px">${esc(S.pxErr)}</p>`:""}
-    <div class="bigline">
-      <div><h3>Market value</h3><span class="v">${fmt0(mv)}</span></div>
-      <div><h3>Gain / loss</h3><span class="v" style="color:${col(g)}">${sg(g).replace(/\.\d\d$/,"")}</span></div>
-      <div><h3>Return</h3><span class="v" style="color:${col(g)}">${cb>0?(g/cb*100).toFixed(1):"0.0"}%</span></div>
-      <div><h3>Net contributions</h3><span class="v">${fmt0(contrib-wd)}</span><span class="muted small">${fmt0(contrib)} in · ${fmt0(wd)} out</span></div>
+    <div class="inv-top">
+      <div class="left-big num" style="font-size:clamp(2.2rem,7vw,3rem)">${fmt(mv)}</div>
+      <div class="num" style="color:${col(g)};font-weight:700">${sg(g)}${pc(g,cb)} <span class="muted small" style="font-weight:600">all time</span></div>
+      <div class="muted small" style="margin-top:4px">Total paid ${fmt0(cb)} · Net contributions ${fmt0(contrib-wd)} (${fmt0(contrib)} in, ${fmt0(wd)} out)</div>
     </div>
-    ${rows?`<div class="tbl-wrap"><table class="cardtbl"><thead><tr><th>Holding</th><th>Account</th><th>Exchange</th><th class="r">Shares</th><th class="r">Avg cost</th><th class="r">Total paid</th><th class="r">Price</th><th class="r">Market value</th><th class="r">Gain / loss</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No holdings yet. Add each stock or ETF below with the shares you bought and what you paid. Bought it more than once? Add each purchase and the average is worked out for you.</div>`}
-    ${accts.length?`<form class="row" id="holdForm" style="margin-top:14px">
+    ${groups||`<div class="empty">No holdings yet. Add your stocks, ETFs and mutual funds below.</div>`}
+    ${accts.length?`<details class="acct-edit" style="margin-top:14px" ${hs.length?"":"open"}><summary>+ Add a holding</summary>
+    <form class="row" id="holdForm" style="margin-top:10px">
       <label class="f" style="flex:0 1 150px">Account<select id="hAcct">${accts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></label>
       <label class="f" style="flex:0 1 110px">Ticker<input id="hSym" placeholder="e.g. XEQT" required autocapitalize="characters"></label>
       <label class="f" style="flex:0 1 150px">Exchange<select id="hEx">${Object.entries(EXCH).map(([k,v])=>`<option value="${k}" ${k==="TSX"?"selected":""}>${v}</option>`).join("")}</select></label>
@@ -778,8 +796,8 @@ function invSection(){
       <label class="f" style="flex:0 1 130px">or total paid<input id="hTot" class="num" inputmode="decimal" placeholder="e.g. 2540"></label>
       <label class="chk" style="flex-basis:100%"><input type="checkbox" id="hCash">Paid with cash already in this account (moves it out of cash)</label>
       <button class="btn pri" type="submit">Add holding</button>
-    </form>`:`<p class="muted small" style="margin:12px 0 0">Add an account below first, then add its holdings here.</p>`}
-    <p class="muted small" style="margin:10px 0 0">Buying and selling don't count as contributions. Net contributions only count money you add or take out of your accounts. Mutual funds don't have live prices, so type in the unit price (NAV) from your statement or fund page. Totals are in CAD${fx?`, with U.S. holdings converted at ${fx.toFixed(4)} USD/CAD`:""}. Gain/loss and return compare market value with cost basis.</p>
+    </form></details>`:`<p class="muted small" style="margin:12px 0 0">Add an account below first, then add its holdings here.</p>`}
+    <p class="muted small" style="margin:10px 0 0">Tap a holding to edit it. Totals are in CAD${fx?` (U.S. at ${fx.toFixed(4)} USD/CAD)`:""}. Buying and selling don't count as contributions. Mutual fund prices are entered by hand.</p>
   </section>`;
 }
 const fmtK=v=>v>=1000?"$"+(v/1000).toFixed(v>=10000?0:1).replace(/\.0$/,"")+"k":"$"+Math.round(v);

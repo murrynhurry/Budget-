@@ -457,7 +457,7 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
     scale: {}, checked: new Set(), stepsDone: new Set(),
     draft: null, importState: { busy: false, msg: "", err: false }, db: null, sample: null, sampleImages: false,
     noStore: false, wake: null,
-    shop: { household: [], other: [], checked: {} }, myCoupons: [], couponFilter: "all", couponGroup: "store", fridge: [], freezer: [], pantry: [], tab: "fridge", stats: { counts: {}, pinned: [], where: {} }, deals: null, staples: true, ideas: [], ideaState: { busy: false, msg: "", err: false }, savedIdeas: new Set(),
+    shop: { groceries: [], household: [], other: [], checked: {} }, myCoupons: [], couponFilter: "all", couponGroup: "store", fridge: [], freezer: [], pantry: [], tab: "fridge", stats: { counts: {}, pinned: [], where: {} }, deals: null, staples: true, ideas: [], ideaState: { busy: false, msg: "", err: false }, savedIdeas: new Set(),
   };
   const app = document.getElementById("app");
 
@@ -1464,7 +1464,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
   function setShop(patch) {
     Object.assign(S.shop, patch); render();
     if (S.db && !S.noStore) shopWrite = shopWrite
-      .then(() => S.db.doc("shopping/list").set({ household: S.shop.household, other: S.shop.other, checked: S.shop.checked, updatedAt: Date.now() }))
+      .then(() => S.db.doc("shopping/list").set({ groceries: S.shop.groceries, household: S.shop.household, other: S.shop.other, checked: S.shop.checked, updatedAt: Date.now() }))
       .catch(() => toast("Couldn't save your list. Try again."));
   }
   async function togglePlan(r) {
@@ -1496,6 +1496,10 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
       if (!merged.has(key)) merged.set(key, { name: m, for: [] });
       merged.get(key).for.push(r.title);
     }
+    for (const g of S.shop.groceries) {
+      const key = toks(g.name).join(" ") || g.name;
+      if (merged.has(key)) merged.get(key).manual = true; else merged.set(key, { name: g.name, for: [], manual: true });
+    }
     for (const n of buyOften()) {
       if (onHandHas(n)) continue;
       const key = toks(n).join(" ") || n;
@@ -1526,17 +1530,21 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     const slug = (s) => s.replace(/[^a-z0-9]+/gi, "-");
 
     const grocery = h("section", { class: "ssec" },
-      h("div", { class: "shead" }, h("h3", null, "Groceries"), h("span", { class: "hint" }, "From your planned meals, minus what's in the fridge, freezer and pantry")),
+      h("div", { class: "shead" }, h("h3", null, "Groceries"), h("span", { class: "hint" }, "Anything you add, plus what your planned meals still need")),
       planned.length ? h("div", { class: "plans" },
         byMeal.map(({ r, missing }) => h("div", { class: "plan" },
           h("button", { class: "linkish", type: "button", onclick: () => go("detail", r.id) }, r.title),
           h("span", { class: "hint" }, missing.length ? "needs " + missing.join(", ") : "you have everything"),
           h("button", { class: "iconbtn", type: "button", "aria-label": "Stop planning " + r.title, title: "Remove from plan", onclick: () => togglePlan(r) }, "×"))))
         : h("p", { class: "hint" }, "No meals planned yet. Open a recipe and tap Plan to make, and its missing ingredients show up here."),
+      h("div", { class: "fridge-in" },
+        h("input", { id: "shop-groceries", placeholder: "Add groceries, e.g. bananas, bread, yogurt", "aria-label": "Add groceries", onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addGroceries(e.target.value); } } }),
+        h("button", { class: "btn", type: "button", onclick: () => addGroceries(document.getElementById("shop-groceries").value) }, "Add")),
       h("div", { class: "slist" }, items.length ? items.map((it) =>
         shopRow("g-" + slug(it.name), it.name, !!S.shop.checked[it.name],
           (e) => { const checked = { ...S.shop.checked }; if (e.target.checked) checked[it.name] = true; else delete checked[it.name]; setShop({ checked }); },
-          it.restock ? "restock · you buy this often" : "for " + it.for.join(", "), null))
+          it.for.length ? "for " + it.for.join(", ") : it.manual ? "" : "restock · you buy this often",
+          it.manual ? () => removeGrocery(it.name) : null))
         : planned.length ? h("p", { class: "hint" }, "Nothing to buy for these meals.") : null));
 
     const listSec = (key) => {
@@ -1574,8 +1582,18 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
           h("p", { class: "hint" }, "Tick things off as you shop. 🏷 marks a matching flyer deal or coupon" + (checkedWhen ? " (checked " + checkedWhen + ")." : "."))),
         h("div", { class: "scols" }, grocery, h("div", { class: "sside" }, listSec("household"), listSec("other")))));
   }
+  function addGroceries(raw) {
+    const names = splitList(raw); if (!names.length) return;
+    const next = [...S.shop.groceries]; for (const n of names) if (!next.some((x) => x.name === n)) next.push({ name: n, done: false });
+    setShop({ groceries: next });
+    const el = document.getElementById("shop-groceries"); if (el) { el.value = ""; el.focus(); }
+  }
+  function removeGrocery(name) {
+    const checked = { ...S.shop.checked }; delete checked[name];
+    setShop({ groceries: S.shop.groceries.filter((x) => x.name !== name), checked });
+  }
   function clearTicked() {
-    setShop({ checked: {}, household: S.shop.household.filter((i) => !i.done), other: S.shop.other.filter((i) => !i.done) });
+    setShop({ checked: {}, groceries: S.shop.groceries.filter((i) => !S.shop.checked[i.name]), household: S.shop.household.filter((i) => !i.done), other: S.shop.other.filter((i) => !i.done) });
     toast("Cleared ticked items");
   }
   // Bought groceries go where they were last kept (pantry items stay pantry), defaulting to the fridge.
@@ -1586,7 +1604,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     for (const it of ticked) add[LOC_KEYS.includes(S.stats.where[it.name]) ? S.stats.where[it.name] : "fridge"].push(it.name);
     for (const loc of LOC_KEYS) if (add[loc].length) addItems(add[loc].join(","), loc);
     const checked = { ...S.shop.checked }; for (const it of ticked) delete checked[it.name];
-    setShop({ checked });
+    setShop({ checked, groceries: S.shop.groceries.filter((g) => !ticked.some((t) => t.name === g.name)) });
     toast("Added " + ticked.length + (ticked.length === 1 ? " item" : " items") + " to your lists");
   }
 
@@ -2003,16 +2021,16 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
   document.querySelectorAll("#apptabs button").forEach((b) => b.addEventListener("click", () => go(b.dataset.view)));
 
   // ---------- quick add (+ button) ----------
-  const QA_TARGETS = [["fridge", "Fridge"], ["freezer", "Freezer"], ["pantry", "Pantry"], ["household", "Household list"], ["other", "Other list"]];
+  const QA_TARGETS = [["fridge", "Fridge"], ["freezer", "Freezer"], ["pantry", "Pantry"], ["groceries", "Groceries to buy"], ["household", "Household list"], ["other", "Other list"]];
   let qaTarget = "fridge", qaLastFocus = null;
   function renderQaTargets() {
     const box = document.getElementById("qaTargets");
     box.replaceChildren(...QA_TARGETS.map(([k, label]) => h("button", { class: "chip", type: "button", "aria-pressed": String(qaTarget === k), onclick: () => { qaTarget = k; renderQaTargets(); document.getElementById("qaText").focus(); } }, label)));
-    document.getElementById("qaText").placeholder = LOC_KEYS.includes(qaTarget) ? LOCS[qaTarget].placeholder : SHOP_LISTS[qaTarget].placeholder;
+    document.getElementById("qaText").placeholder = LOC_KEYS.includes(qaTarget) ? LOCS[qaTarget].placeholder : qaTarget === "groceries" ? "e.g. bananas, bread, yogurt" : SHOP_LISTS[qaTarget].placeholder;
   }
   function openQa() {
     qaLastFocus = document.activeElement;
-    qaTarget = S.view === "fridge" ? S.tab : S.view === "shop" ? "household" : qaTarget;
+    qaTarget = S.view === "fridge" ? S.tab : S.view === "shop" ? "groceries" : qaTarget;
     renderQaTargets();
     document.getElementById("qa").hidden = false; document.getElementById("qaBack").hidden = false;
     setTimeout(() => document.getElementById("qaText").focus(), 50);
@@ -2066,7 +2084,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     }).catch(() => {});
     const rerenderFridge = () => {
       if (S.view !== "fridge" && S.view !== "shop" && S.view !== "coupons") { render(); return; }
-      const ids = ["onhand-in", "often-in", "shop-household", "shop-other", "c-item", "c-deal", "c-store", "c-exp"].map((id) => { const el = document.getElementById(id); return [id, el ? el.value : "", el && document.activeElement === el]; });
+      const ids = ["onhand-in", "often-in", "shop-groceries", "shop-household", "shop-other", "c-item", "c-deal", "c-store", "c-exp"].map((id) => { const el = document.getElementById(id); return [id, el ? el.value : "", el && document.activeElement === el]; });
       render();
       for (const [id, val, had] of ids) { const n = document.getElementById(id); if (n) { n.value = val; if (had) n.focus(); } }
     };
@@ -2098,7 +2116,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
       if (!snap.exists || snap.metadata.hasPendingWrites) return;
       const d = snap.data() || {};
       const clean = (a) => Array.isArray(a) ? a.filter((x) => x && x.name).map((x) => ({ name: String(x.name), done: !!x.done })) : [];
-      const next = { household: clean(d.household), other: clean(d.other), checked: d.checked && typeof d.checked === "object" ? { ...d.checked } : {} };
+      const next = { groceries: clean(d.groceries), household: clean(d.household), other: clean(d.other), checked: d.checked && typeof d.checked === "object" ? { ...d.checked } : {} };
       if (JSON.stringify(next) === JSON.stringify(S.shop)) return;
       S.shop = next; rerenderFridge();
     }, () => {});

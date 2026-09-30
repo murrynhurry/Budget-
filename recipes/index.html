@@ -273,7 +273,10 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .fwhere { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
 .fsplit { display: flex; flex-direction: column; gap: 18px; }
 .fgroup { display: flex; flex-direction: column; gap: 6px; }
-.fgh { margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.fsplit .fgroup { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 6px; background: color-mix(in srgb, var(--bg) 55%, var(--card)); }
+.fsplit .fgroup .frows { border-top: 1px solid var(--rule); }
+.fsplit .fgroup .frow:last-child { border-bottom: 0; }
+.fgh { margin: 0; font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .frows.fridge .frow { grid-template-columns: minmax(0, 1fr) auto auto 34px 34px 34px 34px; }
 @media (max-width: 560px) { .frows.fridge .frow { grid-template-columns: minmax(0, 1fr) 34px 34px 34px 34px; } }
 .frows { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
@@ -1213,14 +1216,14 @@ Rules:
       .catch(() => toast("Couldn't save that. Try again."));
   }
   const splitList = (raw) => String(raw).split(/[,;\n]+/).map((s) => s.trim().toLowerCase().replace(/\s+/g, " ")).filter((s) => s && s.length < 60);
-  function addItems(raw, loc, expires) {
+  function addItems(raw, loc, expires, asCondiment) {
     const add = splitList(raw);
     const next = [...S[loc]]; const counts = { ...S.stats.counts }; const where = { ...S.stats.where }; let changed = false;
     for (const a of add) {
       if (next.some((x) => x.name === a)) continue;
       const g = guessDays(a, loc);
       const exp = /^\d{4}-\d{2}-\d{2}$/.test(expires || "") ? expires : "";
-      next.push({ name: a, expires: exp || (g != null ? addDays(g) : ""), est: !exp && g != null, added: Date.now(), ...(loc === "fridge" && isCondiment(a) ? { cond: true } : {}) });
+      next.push({ name: a, expires: exp || (g != null ? addDays(g) : ""), est: !exp && g != null, added: Date.now(), ...(loc === "fridge" && (asCondiment || isCondiment(a)) ? { cond: true } : {}) });
       counts[a] = (counts[a] || 0) + 1; where[a] = loc; changed = true;
     }
     if (changed) { setList(loc, next); setStats({ counts, where }); }
@@ -1268,7 +1271,7 @@ Rules:
     const refocus = () => { const el = document.getElementById("onhand-in"); if (el) { el.value = ""; el.focus(); } const d = document.getElementById("onhand-exp"); if (d) d.value = ""; };
     const expVal = () => { const d = document.getElementById("onhand-exp"); return d ? d.value : ""; };
     const input = h("input", { id: "onhand-in", placeholder: L.placeholder, "aria-label": "Add to " + L.label.toLowerCase(),
-      onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addItems(e.target.value, loc, expVal()); refocus(); } } });
+      onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addItems(e.target.value, loc, expVal(), loc === "fridge" && S.addCond); refocus(); } } });
 
     let clearArmed = false;
     const clearBtn = h("button", { class: "btn ghost", type: "button", onclick: () => {
@@ -1313,7 +1316,7 @@ Rules:
     if (loc === "fridge" && items.length) {
       const food = items.filter((i) => !condOf(i)), conds = items.filter(condOf);
       rows = h("div", { class: "fsplit" },
-        h("div", { class: "fgroup" }, h("h4", { class: "fgh" }, "Food", h("span", { class: "tcount" }, String(food.length))),
+        h("div", { class: "fgroup" }, h("h4", { class: "fgh" }, "🥕 Food", h("span", { class: "tcount" }, String(food.length))),
           h("div", { class: "frows fridge" }, food.length ? food.map((i) => rowFor(i)) : h("p", { class: "hint" }, "No food in the fridge yet."))),
         h("div", { class: "fgroup" }, h("h4", { class: "fgh" }, "🫙 Condiments", h("span", { class: "tcount" }, String(conds.length))),
           h("div", { class: "frows fridge" }, conds.length ? conds.map((i) => rowFor(i)) : h("p", { class: "hint" }, "Sauces, spreads and pickles show up here. Tap 🫙 on anything to move it."))));
@@ -1343,7 +1346,11 @@ Rules:
         : "Add what's in the cupboards: dry goods, cans, baking supplies, snacks. Common items get an estimated best-before date; change it to the date on the package. Tap × when something runs out, and ☆ for things you buy often."),
       h("div", { class: "fridge-in add-exp" }, input,
         h("label", { class: "expbox", for: "onhand-exp" }, h("span", null, "Expires"), h("input", { id: "onhand-exp", type: "date", "aria-label": "Expiry date (optional)" })),
-        h("button", { class: "btn", type: "button", onclick: () => { addItems(document.getElementById("onhand-in").value, loc, expVal()); refocus(); } }, "Add")),
+        h("button", { class: "btn", type: "button", onclick: () => { addItems(document.getElementById("onhand-in").value, loc, expVal(), loc === "fridge" && S.addCond); refocus(); } }, "Add")),
+      loc === "fridge" ? h("div", { class: "check", style: "gap: 10px" }, "Adding to",
+        h("span", { class: "seg" },
+          h("button", { type: "button", "aria-pressed": String(!S.addCond), onclick: () => { S.addCond = false; render(); } }, "🥕 Food"),
+          h("button", { type: "button", "aria-pressed": String(!!S.addCond), onclick: () => { S.addCond = true; render(); } }, "🫙 Condiments"))) : null,
       h("p", { class: "hint", style: "margin-top: -6px" }, "Expires is optional. Leave it blank and the app estimates a date."),
       soon.length ? h("div", { class: "usesoon" }, h("strong", null, loc === "fridge" ? "Use soon: " : "Use in the next two weeks: "), soon.map((i) => i.name + " (" + statusOf(i.expires).text.toLowerCase() + ")").join(", ")) : null,
       rows,

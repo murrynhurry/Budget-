@@ -263,6 +263,10 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .coupon { font-size: 12px; font-weight: 600; background: var(--ok-soft); color: var(--ok); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
 @media (max-width: 520px) { .srow { grid-template-columns: 22px minmax(0, 1fr) 32px; } .srow .coupon { grid-column: 2; grid-row: 2; justify-self: start; } }
 .tag.plan { background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.add-exp { align-items: stretch; }
+.expbox { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 0 8px; font-size: 13px; color: var(--muted); }
+.expbox input { border: 0; background: transparent; padding: 8px 0; font-family: var(--f-mono); font-size: 14px; color: var(--ink); min-width: 0; }
+@media (max-width: 560px) { .add-exp input#onhand-in { flex-basis: 100%; } .add-exp .expbox { flex: 1 1 auto; } }
 .fsplit { display: flex; flex-direction: column; gap: 18px; }
 .fgroup { display: flex; flex-direction: column; gap: 6px; }
 .fgh { margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
@@ -356,6 +360,8 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .qa-head h2 { font-size: 22px; }
 .qa-form { display: flex; flex-direction: column; gap: 12px; }
 .qa-form input { font: inherit; font-size: 17px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); width: 100%; }
+.qa-exp { padding: 4px 12px; font-size: 14px; }
+.qa-form .qa-exp input { font-size: 16px; border: 0; padding: 8px 0; width: auto; flex: 1; background: transparent; }
 .qa-targets { display: flex; flex-wrap: wrap; gap: 6px; }
 .qa-save { justify-content: center; padding: 13px; font-size: 16px; border-radius: 12px; }
 .qa-more { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
@@ -410,6 +416,7 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
   <div class="qa-head"><h2 id="qaTitle">Add</h2><button class="iconbtn" type="button" id="qaClose" aria-label="Close">×</button></div>
   <form id="qaForm" class="qa-form">
     <input id="qaText" autocomplete="off" placeholder="e.g. milk, eggs, frozen peas" aria-label="What are you adding?">
+    <label class="expbox qa-exp" id="qaExpWrap" for="qaExp"><span>Expires (optional)</span><input id="qaExp" type="date"></label>
     <div class="qa-targets" role="group" aria-label="Where it goes" id="qaTargets"></div>
     <button class="btn primary qa-save" type="submit">Add</button>
   </form>
@@ -1202,13 +1209,14 @@ Rules:
       .catch(() => toast("Couldn't save that. Try again."));
   }
   const splitList = (raw) => String(raw).split(/[,;\n]+/).map((s) => s.trim().toLowerCase().replace(/\s+/g, " ")).filter((s) => s && s.length < 60);
-  function addItems(raw, loc) {
+  function addItems(raw, loc, expires) {
     const add = splitList(raw);
     const next = [...S[loc]]; const counts = { ...S.stats.counts }; const where = { ...S.stats.where }; let changed = false;
     for (const a of add) {
       if (next.some((x) => x.name === a)) continue;
       const g = guessDays(a, loc);
-      next.push({ name: a, expires: g != null ? addDays(g) : "", est: g != null, added: Date.now(), ...(loc === "fridge" && isCondiment(a) ? { cond: true } : {}) });
+      const exp = /^\d{4}-\d{2}-\d{2}$/.test(expires || "") ? expires : "";
+      next.push({ name: a, expires: exp || (g != null ? addDays(g) : ""), est: !exp && g != null, added: Date.now(), ...(loc === "fridge" && isCondiment(a) ? { cond: true } : {}) });
       counts[a] = (counts[a] || 0) + 1; where[a] = loc; changed = true;
     }
     if (changed) { setList(loc, next); setStats({ counts, where }); }
@@ -1253,9 +1261,10 @@ Rules:
     const loc = S.tab;
     const L = LOCS[loc];
     const list = S[loc];
-    const refocus = () => { const el = document.getElementById("onhand-in"); if (el) { el.value = ""; el.focus(); } };
+    const refocus = () => { const el = document.getElementById("onhand-in"); if (el) { el.value = ""; el.focus(); } const d = document.getElementById("onhand-exp"); if (d) d.value = ""; };
+    const expVal = () => { const d = document.getElementById("onhand-exp"); return d ? d.value : ""; };
     const input = h("input", { id: "onhand-in", placeholder: L.placeholder, "aria-label": "Add to " + L.label.toLowerCase(),
-      onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addItems(e.target.value, loc); refocus(); } } });
+      onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addItems(e.target.value, loc, expVal()); refocus(); } } });
 
     let clearArmed = false;
     const clearBtn = h("button", { class: "btn ghost", type: "button", onclick: () => {
@@ -1313,7 +1322,10 @@ Rules:
         : loc === "freezer"
         ? "Add what's in the freezer. Each item gets an estimated use-by date for best quality (frozen food stays safe longer, but tastes best by then); change it if you like. Tap × when it's used up, and ☆ for things you buy often."
         : "Add what's in the cupboards: dry goods, cans, baking supplies, snacks. Common items get an estimated best-before date; change it to the date on the package. Tap × when something runs out, and ☆ for things you buy often."),
-      h("div", { class: "fridge-in" }, input, h("button", { class: "btn", type: "button", onclick: () => { addItems(document.getElementById("onhand-in").value, loc); refocus(); } }, "Add")),
+      h("div", { class: "fridge-in add-exp" }, input,
+        h("label", { class: "expbox", for: "onhand-exp" }, h("span", null, "Expires"), h("input", { id: "onhand-exp", type: "date", "aria-label": "Expiry date (optional)" })),
+        h("button", { class: "btn", type: "button", onclick: () => { addItems(document.getElementById("onhand-in").value, loc, expVal()); refocus(); } }, "Add")),
+      h("p", { class: "hint", style: "margin-top: -6px" }, "Expires is optional. Leave it blank and the app estimates a date."),
       soon.length ? h("div", { class: "usesoon" }, h("strong", null, loc === "fridge" ? "Use soon: " : "Use in the next two weeks: "), soon.map((i) => i.name + " (" + statusOf(i.expires).text.toLowerCase() + ")").join(", ")) : null,
       rows,
       h("div", { class: "dbar", style: "justify-content: space-between; align-items: center;" },
@@ -2024,6 +2036,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
   const QA_TARGETS = [["fridge", "Fridge"], ["freezer", "Freezer"], ["pantry", "Pantry"], ["groceries", "Groceries to buy"], ["household", "Household list"], ["other", "Other list"]];
   let qaTarget = "fridge", qaLastFocus = null;
   function renderQaTargets() {
+    const ew = document.getElementById("qaExpWrap"); if (ew) ew.hidden = !LOC_KEYS.includes(qaTarget);
     const box = document.getElementById("qaTargets");
     box.replaceChildren(...QA_TARGETS.map(([k, label]) => h("button", { class: "chip", type: "button", "aria-pressed": String(qaTarget === k), onclick: () => { qaTarget = k; renderQaTargets(); document.getElementById("qaText").focus(); } }, label)));
     document.getElementById("qaText").placeholder = LOC_KEYS.includes(qaTarget) ? LOCS[qaTarget].placeholder : qaTarget === "groceries" ? "e.g. bananas, bread, yogurt" : SHOP_LISTS[qaTarget].placeholder;
@@ -2048,11 +2061,11 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     e.preventDefault();
     const el = document.getElementById("qaText"); const names = splitList(el.value);
     if (!names.length) { el.focus(); return; }
-    if (LOC_KEYS.includes(qaTarget)) addItems(el.value, qaTarget);
+    if (LOC_KEYS.includes(qaTarget)) addItems(el.value, qaTarget, document.getElementById("qaExp").value);
     else { const next = [...S.shop[qaTarget]]; for (const n of names) if (!next.some((x) => x.name === n)) next.push({ name: n, done: false }); setShop({ [qaTarget]: next }); }
     const label = QA_TARGETS.find(([k]) => k === qaTarget)[1];
     toast("Added " + (names.length === 1 ? names[0] : names.length + " items") + " to " + (LOC_KEYS.includes(qaTarget) ? "the " + label.toLowerCase() : "your " + label.toLowerCase()));
-    el.value = ""; closeQa();
+    el.value = ""; document.getElementById("qaExp").value = ""; closeQa();
   });
   document.querySelectorAll("[data-qa]").forEach((b) => b.addEventListener("click", () => {
     const a = b.dataset.qa; closeQa();
@@ -2084,7 +2097,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     }).catch(() => {});
     const rerenderFridge = () => {
       if (S.view !== "fridge" && S.view !== "shop" && S.view !== "coupons") { render(); return; }
-      const ids = ["onhand-in", "often-in", "shop-groceries", "shop-household", "shop-other", "c-item", "c-deal", "c-store", "c-exp"].map((id) => { const el = document.getElementById(id); return [id, el ? el.value : "", el && document.activeElement === el]; });
+      const ids = ["onhand-in", "onhand-exp", "often-in", "shop-groceries", "shop-household", "shop-other", "c-item", "c-deal", "c-store", "c-exp"].map((id) => { const el = document.getElementById(id); return [id, el ? el.value : "", el && document.activeElement === el]; });
       render();
       for (const [id, val, had] of ids) { const n = document.getElementById(id); if (n) { n.value = val; if (had) n.focus(); } }
     };

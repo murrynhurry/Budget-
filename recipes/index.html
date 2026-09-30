@@ -267,6 +267,10 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .expbox { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 0 8px; font-size: 13px; color: var(--muted); }
 .expbox input { border: 0; background: transparent; padding: 8px 0; font-family: var(--f-mono); font-size: 14px; color: var(--ink); min-width: 0; }
 @media (max-width: 560px) { .add-exp input#onhand-in { flex-basis: 100%; } .add-exp .expbox { flex: 1 1 auto; } }
+.ksearch { margin: 2px 0 0; display: flex; align-items: center; flex: none; width: 100%; position: relative; }
+.ksearch input { padding-right: 40px; }
+.ksearch .iconbtn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+.fwhere { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
 .fsplit { display: flex; flex-direction: column; gap: 18px; }
 .fgroup { display: flex; flex-direction: column; gap: 6px; }
 .fgh { margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
@@ -1286,13 +1290,14 @@ Rules:
     const soon = items.filter((i) => isSoon(i, loc));
     const oftenSet = new Set(buyOften());
 
-    const rowFor = (it) => {
+    const rowFor = (it, where = loc, showWhere = false) => {
+      const loc = where, list = S[where];
       const st = statusOf(it.expires);
       const idx = list.indexOf(it);
       const safe = loc + "-" + it.name.replace(/[^a-z0-9]+/gi, "-");
       const on = oftenSet.has(it.name);
       return h("div", { class: "frow" },
-        h("span", { class: "fname" }, it.name),
+        h("span", { class: "fname" }, it.name, showWhere ? h("small", { class: "fwhere" }, LOCS[loc].label + (loc === "fridge" && condOf(it) ? " · condiments" : "")) : null),
         h("span", { class: "pill " + st.cls }, st.text),
         h("span", { class: "fdate" },
           h("input", { type: "date", id: "exp-" + safe, value: it.expires, "aria-label": "Expiry date for " + it.name,
@@ -1309,14 +1314,28 @@ Rules:
       const food = items.filter((i) => !condOf(i)), conds = items.filter(condOf);
       rows = h("div", { class: "fsplit" },
         h("div", { class: "fgroup" }, h("h4", { class: "fgh" }, "Food", h("span", { class: "tcount" }, String(food.length))),
-          h("div", { class: "frows fridge" }, food.length ? food.map(rowFor) : h("p", { class: "hint" }, "No food in the fridge yet."))),
+          h("div", { class: "frows fridge" }, food.length ? food.map((i) => rowFor(i)) : h("p", { class: "hint" }, "No food in the fridge yet."))),
         h("div", { class: "fgroup" }, h("h4", { class: "fgh" }, "🫙 Condiments", h("span", { class: "tcount" }, String(conds.length))),
-          h("div", { class: "frows fridge" }, conds.length ? conds.map(rowFor) : h("p", { class: "hint" }, "Sauces, spreads and pickles show up here. Tap 🫙 on anything to move it."))));
+          h("div", { class: "frows fridge" }, conds.length ? conds.map((i) => rowFor(i)) : h("p", { class: "hint" }, "Sauces, spreads and pickles show up here. Tap 🫙 on anything to move it."))));
     } else {
-      rows = h("div", { class: "frows" + (loc === "fridge" ? " fridge" : "") }, items.length ? items.map(rowFor) : h("p", { class: "hint" }, L.empty));
+      rows = h("div", { class: "frows" + (loc === "fridge" ? " fridge" : "") }, items.length ? items.map((i) => rowFor(i)) : h("p", { class: "hint" }, L.empty));
     }
 
-    const panel = h("div", { class: "form", id: "onhand-panel", role: "tabpanel", "aria-labelledby": "tab-" + loc },
+    const q = (S.kq || "").trim().toLowerCase();
+    const qt = toks(q);
+    const hits = q ? LOC_KEYS.flatMap((w) => S[w].filter((it) => it.name.toLowerCase().includes(q) || (qt.length && qt.every((t) => toks(it.name).includes(t)))).map((it) => ({ it, w })))
+      .sort((a, b) => statusOf(a.it.expires).n - statusOf(b.it.expires).n) : [];
+    const searchBox = h("div", { class: "search ksearch" },
+      (() => { const i = h("span"); i.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>'; return i.firstChild; })(),
+      h("input", { id: "ksearch", type: "text", enterkeyhint: "search", placeholder: "Search the fridge, freezer and pantry", value: S.kq || "", "aria-label": "Search the fridge, freezer and pantry", autocomplete: "off",
+        oninput: (e) => { S.kq = e.target.value; const pos = e.target.selectionStart; render(); const n = document.getElementById("ksearch"); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch {} } } }),
+      q ? h("button", { class: "iconbtn", type: "button", "aria-label": "Clear search", onclick: () => { S.kq = ""; render(); } }, "×") : null);
+    const searchResults = q ? h("div", { class: "form", id: "onhand-panel" },
+      h("h4", { class: "fgh" }, hits.length ? `Found ${hits.length} ${hits.length === 1 ? "match" : "matches"} for “${S.kq.trim()}”` : `No “${S.kq.trim()}” in the fridge, freezer or pantry`),
+      hits.length ? h("div", { class: "frows fridge" }, hits.map(({ it, w }) => rowFor(it, w, true)))
+        : h("div", { class: "dbar" }, h("button", { class: "btn", type: "button", onclick: () => { addGroceries(S.kq); S.kq = ""; toast("Added to your groceries to buy"); render(); } }, "Add “" + S.kq.trim() + "” to To Buy"))) : null;
+
+    const panel = searchResults || h("div", { class: "form", id: "onhand-panel", role: "tabpanel", "aria-labelledby": "tab-" + loc },
       h("p", { class: "howto" }, loc === "fridge"
         ? "Add what's in the fridge, with commas between items or Enter after each. Common foods get an estimated expiry date; change it to the date on the package. Sauces and spreads go under Condiments; tap 🫙 or 🥕 to move something between the two. Tap ❄ to move it to the freezer, × when it's used up, and ☆ for things you buy often."
         : loc === "freezer"
@@ -1373,7 +1392,7 @@ Rules:
 
     return h("div", null,
       h("div", { class: "sheet" },
-        h("div", { class: "dhead" }, h("h2", null, "Fridge, Freezer & Pantry"), tabs),
+        h("div", { class: "dhead" }, h("h2", null, "Fridge, Freezer & Pantry"), searchBox, q ? null : tabs),
         panel, matchSec, window.LOCAL_APP ? null : ideaSec));
   }
 

@@ -1321,7 +1321,7 @@ function viewShared(){
   const recent=shTx.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12).map(t=>`<div class="tx"><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · ${t.paidBy==="partner"?P+" paid":"You paid"} ${fmt(num(t.amount))}</span></div><span class="num" style="text-align:right">${t.paidBy==="partner"?`<span style="color:var(--bad)">you owe ${fmt(myAmt(t))}</span>`:`<span style="color:var(--good)">owes you ${fmt(num(t.amount)-myAmt(t))}</span>`}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete">×</button></div>`).join("");
   const pays=(S.settle||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8).map(q=>`<div class="tx"><div class="what"><b>${q.dir==="toPartner"?"You paid "+P:P+" paid you"}</b><span class="muted small">${new Date(q.date+"T12:00:00").toLocaleDateString("en-CA",{month:"short",day:"numeric",year:"numeric"})}</span></div><span class="num">${fmt(num(q.amount))}</span><button class="x" data-act="delSettle" data-id="${q.id}" aria-label="Delete payment">×</button></div>`).join("");
   return `<div class="stack">
-  <section class="hero">
+  <section>
     <div class="panel">
       <h3>Who owes who</h3>
       ${Math.abs(bal)<0.01?`<div class="owe">You're all square</div><p class="muted small" style="margin:0">Nobody owes anything right now.</p>`:
@@ -1332,17 +1332,6 @@ function viewShared(){
         <label class="f"><span>Who paid who?</span><select id="payDir"><option value="fromPartner">${P} paid me</option><option value="toPartner">I paid ${P}</option></select></label>
         <button class="btn" type="submit">Record payment</button>
       </form>
-    </div>
-    <div class="panel">
-      <div class="phead"><h2>Settings</h2></div>
-      ${SH.on?(otherId()?`<p class="note" style="margin:0 0 12px"><b>${P} has joined.</b> You're both seeing the same shared expenses.</p>`:`<p class="note" style="margin:0 0 12px"><b>Only you so far.</b> ${window.CLOUD?`Send ${P} the app link, then have him create an account and enter your invite code: <b class="num">${esc(window.CLOUD.invite||"…")}</b> (Settings → Sync &amp; share).`:`Share this app with ${P} using the Share button at the top of the page. Invite him as an Editor so what he adds is saved.`}</p>`):`<p class="note bad" style="margin:0 0 12px">Shared syncing isn't available here, so shared expenses are only saved for you.</p>`}
-      <div class="stack" style="gap:10px">
-        ${SH.on?`<label class="f">Your name (what ${P} sees)<input id="setMyName" value="${esc(((SH.meta&&SH.meta.members&&SH.meta.members[SH.uid])||{}).name||"")}" placeholder="e.g. Mary"></label>`:""}
-        ${SH.on&&otherId()?"":`<label class="f">Partner's name<input id="setPartner" value="${esc(S.partner)}" placeholder="e.g. Jordan"></label>`}
-        <label class="f">Your usual share %<input id="setSplit" class="num" inputmode="decimal" value="${S.split}"></label>
-      </div>
-      <p class="muted small" style="margin:10px 0 0"><b>What ${P} can see:</b> only this Shared tab: shared expenses, shared bills and payments. Your personal spending, budgets, savings, loans and wait list stay private to you, and his stay private to him.</p>
-      <p class="muted small" style="margin:10px 0 0">50 means you split everything evenly. If you pay more of the rent, say 60, set it to 60. You can change the share on each expense too.</p>
     </div>
   </section>
   <section class="grid2">
@@ -1356,6 +1345,17 @@ function viewShared(){
       ${recent||`<div class="empty">Nothing shared yet.</div>`}
       ${pays?`<div class="phead" style="margin-top:18px;margin-bottom:0"><h2>Payments</h2></div>${pays}`:""}
     </div>
+  </section>
+  <section class="panel" style="padding:14px 16px">
+    <details class="acct-edit" data-hrow="shset" ${holdOpen.has("shset")?"open":""}><summary class="small">Sharing settings · ${SH.on?(otherId()?`${P} has joined`:(window.CLOUD&&window.CLOUD.invite?`invite code <b class="num">${esc(window.CLOUD.invite)}</b>`:"only you so far")):"not syncing here"}</summary>
+      ${SH.on&&!otherId()?`<p class="small muted" style="margin:8px 0 0">${window.CLOUD?`Send ${P} the app link. He makes his own account, then enters your invite code in Settings → Sync &amp; share.`:`Share this page with ${P} as an Editor.`}</p>`:""}
+      <div class="row-form" style="margin-top:10px">
+        ${SH.on?`<label class="f">Your name<input id="setMyName" value="${esc(((SH.meta&&SH.meta.members&&SH.meta.members[SH.uid])||{}).name||"")}" placeholder="e.g. Mary"></label>`:""}
+        ${SH.on&&otherId()?"":`<label class="f">Partner's name<input id="setPartner" value="${esc(S.partner)}" placeholder="e.g. Matthew"></label>`}
+        <label class="f" style="flex:0 1 110px">Your share %<input id="setSplit" class="num" inputmode="decimal" value="${S.split}"></label>
+      </div>
+      <p class="muted small" style="margin:8px 0 0">${P} only sees this tab. Your personal budget stays private.</p>
+    </details>
   </section></div>`;
 }
 

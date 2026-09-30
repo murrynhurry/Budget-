@@ -271,8 +271,9 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .ksearch input { padding-right: 40px; }
 .ksearch .iconbtn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
 .fwhere { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
-.subtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; }
+.subtabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; }
 .subtab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; min-width: 0; border: 0; background: transparent; padding: 10px 6px; font: inherit; font-size: 14px; font-weight: 700; color: var(--muted); border-radius: 9px; cursor: pointer; }
+@media (max-width: 460px) { .subtab { flex-wrap: wrap; row-gap: 2px; column-gap: 4px; font-size: 13px; padding: 7px 2px; } .subtab .si { flex-basis: 100%; text-align: center; font-size: 17px; line-height: 1.1; } .subtab { position: relative; } .subtab .tcount { position: absolute; top: 4px; right: 6px; margin: 0; font-size: 11px; padding-inline: 5px; } }
 .subtab[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
 .fsplit { display: flex; flex-direction: column; gap: 18px; }
 .fgroup { display: flex; flex-direction: column; gap: 6px; }
@@ -1190,14 +1191,38 @@ Rules:
   const SOON_DAYS = { fridge: 2, freezer: 14, pantry: 14 };
   const isSoon = (it, loc) => { const n = daysLeft(it.expires); return n != null && n <= SOON_DAYS[loc]; };
   const normItem = (x) => typeof x === "string" ? { name: x, expires: "", est: false, added: Date.now(), ...(isCondiment(x) ? { cond: true } : {}) }
-    : { name: String(x.name || ""), expires: String(x.expires || ""), est: !!x.est, added: Number(x.added) || 0, ...(x.cond != null ? { cond: !!x.cond } : {}) };
+    : { name: String(x.name || ""), expires: String(x.expires || ""), est: !!x.est, added: Number(x.added) || 0, ...(x.cond != null ? { cond: !!x.cond } : {}), ...(x.sec ? { sec: String(x.sec) } : {}) };
   // Condiments: sauces, spreads, pickles and dressings that live in the fridge door.
   const CONDIMENTS = ["ketchup", "mustard", "dijon", "mayo", "mayonnaise", "aioli", "relish", "soy sauce", "tamari", "hot sauce", "sriracha", "tabasco", "chili sauce", "chili crisp", "chili oil",
     "gochujang", "hoisin", "oyster sauce", "fish sauce", "teriyaki", "bbq sauce", "barbecue sauce", "steak sauce", "worcestershire", "salsa", "jam", "jelly", "marmalade", "preserves",
-    "dressing", "vinaigrette", "ranch", "caesar", "pickle", "pickles", "olives", "capers", "horseradish", "wasabi", "chutney", "pesto", "tahini", "hummus", "tzatziki",
+    "dressing", "vinaigrette", "vinegar", "rice vinegar", "balsamic", "olive oil", "sesame oil", "vegetable oil", "canola oil", "cooking oil", "avocado oil", "oil", "cooking wine", "mirin", "cooking spray", "ranch", "caesar", "pickle", "pickles", "olives", "capers", "horseradish", "wasabi", "chutney", "pesto", "tahini", "hummus", "tzatziki",
     "sweet chili sauce", "plum sauce", "curry paste", "miso", "maple syrup", "syrup", "honey", "lemon juice", "lime juice", "kimchi", "sauerkraut", "sambal", "ponzu", "tartar sauce", "cocktail sauce", "sauce"];
   function isCondiment(x) { const n = " " + toks(typeof x === "string" ? x : x.name).join(" ") + " "; return CONDIMENTS.some((c) => n.includes(" " + toks(c).join(" ") + " ")); }
-  const condOf = (it) => it.cond != null ? !!it.cond : isCondiment(it.name);
+  // Seasonings: spices, dried herbs, salts, blends and stock cubes, kept in the pantry.
+  const SEASONINGS = ["salt", "sea salt", "kosher salt", "pepper", "black pepper", "white pepper", "peppercorn", "paprika", "smoked paprika", "cumin", "coriander", "turmeric", "cinnamon", "nutmeg",
+    "clove", "cardamom", "chili powder", "chilli powder", "chili flake", "chilli flake", "red pepper flake", "cayenne", "gochugaru", "oregano", "dried basil", "thyme", "rosemary", "sage", "bay leaf", "bay leaves",
+    "dried dill", "dill weed", "parsley flake", "dried parsley", "garlic powder", "garlic salt", "onion powder", "ground ginger", "ginger powder", "allspice", "star anise", "fennel seed", "mustard seed", "mustard powder",
+    "curry powder", "garam masala", "five spice", "italian seasoning", "taco seasoning", "cajun", "creole", "everything bagel", "msg", "bouillon", "stock cube", "oxo", "dashida", "sesame seed", "vanilla",
+    "vanilla extract", "seasoning", "spice", "spices", "furikake", "za atar", "zaatar", "sumac", "herbes de provence", "poultry seasoning", "steak spice", "lemon pepper", "celery salt", "seasoned salt",
+    "baking soda", "baking powder", "cream of tartar", "saffron", "anise", "caraway", "marjoram", "tarragon", "herbs", "dried herbs", "chicken powder", "hondashi", "sichuan peppercorn"];
+  function isSeasoning(x) { const n = " " + toks(typeof x === "string" ? x : x.name).join(" ") + " "; return SEASONINGS.some((c) => n.includes(" " + toks(c).join(" ") + " ")); }
+  // Sections within a place. The fridge has Food and Condiments; the pantry adds Seasonings.
+  const SECS = { food: { label: "Food", icon: "🥕", word: "food" }, cond: { label: "Condiments", icon: "🫙", word: "condiments" }, season: { label: "Seasonings", icon: "🧂", word: "seasonings" } };
+  const SECS_OF = { fridge: ["food", "cond"], pantry: ["food", "cond", "season"], freezer: ["food"] };
+  function autoSec(name, loc) {
+    const ok = SECS_OF[loc] || ["food"];
+    if (ok.includes("season") && isSeasoning(name)) return "season";
+    if (ok.includes("cond") && isCondiment(name)) return "cond";
+    return "food";
+  }
+  function secOf(it, loc) {
+    const ok = SECS_OF[loc] || ["food"];
+    if (it.sec && ok.includes(it.sec)) return it.sec;
+    if (it.cond != null && !it.sec) return it.cond && ok.includes("cond") ? "cond" : (it.cond ? autoSec(it.name, loc) : "food");
+    return autoSec(it.name, loc);
+  }
+  const withSec = (it, sec) => { const o = { ...it, sec }; delete o.cond; return o; };
+  const condOf = (it) => secOf(it, "fridge") === "cond";
   const LOC_KEYS = ["fridge", "freezer", "pantry"];
   const allOnHand = () => LOC_KEYS.flatMap((loc) => S[loc].map((i) => ({ ...i, loc })));
 
@@ -1228,14 +1253,14 @@ Rules:
       .catch(() => toast("Couldn't save that. Try again."));
   }
   const splitList = (raw) => String(raw).split(/[,;\n]+/).map((s) => s.trim().toLowerCase().replace(/\s+/g, " ")).filter((s) => s && s.length < 60);
-  function addItems(raw, loc, expires, asCondiment) {
+  function addItems(raw, loc, expires, sec) {
     const add = splitList(raw);
     const next = [...S[loc]]; const counts = { ...S.stats.counts }; const where = { ...S.stats.where }; let changed = false;
     for (const a of add) {
       if (next.some((x) => x.name === a)) continue;
       const g = guessDays(a, loc);
       const exp = /^\d{4}-\d{2}-\d{2}$/.test(expires || "") ? expires : "";
-      next.push({ name: a, expires: exp || (g != null ? addDays(g) : ""), est: !exp && g != null, added: Date.now(), ...(loc === "fridge" && (asCondiment || isCondiment(a)) ? { cond: true } : {}) });
+      next.push({ name: a, expires: exp || (g != null ? addDays(g) : ""), est: !exp && g != null, added: Date.now(), sec: (SECS_OF[loc] || []).length > 1 ? (sec && sec !== "food" ? sec : autoSec(a, loc)) : "food" });
       counts[a] = (counts[a] || 0) + 1; where[a] = loc; changed = true;
     }
     if (changed) { setList(loc, next); setStats({ counts, where }); }
@@ -1284,8 +1309,13 @@ Rules:
     const list = S[loc];
     const refocus = () => { const el = document.getElementById("onhand-in"); if (el) { el.value = ""; el.focus(); } const d = document.getElementById("onhand-exp"); if (d) d.value = ""; };
     const expVal = () => { const d = document.getElementById("onhand-exp"); return d ? d.value : ""; };
-    const input = h("input", { id: "onhand-in", placeholder: loc === "fridge" && S.addCond ? "e.g. ketchup, soy sauce, ranch, pickles" : L.placeholder, "aria-label": "Add to " + L.label.toLowerCase(),
-      onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addItems(e.target.value, loc, expVal(), loc === "fridge" && S.addCond); refocus(); } } });
+    const secs = SECS_OF[loc] || ["food"];
+    if (!S.sub) S.sub = {};
+    if (S.addCond != null) { S.sub.fridge = S.addCond ? "cond" : "food"; S.addCond = null; }
+    const cur = secs.includes(S.sub[loc]) ? S.sub[loc] : "food";
+    const PH = { "fridge:cond": "e.g. ketchup, soy sauce, ranch, pickles", "pantry:cond": "e.g. soy sauce, vinegar, olive oil, hot sauce", "pantry:season": "e.g. salt, cumin, oregano, garlic powder" };
+    const input = h("input", { id: "onhand-in", placeholder: PH[loc + ":" + cur] || L.placeholder, "aria-label": "Add to " + L.label.toLowerCase(),
+      onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addItems(e.target.value, loc, expVal(), cur); refocus(); } } });
 
     let clearArmed = false;
     const clearBtn = h("button", { class: "btn ghost", type: "button", onclick: () => {
@@ -1314,7 +1344,7 @@ Rules:
       const safe = loc + "-" + it.name.replace(/[^a-z0-9]+/gi, "-");
       const on = oftenSet.has(it.name);
       return h("div", { class: "frow" },
-        h("span", { class: "fname" }, it.name, showWhere ? h("small", { class: "fwhere" }, LOCS[loc].label + (loc === "fridge" && condOf(it) ? " · condiments" : "")) : null),
+        h("span", { class: "fname" }, it.name, showWhere ? h("small", { class: "fwhere" }, LOCS[loc].label + ((SECS_OF[loc] || []).length > 1 && secOf(it, loc) !== "food" ? " · " + SECS[secOf(it, loc)].word : "")) : null),
         h("span", { class: "fmeta" },
           h("span", { class: "pill " + st.cls }, st.text),
           // A small tag shows the date; the real date box sits invisibly on top so tapping it opens the picker.
@@ -1323,17 +1353,23 @@ Rules:
             h("input", { type: "date", id: "exp-" + safe, value: it.expires, "aria-label": "Expiry date for " + it.name,
               onchange: (e) => { const next = [...S[loc]]; next[idx] = { ...it, expires: e.target.value, est: false }; setList(loc, next); } }))),
         h("button", { class: "iconbtn star" + (on ? " on" : ""), type: "button", "aria-pressed": String(on), title: "Buy often", "aria-label": (on ? "Remove " + it.name + " from" : "Add " + it.name + " to") + " buy often", onclick: () => togglePin(it.name, loc) }, on ? "★" : "☆"),
-        loc === "fridge" ? h("button", { class: "iconbtn", type: "button", "aria-label": (condOf(it) ? "Move " + it.name + " to food" : "Move " + it.name + " to condiments"), title: condOf(it) ? "Move to food" : "Move to condiments",
-          onclick: () => { const next = [...S[loc]]; next[idx] = { ...it, cond: !condOf(it) }; setList(loc, next); toast(condOf(it) ? "Moved to food" : "Moved to condiments"); } }, condOf(it) ? "🥕" : "🫙") : null,
-        loc === "fridge" ? h("button", { class: "iconbtn", type: "button", "aria-label": "Move " + it.name + " to the freezer", title: "Move to freezer", onclick: () => moveItem(it, "fridge", "freezer") }, "❄") : h("span"),
+        ...(() => {
+          const here = secOf(it, loc), others = (SECS_OF[loc] || ["food"]).filter((k) => k !== here);
+          const moveBtn = (k) => h("button", { class: "iconbtn", type: "button", "aria-label": "Move " + it.name + " to " + SECS[k].word, title: "Move to " + SECS[k].word,
+            onclick: () => { const next = [...S[loc]]; next[idx] = withSec(it, k); setList(loc, next); toast("Moved to " + SECS[k].word); } }, SECS[k].icon);
+          if (loc === "fridge") return [moveBtn(others[0]), h("button", { class: "iconbtn", type: "button", "aria-label": "Move " + it.name + " to the freezer", title: "Move to freezer", onclick: () => moveItem(it, "fridge", "freezer") }, "❄")];
+          if (loc === "pantry") return others.map(moveBtn);
+          return [null, h("span")];
+        })(),
         h("button", { class: "iconbtn", type: "button", "aria-label": "Remove " + it.name, title: "Used up", onclick: () => setList(loc, S[loc].filter((x) => x !== it)) }, "×"));
     };
     let rows;
-    if (loc === "fridge") {
-      const food = items.filter((i) => !condOf(i)), conds = items.filter(condOf);
-      const shown = S.addCond ? conds : food;
-      rows = h("div", { class: "frows fridge" }, shown.length ? shown.map((i) => rowFor(i))
-        : h("p", { class: "hint" }, S.addCond ? "No condiments yet. Sauces, spreads, dressings and pickles go here." : "No food in the fridge yet."));
+    if (secs.length > 1) {
+      const shown = items.filter((i) => secOf(i, loc) === cur);
+      const EMPTY = { "fridge:food": "No food in the fridge yet.", "fridge:cond": "No condiments yet. Sauces, spreads, dressings and pickles go here.",
+        "pantry:food": "No food in the pantry yet. Rice, pasta, cans, baking supplies and snacks go here.", "pantry:cond": "No condiments yet. Sauces, oils, vinegars and syrups go here.",
+        "pantry:season": "No seasonings yet. Salt, spices, dried herbs, blends and stock cubes go here." };
+      rows = h("div", { class: "frows fridge" }, shown.length ? shown.map((i) => rowFor(i)) : h("p", { class: "hint" }, EMPTY[loc + ":" + cur]));
     } else {
       rows = h("div", { class: "frows" + (loc === "fridge" ? " fridge" : "") }, items.length ? items.map((i) => rowFor(i)) : h("p", { class: "hint" }, L.empty));
     }
@@ -1357,16 +1393,13 @@ Rules:
         ? "Switch between Food and Condiments at the top; whatever you add goes to the one you're on. Common foods get an estimated expiry date; change it to the date on the package. Tap 🫙 or 🥕 to move something to the other list, ❄ to move it to the freezer, × when it's used up, and ☆ for things you buy often."
         : loc === "freezer"
         ? "Add what's in the freezer. Each item gets an estimated use-by date for best quality (frozen food stays safe longer, but tastes best by then); change it if you like. Tap × when it's used up, and ☆ for things you buy often."
-        : "Add what's in the cupboards: dry goods, cans, baking supplies, snacks. Common items get an estimated best-before date; change it to the date on the package. Tap × when something runs out, and ☆ for things you buy often."),
-      loc === "fridge" ? (() => {
-        const nFood = list.filter((i) => !condOf(i)).length, nCond = list.length - nFood;
-        return h("div", { class: "subtabs", role: "tablist", "aria-label": "Fridge sections" },
-          h("button", { class: "subtab", type: "button", role: "tab", "aria-selected": String(!S.addCond), onclick: () => { S.addCond = false; render(); } }, "🥕 Food", h("span", { class: "tcount" }, String(nFood))),
-          h("button", { class: "subtab", type: "button", role: "tab", "aria-selected": String(!!S.addCond), onclick: () => { S.addCond = true; render(); } }, "🫙 Condiments", h("span", { class: "tcount" }, String(nCond))));
-      })() : null,
+        : "Switch between Food, Condiments and Seasonings at the top; whatever you add goes to the one you're on. Common items get an estimated best-before date; change it to the date on the package. Tap 🥕, 🫙 or 🧂 to move something to another list, × when it runs out, and ☆ for things you buy often."),
+      secs.length > 1 ? h("div", { class: "subtabs", role: "tablist", "aria-label": L.label + " sections" },
+        secs.map((k) => h("button", { class: "subtab", type: "button", role: "tab", "aria-selected": String(cur === k), onclick: () => { S.sub[loc] = k; render(); } },
+          h("span", { class: "si", "aria-hidden": "true" }, SECS[k].icon), h("span", { class: "sl" }, SECS[k].label), h("span", { class: "tcount" }, String(list.filter((i) => secOf(i, loc) === k).length))))) : null,
       h("div", { class: "fridge-in add-exp" }, input,
         h("label", { class: "expbox", for: "onhand-exp" }, h("span", null, "Expires"), h("input", { id: "onhand-exp", type: "date", "aria-label": "Expiry date (optional)" })),
-        h("button", { class: "btn", type: "button", onclick: () => { addItems(document.getElementById("onhand-in").value, loc, expVal(), loc === "fridge" && S.addCond); refocus(); } }, "Add")),
+        h("button", { class: "btn", type: "button", onclick: () => { addItems(document.getElementById("onhand-in").value, loc, expVal(), cur); refocus(); } }, "Add")),
       h("p", { class: "hint", style: "margin-top: -6px" }, "Expires is optional. Leave it blank and the app estimates a date."),
       soon.length ? h("div", { class: "usesoon" }, h("strong", null, loc === "fridge" ? "Use soon: " : "Use in the next two weeks: "), soon.map((i) => i.name + " (" + statusOf(i.expires).text.toLowerCase() + ")").join(", ")) : null,
       rows,

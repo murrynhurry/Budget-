@@ -367,6 +367,7 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
   background: var(--red); color: #fff; box-shadow: 0 6px 18px color-mix(in srgb, var(--red) 40%, transparent), var(--shadow); display: flex; align-items: center; justify-content: center; }
 .fab svg { width: 28px; height: 28px; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; fill: none; }
 .fab:active { transform: scale(.94); }
+body.formview .fab { display: none; }
 .qa-back { position: fixed; inset: 0; background: rgba(20, 24, 30, .4); z-index: 39; }
 .qsheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; margin: 0 auto; max-width: 560px; background: var(--card); color: var(--ink); border-radius: 24px 24px 0 0;
   padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 30px rgba(0, 0, 0, .18); display: flex; flex-direction: column; gap: 12px; max-height: 88vh; overflow-y: auto; animation: sheetUp .28s cubic-bezier(.2, 1.2, .4, 1); }
@@ -394,6 +395,7 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
   .apptabs .tl { display: block; } .apptabs .tlong { display: none; }
   .nbadge { position: absolute; top: 0; left: 56%; min-width: 17px; line-height: 17px; font-size: 10px; padding: 0 4px; }
   .fab { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); right: 18px; }
+  .wrap { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
   .toast { bottom: calc(150px + env(safe-area-inset-bottom, 0px)) !important; }
   .back.tabview { display: none; }
 }
@@ -593,6 +595,7 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
       : n === 0 ? (ex ? "No recipes of your own yet. Examples shown below." : "No recipes yet.")
       : n === 1 ? "1 recipe saved" : n + " recipes saved";
     const tabOf = { detail: "list", edit: "list", import: "list" }[S.view] || S.view;
+    document.body.classList.toggle("formview", S.view === "edit" || S.view === "import");
     document.querySelectorAll("#apptabs button").forEach((b) => b.setAttribute("aria-current", b.dataset.view === tabOf ? "page" : "false"));
     const fp = document.getElementById("fontPanel");
     if (fp) { const show = S.view === "settings"; if (fp.hidden === show) { fp.hidden = !show; if (show) { loadFonts([...TITLE_FONTS, ...BODY_FONTS]); renderFontPanel(); } } }

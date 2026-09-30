@@ -938,9 +938,24 @@ Rules:
       const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = url; });
       const k = Math.min(1, 2200 / Math.max(img.naturalWidth, img.naturalHeight));
       const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-      const x = c.getContext("2d"); x.filter = "grayscale(1) contrast(1.25)"; x.drawImage(img, 0, 0, c.width, c.height);
+      const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(img, 0, 0, c.width, c.height);
+      // Grey it and stretch the contrast so text stands out from shadows and paper colour (Safari can't do canvas filters).
+      const im = x.getImageData(0, 0, c.width, c.height), d = im.data, hist = new Uint32Array(256);
+      for (let i = 0; i < d.length; i += 4) { const g = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000 | 0; d[i] = g; hist[g]++; }
+      const total = d.length / 4; let lo = 0, hi = 255, acc = 0;
+      for (; lo < 255; lo++) { acc += hist[lo]; if (acc > total * 0.02) break; }
+      acc = 0; for (; hi > 0; hi--) { acc += hist[hi]; if (acc > total * 0.02) break; }
+      const span = Math.max(1, hi - lo);
+      for (let i = 0; i < d.length; i += 4) { const v = Math.max(0, Math.min(255, (d[i] - lo) * 255 / span)); d[i] = d[i + 1] = d[i + 2] = v; }
+      x.putImageData(im, 0, 0);
       return c;
     } finally { URL.revokeObjectURL(url); }
+  }
+  // Tidy what the photo reader gives back: drop stray symbols and lines that are just noise.
+  function cleanOcr(t) {
+    return String(t).split(/\r?\n/).map((l) => l.replace(/[|~_`^{}<>\\]+/g, " ").replace(/\s{2,}/g, " ").trim())
+      .filter((l) => (l.match(/[a-z0-9½¼¾⅓⅔]/gi) || []).length >= 2)
+      .join("\n").replace(/\n{3,}/g, "\n\n").trim();
   }
   async function runPhotoImport(files) {
     const list = [...(files || [])].filter((f) => /^image\//.test(f.type) || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
@@ -952,17 +967,18 @@ Rules:
       worker = await T.createWorker("eng", 1, { logger: (m) => {
         if (m.status === "recognizing text") { const pct = Math.round((m.progress || 0) * 100); const el = document.querySelector(".status .dots"); if (el) el.textContent = `Reading photo ${cur} of ${list.length}: ${pct}%`; }
       } });
+      // Automatic page layout: finds columns (ingredients beside steps) instead of reading straight across.
+      await worker.setParameters({ tessedit_pageseg_mode: "3", preserve_interword_spaces: "1" });
       for (const f of list) {
         cur++;
         const { data } = await worker.recognize(await prepPhoto(f));
         text += (text ? "\n" : "") + (data && data.text ? data.text : "");
       }
       if (!text.trim()) throw new Error("Couldn't find any words in that photo. Try a closer, brighter photo.");
-      importFields.text = text.trim();
-      const r = roughParse(text); r.sourceUrl = importFields.url.trim();
-      S.draft = r; S.importState = { busy: false, msg: "", err: false };
-      toast("Read your photo. Check it over and fix anything that came out wrong.");
-      go("edit");
+      importFields.text = cleanOcr(text);
+      S.importState = { busy: false, err: false, msg: "Here's what the photo says. Fix any mistakes in the box, then press Read recipe to sort it into ingredients and steps." };
+      render();
+      setTimeout(() => { const t = document.getElementById("imp-text"); if (t) { t.scrollIntoView({ block: "center" }); } }, 60);
     } catch (e) {
       S.importState = { busy: false, err: true, msg: (e && e.message) || "Couldn't read that photo. Try again with a clearer one." };
       render();

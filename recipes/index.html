@@ -1151,7 +1151,7 @@ Rules:
 
     return h("section", { class: "fsec" },
       h("h3", null, L.label + " things you buy often"),
-      h("p", { class: "hint" }, "Starred items, plus anything you've added three or more times. Claude checks Edmonton grocery flyers and coupons for these every Thursday morning."),
+      h("p", { class: "hint" }, "Starred items, plus anything you've added three or more times. Edmonton flyers are checked for these every Thursday morning."),
       h("div", { class: "items" }, often.length ? often.map((n) => h("span", { class: "item" }, n,
         h("button", { type: "button", "aria-label": "Remove " + n + " from buy often", onclick: () => togglePin(n, loc) }, "×"))) : h("span", { class: "hint" }, "Nothing yet. Star items above, or add them here.")),
       h("div", { class: "fridge-in" }, addIn, h("button", { class: "btn", type: "button", onclick: () => { const el = document.getElementById("often-in"); addOften(el.value, loc); } }, "Add")),
@@ -1442,7 +1442,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
           h("span", { class: "seg" },
             h("button", { type: "button", "aria-pressed": String(S.couponGroup === "store"), onclick: () => { S.couponGroup = "store"; render(); } }, "Store"),
             h("button", { type: "button", "aria-pressed": String(S.couponGroup === "item"), onclick: () => { S.couponGroup = "item"; render(); } }, "Item")))),
-      !deals.length ? h("p", { class: "hint" }, "No deals yet. Claude checks Edmonton flyers every Thursday morning for your buy-often and household items.")
+      !deals.length ? h("p", { class: "hint" }, "No deals yet. Edmonton flyers are checked every Thursday morning for your buy-often and household items.")
       : !shown.length ? h("p", { class: "hint" }, f === "tobuy" ? "None of this week's deals match your To Buy list." : "No deals in this group this week.")
       : h("div", { class: "cgroups" }, Object.entries(groups).map(([g, list]) => h("div", { class: "cgroup" },
           h("div", { class: "dealitem" }, g + " · " + list.length),

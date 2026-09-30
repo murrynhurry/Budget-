@@ -135,6 +135,12 @@ C.importUrl=async url=>{
   return r.data.recipe;
 };
 
+/* ---------- deals: run the weekly flyer check now, through the free "recipe-deals" function ---------- */
+C.checkDeals=async()=>{const r=await sb.functions.invoke("recipe-deals",{body:{}});
+  if(r.error){const x=r.error.context,st=x&&x.status;let m=r.error.message;try{const b=await x.json();if(b&&b.error)m=b.error}catch(e){}
+    if(st===404||r.error.name==="FunctionsFetchError")m="The deals check isn't set up in Supabase yet.";throw new Error(m)}
+  await loadAll().catch(()=>{}); return r.data};
+
 window.claude={use:async n=>{const id=await ready;if(!id)return null;
   if(n==="db"){try{await findHid()}catch(e){return null}return db}
   return null}};

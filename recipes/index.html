@@ -263,6 +263,11 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .coupon { font-size: 12px; font-weight: 600; background: var(--ok-soft); color: var(--ok); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
 @media (max-width: 520px) { .srow { grid-template-columns: 22px minmax(0, 1fr) 32px; } .srow .coupon { grid-column: 2; grid-row: 2; justify-self: start; } }
 .tag.plan { background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.fsplit { display: flex; flex-direction: column; gap: 18px; }
+.fgroup { display: flex; flex-direction: column; gap: 6px; }
+.fgh { margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.frows.fridge .frow { grid-template-columns: minmax(0, 1fr) auto auto 34px 34px 34px 34px; }
+@media (max-width: 560px) { .frows.fridge .frow { grid-template-columns: minmax(0, 1fr) 34px 34px 34px 34px; } }
 .frows { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
 .frow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto 34px 34px 34px; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--rule); }
 .fname { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
@@ -1109,6 +1114,8 @@ Rules:
       ["corn", 3], ["green bean", 6], ["asparagus", 4], ["carrot", 21], ["celery", 14], ["cabbage", 21], ["apple", 30], ["orange", 21], ["lemon", 21], ["lime", 21],
       ["grape", 7], ["bread", 5], ["tortilla", 14], ["hummus", 7], ["juice", 7], ["leftover", 4], ["cooked", 4], ["soup", 4], ["onion", 30], ["potato", 30],
       ["ketchup", 180], ["mustard", 365], ["mayo", 60], ["mayonnaise", 60], ["jam", 180], ["salsa", 14], ["pickle", 90],
+      ["soy sauce", 730], ["hot sauce", 365], ["sriracha", 180], ["hoisin", 365], ["fish sauce", 730], ["oyster sauce", 180], ["bbq sauce", 120], ["dressing", 60], ["ranch", 45],
+      ["relish", 270], ["horseradish", 90], ["pesto", 7], ["tahini", 180], ["gochujang", 365], ["miso", 365], ["maple syrup", 365], ["jelly", 180], ["olive", 30], ["capers", 365], ["kimchi", 90], ["curry paste", 30], ["worcestershire", 730],
     ],
     freezer: [
       ["chicken", 270], ["turkey", 270], ["ground", 120], ["ground beef", 120], ["mince", 120], ["beef", 240], ["steak", 240], ["roast", 240], ["pork", 180], ["lamb", 240],
@@ -1156,8 +1163,15 @@ Rules:
   // Pantry items last longer, so "use soon" looks further ahead there.
   const SOON_DAYS = { fridge: 2, freezer: 14, pantry: 14 };
   const isSoon = (it, loc) => { const n = daysLeft(it.expires); return n != null && n <= SOON_DAYS[loc]; };
-  const normItem = (x) => typeof x === "string" ? { name: x, expires: "", est: false, added: Date.now() }
-    : { name: String(x.name || ""), expires: String(x.expires || ""), est: !!x.est, added: Number(x.added) || 0 };
+  const normItem = (x) => typeof x === "string" ? { name: x, expires: "", est: false, added: Date.now(), ...(isCondiment(x) ? { cond: true } : {}) }
+    : { name: String(x.name || ""), expires: String(x.expires || ""), est: !!x.est, added: Number(x.added) || 0, ...(x.cond != null ? { cond: !!x.cond } : {}) };
+  // Condiments: sauces, spreads, pickles and dressings that live in the fridge door.
+  const CONDIMENTS = ["ketchup", "mustard", "dijon", "mayo", "mayonnaise", "aioli", "relish", "soy sauce", "tamari", "hot sauce", "sriracha", "tabasco", "chili sauce", "chili crisp", "chili oil",
+    "gochujang", "hoisin", "oyster sauce", "fish sauce", "teriyaki", "bbq sauce", "barbecue sauce", "steak sauce", "worcestershire", "salsa", "jam", "jelly", "marmalade", "preserves",
+    "dressing", "vinaigrette", "ranch", "caesar", "pickle", "pickles", "olives", "capers", "horseradish", "wasabi", "chutney", "pesto", "tahini", "hummus", "tzatziki",
+    "sweet chili sauce", "plum sauce", "curry paste", "miso", "maple syrup", "syrup", "honey", "lemon juice", "lime juice", "kimchi", "sauerkraut", "sambal", "ponzu", "tartar sauce", "cocktail sauce", "sauce"];
+  function isCondiment(x) { const n = " " + toks(typeof x === "string" ? x : x.name).join(" ") + " "; return CONDIMENTS.some((c) => n.includes(" " + toks(c).join(" ") + " ")); }
+  const condOf = (it) => it.cond != null ? !!it.cond : isCondiment(it.name);
   const LOC_KEYS = ["fridge", "freezer", "pantry"];
   const allOnHand = () => LOC_KEYS.flatMap((loc) => S[loc].map((i) => ({ ...i, loc })));
 
@@ -1194,7 +1208,7 @@ Rules:
     for (const a of add) {
       if (next.some((x) => x.name === a)) continue;
       const g = guessDays(a, loc);
-      next.push({ name: a, expires: g != null ? addDays(g) : "", est: g != null, added: Date.now() });
+      next.push({ name: a, expires: g != null ? addDays(g) : "", est: g != null, added: Date.now(), ...(loc === "fridge" && isCondiment(a) ? { cond: true } : {}) });
       counts[a] = (counts[a] || 0) + 1; where[a] = loc; changed = true;
     }
     if (changed) { setList(loc, next); setStats({ counts, where }); }
@@ -1263,7 +1277,7 @@ Rules:
     const soon = items.filter((i) => isSoon(i, loc));
     const oftenSet = new Set(buyOften());
 
-    const rows = h("div", { class: "frows" }, items.length ? items.map((it) => {
+    const rowFor = (it) => {
       const st = statusOf(it.expires);
       const idx = list.indexOf(it);
       const safe = loc + "-" + it.name.replace(/[^a-z0-9]+/gi, "-");
@@ -1276,13 +1290,26 @@ Rules:
             onchange: (e) => { const next = [...S[loc]]; next[idx] = { ...it, expires: e.target.value, est: false }; setList(loc, next); } }),
           it.est && it.expires ? h("small", { title: "Estimated from typical shelf life. Change it to the date on the package." }, "est.") : null),
         h("button", { class: "iconbtn star" + (on ? " on" : ""), type: "button", "aria-pressed": String(on), title: "Buy often", "aria-label": (on ? "Remove " + it.name + " from" : "Add " + it.name + " to") + " buy often", onclick: () => togglePin(it.name, loc) }, on ? "★" : "☆"),
+        loc === "fridge" ? h("button", { class: "iconbtn", type: "button", "aria-label": (condOf(it) ? "Move " + it.name + " to food" : "Move " + it.name + " to condiments"), title: condOf(it) ? "Move to food" : "Move to condiments",
+          onclick: () => { const next = [...S[loc]]; next[idx] = { ...it, cond: !condOf(it) }; setList(loc, next); toast(condOf(it) ? "Moved to food" : "Moved to condiments"); } }, condOf(it) ? "🥕" : "🫙") : null,
         loc === "fridge" ? h("button", { class: "iconbtn", type: "button", "aria-label": "Move " + it.name + " to the freezer", title: "Move to freezer", onclick: () => moveItem(it, "fridge", "freezer") }, "❄") : h("span"),
         h("button", { class: "iconbtn", type: "button", "aria-label": "Remove " + it.name, title: "Used up", onclick: () => setList(loc, S[loc].filter((x) => x !== it)) }, "×"));
-    }) : h("p", { class: "hint" }, L.empty));
+    };
+    let rows;
+    if (loc === "fridge" && items.length) {
+      const food = items.filter((i) => !condOf(i)), conds = items.filter(condOf);
+      rows = h("div", { class: "fsplit" },
+        h("div", { class: "fgroup" }, h("h4", { class: "fgh" }, "Food", h("span", { class: "tcount" }, String(food.length))),
+          h("div", { class: "frows fridge" }, food.length ? food.map(rowFor) : h("p", { class: "hint" }, "No food in the fridge yet."))),
+        h("div", { class: "fgroup" }, h("h4", { class: "fgh" }, "🫙 Condiments", h("span", { class: "tcount" }, String(conds.length))),
+          h("div", { class: "frows fridge" }, conds.length ? conds.map(rowFor) : h("p", { class: "hint" }, "Sauces, spreads and pickles show up here. Tap 🫙 on anything to move it."))));
+    } else {
+      rows = h("div", { class: "frows" + (loc === "fridge" ? " fridge" : "") }, items.length ? items.map(rowFor) : h("p", { class: "hint" }, L.empty));
+    }
 
     const panel = h("div", { class: "form", id: "onhand-panel", role: "tabpanel", "aria-labelledby": "tab-" + loc },
       h("p", { class: "howto" }, loc === "fridge"
-        ? "Add what's in the fridge, with commas between items or Enter after each. Common foods get an estimated expiry date; change it to the date on the package. Tap ❄ to move something to the freezer, × when it's used up, and ☆ for things you buy often."
+        ? "Add what's in the fridge, with commas between items or Enter after each. Common foods get an estimated expiry date; change it to the date on the package. Sauces and spreads go under Condiments; tap 🫙 or 🥕 to move something between the two. Tap ❄ to move it to the freezer, × when it's used up, and ☆ for things you buy often."
         : loc === "freezer"
         ? "Add what's in the freezer. Each item gets an estimated use-by date for best quality (frozen food stays safe longer, but tastes best by then); change it if you like. Tap × when it's used up, and ☆ for things you buy often."
         : "Add what's in the cupboards: dry goods, cans, baking supplies, snacks. Common items get an estimated best-before date; change it to the date on the package. Tap × when something runs out, and ☆ for things you buy often."),

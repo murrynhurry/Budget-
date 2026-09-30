@@ -489,7 +489,7 @@ function sharedCats(){return ["Shared groceries","Shared bills","Household & fur
 function blankState(){
   return {v:1,sample:false,income:0,hourly:0,extra:0,strategy:"avalanche",skipped:0,
     partner:"",split:50,settle:[],bills:[],accounts:[],incomes:[],inc:[],cards:[],holdings:[],px:{},
-    categories:[["Rent",0],["Groceries",0],["Transit",0],["Phone & internet",0],["Eating out",0],["Fun",0],["Shopping",0],["Subscriptions",0]].map(([n,l])=>({id:uid(),name:n,limit:l,shared:false})).concat(sharedCats()),
+    categories:[["Rent",0],["Groceries",0],["Transit",0],["Phone & internet",0],["Eating out",0],["Fun",0],["Shopping",0],["Subscriptions",0],["Bills",0]].map(([n,l])=>({id:uid(),name:n,limit:l,shared:false})).concat(sharedCats()),
     tx:[],goals:[],debts:[],wish:[]};
 }
 function sampleState(){
@@ -547,7 +547,7 @@ async function flush(){
   }
   saving=false; if(dirty)flush();
 }
-function adopt(d){ let migrated=false; if(d&&typeof d==="object")d=JSON.parse(JSON.stringify(d)); if(d&&typeof d==="object"&&Array.isArray(d.tx)){ S=Object.assign(blankState(),d); if(!Array.isArray(S.settle))S.settle=[]; if(!Array.isArray(S.bills))S.bills=[]; if(SH.on&&!S.sharedMoved){const L=takeLegacy();if(L&&!d.sample)legacyShared=L;migrated=true} if(!SH.on&&!S.categories.some(c=>c.shared))S.categories=S.categories.concat(sharedCats()); if(!Array.isArray(S.bills))S.bills=[]; if(!S.categories.some(c=>/^subscriptions?$/i.test(c.name.trim()))){const i=S.categories.findIndex(c=>c.shared);const c={id:uid(),name:"Subscriptions",limit:0,shared:false};i<0?S.categories.push(c):S.categories.splice(i,0,c);migrated=true} const n=postDueBills(); render(); if(migrated&&!n)scheduleSave(); if(n){scheduleSave();toast(n+" bill"+(n>1?"s":"")+" added to your spending")} } }
+function adopt(d){ let migrated=false; if(d&&typeof d==="object")d=JSON.parse(JSON.stringify(d)); if(d&&typeof d==="object"&&Array.isArray(d.tx)){ S=Object.assign(blankState(),d); if(!Array.isArray(S.settle))S.settle=[]; if(!Array.isArray(S.bills))S.bills=[]; if(SH.on&&!S.sharedMoved){const L=takeLegacy();if(L&&!d.sample)legacyShared=L;migrated=true} if(!SH.on&&!S.categories.some(c=>c.shared))S.categories=S.categories.concat(sharedCats()); if(!Array.isArray(S.bills))S.bills=[]; if(!S.categories.some(c=>/^subscriptions?$/i.test(c.name.trim()))){const i=S.categories.findIndex(c=>c.shared);const c={id:uid(),name:"Subscriptions",limit:0,shared:false};i<0?S.categories.push(c):S.categories.splice(i,0,c);migrated=true} if(!S.categories.some(c=>/^bills?$/i.test(c.name.trim()))){const i=S.categories.findIndex(c=>c.shared);const c={id:uid(),name:"Bills",limit:0,shared:false};i<0?S.categories.push(c):S.categories.splice(i,0,c);migrated=true} const n=postDueBills(); render(); if(migrated&&!n)scheduleSave(); if(n){scheduleSave();toast(n+" bill"+(n>1?"s":"")+" added to your spending")} } }
 let bootWhy="";
 async function waitForRuntime(ms){const t0=Date.now();while(!(window.claude&&window.claude.use)&&Date.now()-t0<ms)await new Promise(r=>setTimeout(r,100));return !!(window.claude&&window.claude.use)}
 async function initStore(){

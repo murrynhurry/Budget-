@@ -342,7 +342,8 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .tx-day{display:flex;justify-content:space-between;align-items:baseline}
 .stat4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}.stat4 div{display:flex;flex-direction:column;background:var(--sunk);border-radius:14px;padding:8px 10px}
 .btiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.btile{border:2px solid var(--line);border-radius:16px;padding:12px}.btile.over{background:var(--bad-soft);border-color:transparent}
+.btile{border:2px solid var(--line);border-radius:16px;padding:12px}.btile{cursor:pointer}.btile.open{grid-column:1 / -1;cursor:default}.btile.open>div:first-child{cursor:pointer}.btx{margin-top:8px;background:var(--surface);border-radius:12px;padding:0 10px}.btx .txw:last-child .tx{border-bottom:0}
+.btile.over{background:var(--bad-soft);border-color:transparent}
 .tx.txb{grid-template-columns:34px minmax(0,1fr) auto auto}
 .hbadge.sb{width:34px;height:34px;border-radius:10px;font-size:.92rem}
 .hbadge{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.05rem}
@@ -1116,23 +1117,26 @@ function viewSettings(){
   </div>`;
 }
 
-let spendView="budgets",spendFilter="all";
+let spendView="budgets",spendFilter="all",spendCat=null;
 function viewSpending(){
   const tx=txIn(viewMonth).slice().sort((a,b)=>b.date.localeCompare(a.date));
   const total=sum(tx,myAmt);
   const byDay={}; tx.filter(t=>spendFilter==="all"||t.type===spendFilter).forEach(t=>(byDay[t.date]=byDay[t.date]||[]).push(t));
   const BC=["#E35B8F","#9B84E0","#44B38D","#E0843A","#4A90D9","#C0567A"], ccol=id=>{const n=catName(id);return BC[[...n].reduce((x,c)=>x+c.charCodeAt(0),0)%BC.length]};
+  const txr=t=>`<div class="txw"><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx txb" data-swipe="1"><span class="hbadge sb" style="background:${ccol(t.cat)}">${esc(catName(t.cat).slice(0,1))}</span><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · <span style="color:${t.type==="want"?"var(--want)":"var(--good)"};font-weight:700">${t.type==="want"?"Want":"Need"}</span>${t.billId?" · Bill":""}${t.split!=null?" · "+(t.paidBy==="partner"?esc(pName())+" paid":"you paid"):""}</span></div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete ${esc(t.note||"expense")}">×</button></div></div>`;
   const list=Object.keys(byDay).map(d=>{
     const dd=new Date(d+"T12:00:00");
     return `<div class="tx-day"><span>${dd.toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})}</span><span class="num">${fmt(sum(byDay[d],myAmt))}</span></div>`+
-      byDay[d].map(t=>`<div class="txw"><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx txb" data-swipe="1"><span class="hbadge sb" style="background:${ccol(t.cat)}">${esc(catName(t.cat).slice(0,1))}</span><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · <span style="color:${t.type==="want"?"var(--want)":"var(--good)"};font-weight:700">${t.type==="want"?"Want":"Need"}</span>${t.billId?" · Bill":""}${t.split!=null?" · "+(t.paidBy==="partner"?esc(pName())+" paid":"you paid"):""}</span></div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete ${esc(t.note||"expense")}">×</button></div></div>`).join("");
+      byDay[d].map(txr).join("");
   }).join("");
   const mtx=txIn(viewMonth), needsM=sum(mtx.filter(t=>t.type==="need"),myAmt), limT=sum(S.categories,c=>num(c.limit));
   const lrows=S.categories.map(c=>{const sp=sum(mtx.filter(t=>t.cat===c.id),myAmt),lim=num(c.limit);return {c,sp,lim}}).filter(x=>x.sp>0||x.lim>0)
     .sort((x,y)=>((y.lim?y.sp/y.lim:y.sp?9:0)-(x.lim?x.sp/x.lim:x.sp?9:0))).map(({c,sp,lim})=>{const left=lim-sp,over=lim&&left<0;
-    return `<div class="btile${over?" over":""}"><div class="small" style="font-weight:700">${esc(c.name)}</div>
+    const open=spendCat===c.id, ctx=open?mtx.filter(t=>t.cat===c.id).sort((a,b)=>b.date.localeCompare(a.date)):[];
+    return `<div class="btile${over?" over":""}${open?" open":""}" data-act="spendCat" data-v="${c.id}" role="button" aria-expanded="${open}"><div class="small" style="font-weight:700;display:flex;justify-content:space-between;gap:6px"><span>${esc(c.name)}</span><span class="muted">${open?"▴":"▾"}</span></div>
       <div class="num" style="font-size:1.35rem;color:${over?"var(--bad)":"var(--ink)"}">${lim?(over?"−"+fmt0(-left):fmt0(left)):fmt0(sp)}</div>
-      <div class="muted small" style="margin-bottom:6px">${lim?(over?"over":"left")+` · ${fmt0(sp)} of ${fmt0(lim)}`:"spent · no limit"}</div>${barHTML(sp,lim)}</div>`}).join("");
+      <div class="muted small" style="margin-bottom:6px">${lim?(over?"over":"left")+` · ${fmt0(sp)} of ${fmt0(lim)}`:"spent · no limit"}</div>${barHTML(sp,lim)}
+      ${open?`<div class="btx">${ctx.length?ctx.map(t=>txr(t).replace('<div class="tx txb"','<div class="tx txb" data-date="1"').replace('<span class="muted small">'+esc(catName(t.cat))+' · ','<span class="muted small">'+D(t.date).toLocaleDateString("en-CA",{month:"short",day:"numeric"})+' · ')).join(""):`<div class="muted small" style="padding:10px 0">Nothing spent here in ${esc(monthLabel(viewMonth).split(" ")[0])}.</div>`}</div>`:""}</div>`}).join("");
   const shown=spendFilter==="all"?null:spendFilter;
   const cur=monthKey(new Date());
   return `<div class="stack">
@@ -1671,6 +1675,7 @@ document.addEventListener("click",e=>{
     case "pxRefresh":refreshPrices(true);break;
     case "delHold":S.holdings=(S.holdings||[]).filter(x=>x.id!==id);commit("Holding removed");break;
     case "spendView":spendView=b.dataset.v;render();break;
+    case "spendCat":spendCat=spendCat===b.dataset.v?null:b.dataset.v;render();break;
     case "spendFilter":spendFilter=b.dataset.v;render();break;
     case "goCards":tab="cards";render();window.scrollTo({top:0});break;
     case "delCard":S.cards=(S.cards||[]).filter(x=>x.id!==id);commit("Card removed");break;

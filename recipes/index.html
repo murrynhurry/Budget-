@@ -227,6 +227,8 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .code { font-family: var(--f-mono); letter-spacing: .08em; }
 .signin { max-width: 420px; margin: 40px auto; display: flex; flex-direction: column; gap: 12px; }
 .signin input { font: inherit; font-size: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); width: 100%; }
+.photo-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.photo-btns .btn { flex: 1 1 150px; justify-content: center; padding: 12px; }
 .cstack { display: flex; flex-direction: column; gap: 32px; }
 .cform { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
 .cgroups { display: flex; flex-direction: column; gap: 16px; }
@@ -407,6 +409,7 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
   <div class="qa-more">
     <button class="btn" type="button" data-qa="import">⬇ Import a recipe</button>
     <button class="btn" type="button" data-qa="write">✎ Write a recipe</button>
+    <button class="btn" type="button" data-qa="photo" hidden>📷 Recipe from a photo</button>
     <button class="btn" type="button" data-qa="coupon">🏷 Add a coupon</button>
   </div>
 </section>
@@ -796,8 +799,16 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
         h("form", { class: "form", onsubmit: (e) => { e.preventDefault(); runImport(); } },
           h("div", { class: "field" }, h("label", { for: "imp-url" }, "Recipe link"), url),
           h("div", { class: "field" }, h("label", { for: "imp-text" }, "Recipe page text"), text),
-          S.sampleImages ? h("div", { class: "or" }, "or") : null,
-          S.sampleImages ? h("div", { class: "field" }, h("label", { for: "imp-photo" }, "Photo or screenshot of a recipe"),
+          window.LOCAL_APP ? h("div", { class: "or" }, "or") : null,
+          window.LOCAL_APP ? h("div", { class: "field" }, h("label", null, "Photo of a recipe"),
+            h("div", { class: "photo-btns" },
+              h("input", { id: "imp-cam", type: "file", accept: "image/*", capture: "environment", hidden: true, onchange: (e) => runPhotoImport(e.target.files) }),
+              h("input", { id: "imp-pick", type: "file", accept: "image/*", multiple: true, hidden: true, onchange: (e) => runPhotoImport(e.target.files) }),
+              h("button", { class: "btn", type: "button", disabled: st.busy, onclick: () => document.getElementById("imp-cam").click() }, "📷 Take a photo"),
+              h("button", { class: "btn", type: "button", disabled: st.busy, onclick: () => document.getElementById("imp-pick").click() }, "🖼 Choose photos")),
+            h("span", { class: "hint" }, "Cookbook pages, recipe cards and screenshots work best. Choose two photos if a recipe runs over two pages. Everything is read on your phone.")) : null,
+          S.sampleImages && !window.LOCAL_APP ? h("div", { class: "or" }, "or") : null,
+          S.sampleImages && !window.LOCAL_APP ? h("div", { class: "field" }, h("label", { for: "imp-photo" }, "Photo or screenshot of a recipe"),
             h("div", { class: "photo" }, photoIn, h("span", { class: "hint" }, "A cookbook page or a screenshot works."))) : null,
           status,
           h("div", { class: "formbar" },
@@ -870,18 +881,90 @@ Rules:
   }
 
   // Fallback: split pasted text on Ingredients / Method headings.
+  // Sorts plain recipe text into title, ingredients and steps. Uses "Ingredients" / "Method" headings when
+  // present; otherwise it guesses: short lines that start with an amount are ingredients, the rest are steps.
   function roughParse(text) {
-    const ls = lines(text);
+    const ls = lines(text).map((l) => l.replace(/\s+/g, " ").replace(/^[•·▪◦*\-–]\s*/, "")).filter((l) => l.length > 1);
     const r = blank();
-    const iI = ls.findIndex((l) => /^ingredients\b/i.test(l));
-    const iS = ls.findIndex((l, i) => i > iI && /^(instructions|directions|method|steps|preparation)\b/i.test(l));
-    r.title = (iI > 0 ? ls.slice(0, iI).reverse().find((l) => l.length > 3 && l.length < 90) : ls[0]) || "";
+    const isIngHead = (l) => /^ingredients?\b/i.test(l);
+    const isStepHead = (l) => /^(instructions|directions|method|steps|preparation|how to make)\b/i.test(l);
+    const isNoise = (l) => /^(notes?|nutrition|tips?|serving size|calories|prep time|cook time|total time)\b/i.test(l);
+    const amount = /^(\d|[½⅓⅔¼¾⅛]|one |two |three |a |an |pinch|dash|handful|salt|pepper)/i;
+    // Join lines that were split mid-sentence (common in photos): a line continues the last one
+    // unless the last one ended a sentence or this one starts a new numbered step.
+    const joinSteps = (arr) => {
+      const out = [];
+      for (const l of arr) {
+        const newStep = /^(step\s*)?\d+[.):]\s*/i.test(l) || !out.length || /[.!?:)]$/.test(out[out.length - 1]);
+        const clean = l.replace(/^(step\s*)?\d+[.):]?\s*/i, "");
+        if (newStep) out.push(clean); else out[out.length - 1] += " " + clean;
+      }
+      return out.filter((x) => x.length > 8 && !isNoise(x)).slice(0, 40);
+    };
+    const iI = ls.findIndex(isIngHead);
+    const iS = ls.findIndex((l, i) => i > iI && isStepHead(l));
+    r.title = (iI > 0 ? ls.slice(0, iI).find((l) => l.length > 3 && l.length < 70 && !amount.test(l)) : ls.find((l) => l.length > 3 && l.length < 70 && !amount.test(l))) || "";
     if (iI >= 0) {
-      r.ingredients = ls.slice(iI + 1, iS > iI ? iS : undefined).filter((l) => l.length < 160).slice(0, 60);
-      if (iS > iI) r.steps = ls.slice(iS + 1).filter((l) => l.length > 15 && !/^(notes?|nutrition)\b/i.test(l)).slice(0, 30).map((l) => l.replace(/^(step\s*)?\d+[.):]?\s*/i, ""));
-    } else r.notes = text.slice(0, 4000);
-    const sv = text.match(/(?:serves|servings|yield)\s*:?\s*(\d+)/i); if (sv) r.servings = +sv[1];
+      r.ingredients = ls.slice(iI + 1, iS > iI ? iS : undefined).filter((l) => l.length < 120 && !isStepHead(l)).slice(0, 60);
+      if (iS > iI) r.steps = joinSteps(ls.slice(iS + 1));
+    } else {
+      const body = ls.filter((l) => l !== r.title && !isIngHead(l) && !isStepHead(l));
+      r.ingredients = body.filter((l) => amount.test(l) && l.length < 90).slice(0, 60);
+      r.steps = joinSteps(body.filter((l) => !(amount.test(l) && l.length < 90)));
+      if (!r.ingredients.length && !r.steps.length) r.notes = text.slice(0, 4000);
+    }
+    const sv = text.match(/(?:serves|servings|yield|makes)\s*:?\s*(\d+)/i); if (sv) r.servings = +sv[1];
     return r;
+  }
+
+  // ---------- reading text from a photo, on the phone (phone app only; free, no account needed) ----------
+  let ocrLib = null;
+  function loadOcr() {
+    return ocrLib || (ocrLib = new Promise((res, rej) => {
+      if (window.Tesseract) return res(window.Tesseract);
+      const sc = document.createElement("script");
+      sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+      sc.onload = () => window.Tesseract ? res(window.Tesseract) : rej(new Error("no reader"));
+      sc.onerror = () => { ocrLib = null; rej(new Error("Couldn't load the photo reader. Check your internet connection.")); };
+      document.head.append(sc);
+    }));
+  }
+  // Shrink big photos and turn them grey; the reader is faster and more accurate that way.
+  async function prepPhoto(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = url; });
+      const k = Math.min(1, 2200 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      const x = c.getContext("2d"); x.filter = "grayscale(1) contrast(1.25)"; x.drawImage(img, 0, 0, c.width, c.height);
+      return c;
+    } finally { URL.revokeObjectURL(url); }
+  }
+  async function runPhotoImport(files) {
+    const list = [...(files || [])].filter((f) => /^image\//.test(f.type) || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
+    if (!list.length) return;
+    S.importState = { busy: true, err: false, msg: "Getting the photo reader ready (first time takes a moment)" }; render();
+    let worker = null, cur = 0, text = "";
+    try {
+      const T = await loadOcr();
+      worker = await T.createWorker("eng", 1, { logger: (m) => {
+        if (m.status === "recognizing text") { const pct = Math.round((m.progress || 0) * 100); const el = document.querySelector(".status .dots"); if (el) el.textContent = `Reading photo ${cur} of ${list.length}: ${pct}%`; }
+      } });
+      for (const f of list) {
+        cur++;
+        const { data } = await worker.recognize(await prepPhoto(f));
+        text += (text ? "\n" : "") + (data && data.text ? data.text : "");
+      }
+      if (!text.trim()) throw new Error("Couldn't find any words in that photo. Try a closer, brighter photo.");
+      importFields.text = text.trim();
+      const r = roughParse(text); r.sourceUrl = importFields.url.trim();
+      S.draft = r; S.importState = { busy: false, msg: "", err: false };
+      toast("Read your photo. Check it over and fix anything that came out wrong.");
+      go("edit");
+    } catch (e) {
+      S.importState = { busy: false, err: true, msg: (e && e.message) || "Couldn't read that photo. Try again with a clearer one." };
+      render();
+    } finally { if (worker) worker.terminate().catch(() => {}); }
   }
 
   async function removeExamples() {
@@ -1805,6 +1888,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     document.getElementById("qa").hidden = true; document.getElementById("qaBack").hidden = true;
     if (qaLastFocus && qaLastFocus.focus) qaLastFocus.focus();
   }
+  if (window.LOCAL_APP) { const pb = document.querySelector('[data-qa="photo"]'); if (pb) pb.hidden = false; }
   document.getElementById("fab").addEventListener("click", openQa);
   document.getElementById("qaClose").addEventListener("click", closeQa);
   document.getElementById("qaBack").addEventListener("click", closeQa);
@@ -1822,6 +1906,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
   document.querySelectorAll("[data-qa]").forEach((b) => b.addEventListener("click", () => {
     const a = b.dataset.qa; closeQa();
     if (a === "import") startImport();
+    else if (a === "photo") { startImport(); setTimeout(() => { const c = document.querySelector(".photo-btns"); if (c) c.scrollIntoView({ block: "center" }); }, 60); }
     else if (a === "write") { S.draft = blank(); go("edit"); }
     else { go("coupons"); setTimeout(() => { const c = document.getElementById("c-item"); if (c) { c.scrollIntoView({ block: "center" }); c.focus(); } }, 50); }
   }));

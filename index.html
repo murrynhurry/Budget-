@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#FFF4F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1D1522" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="cloud.js"></script>
@@ -374,52 +374,7 @@ input,select,textarea{font-size:16px}
       <span class="status" id="status">Loading your saved data…</span>
     </div>
     <div class="pigbox">
-      <svg class="pig" id="pig" viewBox="0 0 120 112" role="img" aria-label="Pach the dog">
-        <ellipse cx="60" cy="110" rx="27" ry="2" fill="var(--line)"/>
-        <path d="M31 66 Q26 84 30 97 Q34 105 40 104 Q46 107.5 52 104.5 Q60 108.5 68 104.5 Q74 107.5 80 104 Q86 105 90 97 Q94 84 89 66 Z" fill="var(--fur)"/>
-        <path d="M30.5 88 Q30 95 32.5 99.5 Q35.5 105 40 104 Q46 107.5 52 104.5 Q60 108.5 68 104.5 Q74 107.5 80 104 Q84.5 105 87.5 99.5 Q90 95 89.5 88" fill="none" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <g fill="none" stroke="var(--fur-edge)" stroke-width="1.2" stroke-linecap="round"><path d="M60 96 L60 104"/></g>
-        <g fill="var(--fur)" stroke="var(--fur-edge)" stroke-width="1.5">
-          <ellipse cx="49" cy="105.5" rx="9" ry="5.6"/><ellipse cx="71" cy="105.5" rx="9" ry="5.6"/>
-        </g>
-        <g fill="none" stroke="var(--fur-edge)" stroke-width="1.1" stroke-linecap="round">
-          <path d="M46.4 108.2 v-2.6"/><path d="M51.6 108.2 v-2.6"/><path d="M68.4 108.2 v-2.6"/><path d="M73.6 108.2 v-2.6"/>
-        </g>
-        <g transform="rotate(-9 60 54)">
-          <g fill="var(--fur)" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linejoin="round">
-            <path d="M42 26 Q22 34 18 58 Q15 78 22 94 Q26 90 29 95 Q32 89 36 94 Q39 87 43 90 Q44 70 46 50 Z"/>
-            <path d="M78 26 Q98 34 102 58 Q105 78 98 94 Q94 90 91 95 Q88 89 84 94 Q81 87 77 90 Q76 70 74 50 Z"/>
-          </g>
-          <ellipse cx="60" cy="52" rx="29" ry="28" fill="var(--fur)"/>
-          <path d="M40 31 Q48 24 60 24 Q72 24 80 31" fill="none" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linecap="round"/>
-          <path d="M40 64 Q38 80 47 86 Q50 91 54 88 Q57 93 60 89 Q63 93 66 88 Q70 91 73 86 Q82 80 80 64 Z" fill="var(--fur)"/>
-          <path d="M40.5 70 Q41 81 47 86 Q50 91 54 88 Q57 93 60 89 Q63 93 66 88 Q70 91 73 86 Q79 81 79.5 70" fill="none" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-          <g fill="none" stroke="var(--fur-edge)" stroke-width="1.3" stroke-linecap="round">
-            
-            <path d="M24 58 Q22 72 25 86"/><path d="M96 58 Q98 72 95 86"/><path d="M30 50 Q28 64 30 78"/><path d="M90 50 Q92 64 90 78"/>
-          </g>
-          <ellipse cx="44" cy="51" rx="9.6" ry="9" fill="var(--rim)"/>
-          <ellipse cx="76" cy="51" rx="9.6" ry="9" fill="var(--rim)"/>
-          <g class="pig-eyes">
-            <circle cx="44" cy="51" r="7.3" fill="var(--eye)"/><circle cx="76" cy="51" r="7.3" fill="var(--eye)"/>
-            <ellipse cx="46.6" cy="48" rx="2.7" ry="2.4" fill="#fff"/><ellipse cx="78.6" cy="48" rx="2.7" ry="2.4" fill="#fff"/>
-            <circle cx="41.8" cy="54.4" r="1.1" fill="#fff" opacity=".9"/><circle cx="73.8" cy="54.4" r="1.1" fill="#fff" opacity=".9"/>
-          </g>
-          <ellipse cx="37" cy="63.5" rx="6" ry="3.4" fill="var(--accent)" opacity=".25"/>
-          <ellipse cx="83" cy="63.5" rx="6" ry="3.4" fill="var(--accent)" opacity=".25"/>
-          <g transform="translate(60 61.4) scale(0.72) translate(-60 -61.4)"><path d="M53.8 61 Q54.2 56.2 60 56.2 Q65.8 56.2 66.2 61 Q65.8 66.2 60 66.6 Q54.2 66.2 53.8 61 Z" fill="var(--nose)"/>
-          <ellipse cx="57.2" cy="62.4" rx="1.5" ry="1.15" fill="var(--eye)" opacity=".75"/>
-          <ellipse cx="62.8" cy="62.4" rx="1.5" ry="1.15" fill="var(--eye)" opacity=".75"/>
-          <g fill="var(--eye)" opacity=".4"><circle cx="56.5" cy="58.8" r=".7"/><circle cx="63.6" cy="58.4" r=".6"/><circle cx="60.3" cy="60.2" r=".55"/><circle cx="64.6" cy="60.8" r=".6"/></g>
-          <ellipse cx="58" cy="57.9" rx="2" ry=".9" fill="#fff" opacity=".45"/>
-          </g>
-          <g id="dogTongue"><path d="M57.8 71.1 Q57.6 74.8 59.8 74.9 Q62 74.8 61.8 71.2 Z" fill="#F48FB1" stroke="#E2728F" stroke-width=".9" stroke-linejoin="round"/></g>
-          <path id="pigMouth" d="M55 69.4 Q57.5 71.8 60 71.2 Q62.5 71.8 65 69.4" fill="none" stroke="var(--eye)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </g>
-        <path d="M8 26 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6z" fill="var(--gold)"/>
-        <path d="M108 50 l1.2 3 3 1.2 -3 1.2 -1.2 3 -1.2 -3 -3 -1.2 3 -1.2z" fill="var(--gold)" opacity=".85"/>
-        <path d="M100 98 l1 2.4 2.4 1 -2.4 1 -1 2.4 -1 -2.4 -2.4 -1 2.4 -1z" fill="var(--accent)" opacity=".7"/>
-      </svg>
+      <svg class="pig" id="pig" viewBox="0 0 120 112" role="img" aria-label="Pach the dog">         <ellipse cx="60" cy="110" rx="27" ry="2" fill="var(--line)"/>         <path d="M31 66 Q26 84 30 97 Q34 105 40 104 Q46 107.5 52 104.5 Q60 108.5 68 104.5 Q74 107.5 80 104 Q86 105 90 97 Q94 84 89 66 Z" fill="var(--fur)"/>         <path d="M30.5 88 Q30 95 32.5 99.5 Q35.5 105 40 104 Q46 107.5 52 104.5 Q60 108.5 68 104.5 Q74 107.5 80 104 Q84.5 105 87.5 99.5 Q90 95 89.5 88" fill="none" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>         <g fill="none" stroke="var(--fur-edge)" stroke-width="1.2" stroke-linecap="round"><path d="M60 96 L60 104"/></g>         <g fill="var(--fur)" stroke="var(--fur-edge)" stroke-width="1.5">           <ellipse cx="49" cy="105.5" rx="9" ry="5.6"/><ellipse cx="71" cy="105.5" rx="9" ry="5.6"/>         </g>         <g fill="none" stroke="var(--fur-edge)" stroke-width="1.1" stroke-linecap="round">           <path d="M46.4 108.2 v-2.6"/><path d="M51.6 108.2 v-2.6"/><path d="M68.4 108.2 v-2.6"/><path d="M73.6 108.2 v-2.6"/>         </g>         <g transform="rotate(-9 60 54)">           <g fill="var(--fur)" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linejoin="round">             <path d="M42 26 Q22 34 18 58 Q15 78 21 92 Q24.5 97 29 93 Q32.5 97.5 36.5 92.5 Q40.5 95.5 43 89 Q44 70 46 50 Z"/>             <path d="M78 26 Q98 34 102 58 Q105 78 99 92 Q95.5 97 91 93 Q87.5 97.5 83.5 92.5 Q79.5 95.5 77 89 Q76 70 74 50 Z"/>           </g>           <ellipse cx="60" cy="53" rx="30.5" ry="30" fill="var(--fur)"/>           <path d="M59.2 27.4 Q53 29.5 48.5 34.5" fill="none" stroke="var(--fur-edge)" stroke-width="1.3" stroke-linecap="round"/><path d="M60.8 27.4 Q67 29.5 71.5 34.5" fill="none" stroke="var(--fur-edge)" stroke-width="1.3" stroke-linecap="round"/><path d="M40 31 Q48 24 57.5 24.6 Q60 27.6 62.5 24.6 Q72 24 80 31" fill="none" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linecap="round"/>           <path d="M36 58 Q34 80 45 87.5 Q49 92.5 53.5 89.5 Q57 94 60 90.5 Q63 94 66.5 89.5 Q71 92.5 75 87.5 Q86 80 84 58 Z" fill="var(--fur)"/>           <path d="M35.5 60 Q35 80 45 87.5 Q49 92.5 53.5 89.5 Q57 94 60 90.5 Q63 94 66.5 89.5 Q71 92.5 75 87.5 Q85 80 84.5 60" fill="none" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>           <g fill="none" stroke="var(--fur-edge)" stroke-width="1.3" stroke-linecap="round">                          <path d="M24 58 Q22 72 25 86"/><path d="M96 58 Q98 72 95 86"/>           </g>           <ellipse cx="43" cy="52" rx="10.6" ry="10" fill="var(--rim)"/>           <ellipse cx="77" cy="52" rx="10.6" ry="10" fill="var(--rim)"/>           <g class="pig-eyes">             <circle cx="43" cy="52" r="8.3" fill="var(--eye)"/><circle cx="77" cy="52" r="8.3" fill="var(--eye)"/>             <ellipse cx="46.2" cy="48.4" rx="3.1" ry="2.8" fill="#fff"/><ellipse cx="80.2" cy="48.4" rx="3.1" ry="2.8" fill="#fff"/><circle cx="48.2" cy="52.6" r="1" fill="#fff"/><circle cx="82.2" cy="52.6" r="1" fill="#fff"/>             <circle cx="40.2" cy="56" r="1.4" fill="#fff" opacity=".9"/><circle cx="74.2" cy="56" r="1.4" fill="#fff" opacity=".9"/>           </g>           <ellipse cx="39.5" cy="66" rx="7" ry="4" fill="var(--accent)" opacity=".32"/><ellipse cx="80.5" cy="66" rx="7" ry="4" fill="var(--accent)" opacity=".32"/>           <g transform="translate(60 61.4) scale(0.72) translate(-60 -61.4)"><path d="M53.8 61 Q54.2 56.2 60 56.2 Q65.8 56.2 66.2 61 Q65.8 66.2 60 66.6 Q54.2 66.2 53.8 61 Z" fill="var(--nose)"/>           <ellipse cx="57.2" cy="62.4" rx="1.5" ry="1.15" fill="var(--eye)" opacity=".75"/>           <ellipse cx="62.8" cy="62.4" rx="1.5" ry="1.15" fill="var(--eye)" opacity=".75"/>           <g fill="var(--eye)" opacity=".4"><circle cx="56.5" cy="58.8" r=".7"/><circle cx="63.6" cy="58.4" r=".6"/><circle cx="60.3" cy="60.2" r=".55"/><circle cx="64.6" cy="60.8" r=".6"/></g>           <ellipse cx="58" cy="57.9" rx="2" ry=".9" fill="#fff" opacity=".45"/>           </g>           <g id="dogTongue"><path d="M57.8 71.1 Q57.6 74.8 59.8 74.9 Q62 74.8 61.8 71.2 Z" fill="#F48FB1" stroke="#E2728F" stroke-width=".9" stroke-linejoin="round"/></g>           <path id="pigMouth" d="M55 69.4 Q57.5 71.8 60 71.2 Q62.5 71.8 65 69.4" fill="none" stroke="var(--eye)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>         </g>         <path d="M8 26 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6z" fill="var(--gold)"/>         <path d="M108 50 l1.2 3 3 1.2 -3 1.2 -1.2 3 -1.2 -3 -3 -1.2 3 -1.2z" fill="var(--gold)" opacity=".85"/>         <path d="M100 98 l1 2.4 2.4 1 -2.4 1 -1 2.4 -1 -2.4 -2.4 -1 2.4 -1z" fill="var(--accent)" opacity=".7"/>       </svg>
       <div class="bubble" id="pigSays"><span class="dogname">Pach</span>Hi! Let's look after your money.</div>
     </div>
   </header>

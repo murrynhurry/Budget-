@@ -87,7 +87,21 @@ a { color: var(--focus); }
 
 /* Header */
 .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin-bottom: 18px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brandtext { min-width: 0; }
 .brand h1 { font-size: 34px; }
+.mascot { flex: none; width: 84px; }
+.mascot .loaf { width: 100%; height: auto; display: block; animation: loafBob 3.4s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes loafBob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4px) rotate(2deg); } }
+.stitch svg { display: block; height: 44px; width: auto; max-width: 100%; color: var(--red); }
+.stitch svg .x { stroke: currentColor; stroke-width: 4.2; stroke-linecap: round; fill: none; }
+.stitch svg .halo { stroke: var(--bg); stroke-width: 9; stroke-linecap: round; fill: none; }
+.stitch svg .sh { stroke: #fff; stroke-width: 1; stroke-linecap: round; fill: none; opacity: .28; }
+#rbTitle.stitched .plain { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#rbTitle:not(.stitched) .stitch { display: none; }
+#rbTitle.stitched { margin-bottom: 4px; }
+@media (max-width: 760px) { .mascot { width: 66px; } .stitch svg { height: 34px; } }
+@media (prefers-reduced-motion: reduce) { .mascot .loaf { animation: none; } }
 .brand p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -350,8 +364,11 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <h1>Recipe Box</h1>
-      <p id="count">Loading your recipes…</p>
+      <div class="mascot"><svg class="loaf" viewBox="-330 -350 660 640" aria-hidden="true" focusable="false"><defs><linearGradient id="loafcr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4cf"/><stop offset="1" stop-color="#f8e19c"/></linearGradient></defs><ellipse cx="0" cy="245" rx="250" ry="22" fill="#000" opacity=".08"/><path d="M-205 20 C-250 -40 -225 -140 -140 -150 C-110 -205 -30 -215 0 -180 C30 -215 110 -205 140 -150 C225 -140 250 -40 205 20 L205 200 Q205 240 165 240 L-165 240 Q-205 240 -205 200 Z" fill="#e9a55d" stroke="#4a3226" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/><path d="M-165 40 Q-170 0 -130 -5 L130 -5 Q170 0 165 40 L165 190 Q165 215 140 215 L-140 215 Q-165 215 -165 190 Z" fill="#f7d9a6"/><path d="M-150 -95 Q-120 -130 -80 -128" fill="none" stroke="#ffe3b8" stroke-width="14" stroke-linecap="round"/><g fill="none" stroke="#b9743a" stroke-width="10" stroke-linecap="round"><path d="M-95 -95 q20 -22 44 -26"/><path d="M-10 -120 q20 -22 44 -26"/><path d="M75 -95 q20 -22 44 -26"/></g><ellipse cx="-65.10000000000001" cy="95" rx="31.5" ry="37.800000000000004" fill="#4a3226"/><circle cx="-54.60000000000001" cy="82.4" r="11.55" fill="#fff"/><circle cx="-75.60000000000001" cy="107.6" r="5.25" fill="#fff"/><ellipse cx="65.10000000000001" cy="95" rx="31.5" ry="37.800000000000004" fill="#4a3226"/><circle cx="75.60000000000001" cy="82.4" r="11.55" fill="#fff"/><circle cx="54.60000000000001" cy="107.6" r="5.25" fill="#fff"/><path d="M-27.3 141.2 q13.65 18.900000000000002 27.3 0 q13.65 18.900000000000002 27.3 0" fill="none" stroke="#4a3226" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="-119.70000000000002" cy="134.9" rx="37.800000000000004" ry="21.0" fill="#ff8fab" opacity=".65"/><ellipse cx="119.70000000000002" cy="134.9" rx="37.800000000000004" ry="21.0" fill="#ff8fab" opacity=".65"/><g transform="translate(262 40) rotate(22)" stroke="#4a3226" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -170 C-72 -100 -48 20 0 44 C48 20 72 -100 0 -170Z" fill="#ffffff"/><path d="M0 -170 V44 M-34 -118 C-44 -56 -22 16 0 44 M34 -118 C44 -56 22 16 0 44" fill="none"/><rect x="-20" y="40" width="40" height="130" rx="18" fill="#f4a3b4"/></g><ellipse cx="222" cy="150" rx="32" ry="26" fill="#e9a55d" stroke="#4a3226" stroke-width="12" stroke-linejoin="round" stroke-linecap="round"/><g transform="translate(0 -205) scale(.78)"><path d="M-120 22 C-175 22 -185 -62 -120 -74 C-108 -140 -20 -150 0 -102 C32 -150 120 -128 120 -70 C185 -64 175 22 120 22 Z" fill="#ffffff" stroke="#4a3226" stroke-width="10" stroke-linejoin="round"/><rect x="-108" y="10" width="216" height="60" rx="16" fill="#ffffff" stroke="#4a3226" stroke-width="10" stroke-linejoin="round"/><path d="M-60 12 Q-50 -30 -40 12 M0 12 Q10 -40 20 12 M60 12 Q66 -24 72 12" fill="none" stroke="#e6e0d4" stroke-width="8" stroke-linecap="round"/></g></svg></div>
+      <div class="brandtext">
+        <h1 id="rbTitle"><span class="plain">Recipe Box</span><span class="stitch" id="stitchTitle" aria-hidden="true"></span></h1>
+        <p id="count">Loading your recipes…</p>
+      </div>
     </div>
   </header>
   <nav class="apptabs" id="apptabs" aria-label="Sections">
@@ -1464,6 +1481,33 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
         h("div", { class: "cstack" }, dealsSec, mineSec)));
   }
 
+  // ---------- cross-stitched title ----------
+  function buildStitchTitle() {
+    const G = {
+      R: ["11110","10001","10001","11110","10100","10010","10001"], E: ["11111","10000","10000","11110","10000","10000","11111"],
+      C: ["01110","10001","10000","10000","10000","10001","01110"], I: ["111","010","010","010","010","010","111"],
+      P: ["11110","10001","10001","11110","10000","10000","10000"], B: ["11110","10001","10001","11110","10001","10001","11110"],
+      O: ["01110","10001","10001","10001","10001","10001","01110"], X: ["10001","10001","01010","00100","01010","10001","10001"],
+      " ": ["00","00","00","00","00","00","00"],
+    };
+    const s = 10, pad = 2.2; let x = 0, d = "", hl = "";
+    let seed = 11; const r = () => { seed = (seed * 16807) % 2147483647; return (seed / 2147483647 - 0.5) * 0.9; };
+    for (const ch of "RECIPE BOX") {
+      const g = G[ch];
+      g.forEach((row, ry) => [...row].forEach((c, rx) => {
+        if (c !== "1") return;
+        const X = x + rx * s, Y = ry * s;
+        d += `M${(X + pad + r()).toFixed(1)} ${(Y + pad + r()).toFixed(1)}L${(X + s - pad + r()).toFixed(1)} ${(Y + s - pad + r()).toFixed(1)}M${(X + s - pad + r()).toFixed(1)} ${(Y + pad + r()).toFixed(1)}L${(X + pad + r()).toFixed(1)} ${(Y + s - pad + r()).toFixed(1)}`;
+        hl += `M${(X + pad + 1).toFixed(1)} ${(Y + pad - 0.6).toFixed(1)}L${(X + s - pad + 0.4).toFixed(1)} ${(Y + s - pad - 1.2).toFixed(1)}`;
+      }));
+      x += (g[0].length + 1) * s;
+    }
+    const w = x - s;
+    document.getElementById("stitchTitle").innerHTML =
+      `<svg viewBox="-5 -5 ${w + 10} ${7 * s + 10}" focusable="false"><path class="halo" d="${d}"/><path class="x" d="${d}"/><path class="sh" d="${hl}"/></svg>`;
+  }
+  buildStitchTitle();
+
   // ---------- colours ----------
   // Token order: bg, card, ink, muted, rule, accent, accentSoft, line, chip, focus
   const TOK = ["--bg", "--card", "--ink", "--muted", "--rule", "--red", "--red-soft", "--line", "--chip", "--focus"];
@@ -1525,6 +1569,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
   const isDark = () => { const t = document.documentElement.getAttribute("data-theme"); return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
   function applyPalette() {
     const bg = document.getElementById("foodbg"); if (bg) bg.hidden = F.food === false;
+    const t = document.getElementById("rbTitle"); if (t) t.classList.toggle("stitched", F.stitch !== false);
     const p = findPal(F.palette);
     const decl = (vals) => TOK.map((t, i) => `${t}: ${vals[i]};`).join(" ");
     let el = document.getElementById("palette-style");
@@ -1603,7 +1648,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     { n: "Mali", c: "cursive", w: [400, 700], note: "Neat handwriting" },
   ];
   const FONT_DEFAULT = { title: "Figtree", body: "Figtree", bold: true };
-  const F = { ...FONT_DEFAULT, palette: "index", food: true };
+  const F = { ...FONT_DEFAULT, palette: "index", food: true, stitch: true };
   const loadedFams = new Set(["Figtree"]);
   // One stylesheet per family, asking only for weights that family has, so one bad request can't break the rest.
   const familyUrl = (f) => "https://fonts.googleapis.com/css2?family=" + f.n.replace(/ /g, "+") + (f.w.length > 1 ? ":wght@" + f.w.join(";") : "") + "&display=swap";
@@ -1644,7 +1689,9 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
         h("span", { class: "hint" }, "Changes show up across the page right away and are saved for next time."),
         h("button", { class: "btn ghost", type: "button", onclick: toggleFontPanel }, "Done")),
       paletteSection(),
-      h("label", { class: "check" }, h("input", { type: "checkbox", id: "food-bg", checked: F.food !== false, onchange: (e) => setFonts({ food: e.target.checked }) }), "Cute food background"),
+      h("div", { class: "dbar" },
+        h("label", { class: "check" }, h("input", { type: "checkbox", id: "food-bg", checked: F.food !== false, onchange: (e) => setFonts({ food: e.target.checked }) }), "Cute food background"),
+        h("label", { class: "check" }, h("input", { type: "checkbox", id: "stitch-title", checked: F.stitch !== false, onchange: (e) => setFonts({ stitch: e.target.checked }) }), "Cross-stitched title")),
       h("div", { class: "fp-grid" },
         h("div", { class: "fp-col" }, h("span", { class: "fp-label" }, "Titles"), h("div", { class: "fp-list" }, opt(TITLE_FONTS, "title"))),
         h("div", { class: "fp-col" }, h("span", { class: "fp-label" }, "Everything else"), h("div", { class: "fp-list" }, opt(BODY_FONTS, "body")))),
@@ -1780,8 +1827,8 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     db.doc("settings/fonts").get().then((snap) => {
       if (!snap.exists) return;
       const d = snap.data() || {};
-      const next = { title: String(d.title || F.title), body: String(d.body || F.body), bold: d.bold !== false, palette: String(d.palette || F.palette), food: d.food !== false };
-      if (next.title !== F.title || next.body !== F.body || next.bold !== F.bold || next.palette !== F.palette || next.food !== F.food) { Object.assign(F, next); applyFonts(); applyPalette(); renderFontPanel(); try { localStorage.setItem("recipebox-fonts", JSON.stringify(F)); } catch {} }
+      const next = { title: String(d.title || F.title), body: String(d.body || F.body), bold: d.bold !== false, palette: String(d.palette || F.palette), food: d.food !== false, stitch: d.stitch !== false };
+      if (next.title !== F.title || next.body !== F.body || next.bold !== F.bold || next.palette !== F.palette || next.food !== F.food || next.stitch !== F.stitch) { Object.assign(F, next); applyFonts(); applyPalette(); renderFontPanel(); try { localStorage.setItem("recipebox-fonts", JSON.stringify(F)); } catch {} }
     }).catch(() => {});
     const rerenderFridge = () => {
       if (S.view !== "fridge" && S.view !== "shop" && S.view !== "coupons") { render(); return; }

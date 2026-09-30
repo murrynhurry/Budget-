@@ -72,7 +72,9 @@ body.bg-gingham {
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body.bg-gingham { --ging: color-mix(in srgb, var(--focus) 11%, transparent); } }
 :root[data-theme="dark"] body.bg-gingham { --ging: color-mix(in srgb, var(--focus) 11%, transparent); }
-body.bg-gingham .top, body.bg-food .top { background: color-mix(in srgb, var(--card) 94%, transparent); border: 1px solid var(--line); border-radius: 20px; padding: 12px 16px; box-shadow: var(--shadow); }
+.top { position: relative; background: color-mix(in srgb, var(--card) 94%, transparent); border: 1px solid var(--line); border-radius: 20px; padding: 30px 18px; box-shadow: var(--shadow); }
+.top::before, .top::after { content: ""; position: absolute; left: 16px; right: 16px; height: 13px; background-image: var(--heart-row); background-repeat: space; background-size: auto 100%; background-position: center; pointer-events: none; }
+.top::before { top: 10px; } .top::after { bottom: 10px; }
 .foodbg { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: var(--food-op); }
 .wrap { position: relative; z-index: 1; }
 body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
@@ -353,7 +355,7 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .qa-more { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .qa-more .btn { justify-content: center; padding: 11px; }
 @media (max-width: 760px) {
-  .wrap { padding-block: 12px 110px; }
+  .wrap { padding-block: 34px 110px; }
   .brand h1 { font-size: 28px; }
   .apptabs { position: fixed; top: auto; left: 0; right: 0; bottom: 0; margin: 0; z-index: 25; gap: 0; overflow: visible;
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: color-mix(in srgb, var(--card) 88%, transparent); }
@@ -1601,6 +1603,18 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
       `<svg viewBox="-5 -5 ${w + 10} ${7 * s + 10}" focusable="false"><path class="halo" d="${d}"/><path class="x" d="${d}"/><path class="sh" d="${hl}"/></svg>`;
   }
   buildStitchTitle();
+  // A pink cross-stitched heart, used as a repeating row along the header card.
+  (function heartRow() {
+    const HEART = ["0110110", "1111111", "1111111", "0111110", "0011100", "0001000"];
+    const s = 10, p = 2.2; let d = "";
+    HEART.forEach((row, y) => [...row].forEach((c, x) => {
+      if (c !== "1") return;
+      const X = x * s, Y = y * s;
+      d += `M${X + p} ${Y + p}L${X + s - p} ${Y + s - p}M${X + s - p} ${Y + p}L${X + p} ${Y + s - p}`;
+    }));
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -2 118 64"><path d="${d}" stroke="#ef8fb0" stroke-width="3.8" stroke-linecap="round" fill="none"/></svg>`;
+    document.documentElement.style.setProperty("--heart-row", `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+  })();
 
   // ---------- colours ----------
   // Token order: bg, card, ink, muted, rule, accent, accentSoft, line, chip, focus

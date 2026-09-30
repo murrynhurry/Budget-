@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Together">
+<meta name="theme-color" content="#f4efee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17151a" media="(prefers-color-scheme: dark)">
+<title>Together</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=1">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="free.js"></script>
+<script src="cloud.js"></script>
+<script>
+if("serviceWorker" in navigator){
+  let reloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloaded)return;reloaded=true;location.reload()});
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{r.update();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")r.update()})}).catch(()=>{}));
+}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Together: a week of two lanes, you and your partner, with the gaps you share lit up. */
+:root {
+  --bg: #f4efee; --card: #fffdfc; --ink: #2a2226; --muted: #6d6168; --line: #e3d9da; --chip: #efe6e7;
+  --accent: #c0456a; --accent-soft: #f8e1e8; --focus: #2f6fb3;
+  --free: #2f8a5b; --free-soft: #dff2e7; --free-edge: #9fd4b6;
+  --bad: #b3261e; --shadow: 0 1px 2px rgba(42,34,38,.07), 0 6px 18px rgba(42,34,38,.06);
+  --f-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17151a; --card: #211e24; --ink: #efe8eb; --muted: #a79ca3; --line: #34303a; --chip: #2c2830;
+  --accent: #f07a9c; --accent-soft: #3d2330; --focus: #7fb2ea; --free: #7fd4a4; --free-soft: #173024; --free-edge: #2e6a4a; --bad: #ff8a80;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #17151a; --card: #211e24; --ink: #efe8eb; --muted: #a79ca3; --line: #34303a; --chip: #2c2830;
+  --accent: #f07a9c; --accent-soft: #3d2330; --focus: #7fb2ea; --free: #7fd4a4; --free-soft: #173024; --free-edge: #2e6a4a; --bad: #ff8a80;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; -webkit-tap-highlight-color: transparent; }
+h1, h2, h3 { font-weight: 700; letter-spacing: -0.015em; margin: 0; line-height: 1.15; text-wrap: balance; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); background: var(--card); padding: 9px 15px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+:root[data-theme="dark"] .btn.primary { color: #1c1216; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { color: #1c1216; } }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+.btn.danger { color: var(--bad); }
+.btn.sm { padding: 6px 11px; font-size: 13px; border-radius: 8px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.iconbtn { border: 0; background: transparent; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 22px; color: var(--muted); display: grid; place-items: center; }
+.iconbtn:hover { background: var(--chip); color: var(--ink); }
+
+/* header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand h1 { font-size: 26px; }
+.brand p { margin: 0; color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pair { display: flex; flex: none; }
+.dot { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; border: 2px solid var(--bg); }
+.pair .dot + .dot { margin-left: -10px; }
+.dot.empty { background: var(--chip); color: var(--muted); border-style: dashed; border-color: var(--line); }
+
+/* nav: pills on wide screens, a bottom tab bar on phones */
+.ti { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.apptabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; margin: 0 -16px 18px; padding: 8px 16px; display: flex; gap: 6px;
+  background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.apptabs button { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 14px; background: var(--card); border: 1px solid var(--line); color: var(--muted); padding: 8px 15px; border-radius: 999px; cursor: pointer; }
+.apptabs button[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.fab { position: fixed; right: 22px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 30; width: 58px; height: 58px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--accent); color: #fff; box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 40%, transparent), var(--shadow); display: grid; place-items: center; }
+.fab svg { width: 28px; height: 28px; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; fill: none; }
+.fab:active { transform: scale(.94); }
+@media (max-width: 760px) {
+  .wrap { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+  .apptabs { position: fixed; top: auto; left: 0; right: 0; bottom: 0; margin: 0; z-index: 25; gap: 0;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: color-mix(in srgb, var(--card) 90%, transparent); }
+  .apptabs button, .apptabs button[aria-current="page"] { flex: 1 1 0; flex-direction: column; gap: 2px; padding: 4px 0 2px; border: 0; background: none; font-size: 11px; color: var(--muted); }
+  .apptabs button[aria-current="page"] { color: var(--accent); }
+  .apptabs .ti { width: 48px; height: 30px; padding: 4px 13px; border-radius: 15px; }
+  .apptabs button[aria-current="page"] .ti { background: var(--accent-soft); }
+  .fab { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); right: 18px; }
+  .toast { bottom: calc(154px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+
+/* cards */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.sect-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.sect-h h2 { font-size: 19px; }
+.notice { border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; font-size: 14px; color: var(--muted); background: var(--card); }
+.notice b { color: var(--ink); }
+.notice.err { border-color: var(--bad); color: var(--bad); }
+
+/* home hero */
+.hero { background: linear-gradient(160deg, var(--free-soft), var(--card) 70%); border-color: var(--free-edge); padding: 22px 20px; }
+.hero .k { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--free); }
+.hero .when { font-size: clamp(28px, 8vw, 40px); font-weight: 800; letter-spacing: -0.02em; margin: 6px 0 2px; line-height: 1.05; }
+.hero .time { font-size: 20px; font-weight: 600; }
+.hero .meta { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--chip); font-size: 13px; font-weight: 600; }
+.pill.free { background: var(--free); color: var(--card); }
+.hero .actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+.hero.none { background: var(--card); border-color: var(--line); }
+.hero.none .k { color: var(--muted); }
+
+.slots { list-style: none; margin: 0; padding: 0; }
+.slots li { border-top: 1px solid var(--line); }
+.slots li:first-child { border-top: 0; }
+.slots .slot { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 4px; border: 0; background: none; text-align: left; cursor: pointer; border-radius: 8px; }
+.slots .slot:hover { background: var(--chip); }
+.slots .d { font-weight: 600; }
+.slots .t { color: var(--muted); font-size: 14px; }
+.slots .len { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--free); font-weight: 500; }
+.slots li.past { opacity: .45; }
+
+.today { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.today h3 { font-size: 14px; display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.today h3 i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.today ul { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.today li { padding: 5px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.today li span { display: block; font-size: 12px; color: var(--muted); font-family: var(--f-mono); }
+.today .none { color: var(--muted); font-size: 14px; padding: 5px 0; }
+
+/* week */
+.weekhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.weekhead h2 { font-size: 20px; }
+.weekhead .nav { display: flex; align-items: center; gap: 4px; }
+.strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 12px; }
+.strip button { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 7px 0 6px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+.strip .wd { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.strip .dn { font-size: 18px; font-weight: 700; }
+.strip .fh { font-family: var(--f-mono); font-size: 10.5px; color: var(--free); min-height: 16px; }
+.strip .fh.zero { color: var(--muted); opacity: .6; }
+.strip button.today .dn { color: var(--accent); }
+.strip button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); }
+.strip button[aria-pressed="true"] .wd, .strip button[aria-pressed="true"] .dn, .strip button[aria-pressed="true"] .fh { color: var(--bg); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; }
+
+.tl { display: grid; grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1fr); column-gap: 6px; }
+.tl .lanehead { font-size: 13px; font-weight: 700; padding: 0 0 6px 4px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tl .lanehead i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.tl .lanehead span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl .adl { font-size: 11px; color: var(--muted); align-self: center; text-align: right; padding-right: 2px; margin-bottom: 6px; }
+.tl .adc { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; min-width: 0; }
+.tl .body { grid-column: 1 / 4; position: relative; }
+.tl .hr { position: absolute; left: 58px; right: 0; border-top: 1px solid var(--line); }
+.tl .hl { position: absolute; left: 0; width: 52px; text-align: right; white-space: nowrap; font-family: var(--f-mono); font-size: 10px; color: var(--muted); transform: translateY(-7px); }
+.tl .lane { position: absolute; top: 0; bottom: 0; }
+.tl .band { position: absolute; left: 58px; right: 0; background: var(--free-soft); border: 1.5px solid var(--free-edge); border-radius: 10px; z-index: 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 3px; }
+.tl .band b { font-size: 11px; font-weight: 700; color: var(--free); background: var(--card); padding: 0 8px; border-radius: 999px; border: 1px solid var(--free-edge); white-space: nowrap; }
+.tl .band.past { opacity: .45; }
+.tl .off { position: absolute; background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--muted) 12%, transparent) 6px 7px); border-radius: 6px; z-index: 0; }
+.ev { position: absolute; z-index: 1; border-radius: 8px; padding: 3px 7px; font-size: 12.5px; line-height: 1.25; overflow: hidden; text-align: left; border: 0; cursor: pointer;
+  background: color-mix(in srgb, var(--c) 22%, var(--card)); border-left: 4px solid var(--c); color: var(--ink); }
+.ev b { display: block; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev span { font-family: var(--f-mono); font-size: 10.5px; color: var(--muted); }
+.ev.theirs { cursor: default; }
+.ev.chip { position: static; padding: 3px 8px; }
+.nowline { position: absolute; left: 54px; right: 0; border-top: 2px solid var(--accent); z-index: 2; }
+.nowline::before { content: ""; position: absolute; left: -5px; top: -6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+
+/* forms */
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field > label, .field > .lbl { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.field input, .field select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); min-height: 44px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatches button { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--card); outline: 2px solid transparent; cursor: pointer; }
+.swatches button[aria-pressed="true"] { outline-color: var(--ink); }
+.check { display: inline-flex; gap: 8px; align-items: center; font-size: 15px; cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+.code { font-family: var(--f-mono); font-size: 26px; letter-spacing: .14em; font-weight: 500; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.status { font-size: 14px; color: var(--muted); min-height: 20px; margin: 0; }
+.status.err { color: var(--bad); }
+@media (max-width: 760px) { input, select { font-size: 16px !important; } }
+
+/* sheet */
+.back { position: fixed; inset: 0; background: rgba(20, 16, 20, .42); z-index: 39; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; margin: 0 auto; max-width: 560px; background: var(--card); border-radius: 24px 24px 0 0;
+  padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -8px 30px rgba(0,0,0,.18); display: flex; flex-direction: column; gap: 14px; max-height: 90vh; overflow-y: auto; animation: up .28s cubic-bezier(.2, 1.2, .4, 1); }
+@keyframes up { from { transform: translateY(100%); } to { transform: none; } }
+.grab { width: 44px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto; }
+.sheet-h { display: flex; justify-content: space-between; align-items: center; }
+.sheet-h h2 { font-size: 21px; }
+.sheet .bar { display: flex; gap: 8px; }
+.sheet .bar .primary { flex: 1; padding: 13px; font-size: 16px; }
+
+.signin { max-width: 420px; margin: 30px auto; }
+.signin form { display: flex; flex-direction: column; gap: 12px; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); z-index: 50; max-width: calc(100vw - 32px); }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="pair" id="pair" aria-hidden="true"></div>
+      <div><h1>Together</h1><p id="sub">Loading…</p></div>
+    </div>
+  </header>
+  <nav class="apptabs" id="tabs" aria-label="Sections" hidden>
+    <button type="button" data-view="home"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
+    <button type="button" data-view="week"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2"/></svg><span>Week</span></button>
+    <button type="button" data-view="profile"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="9" r="3.2"/><circle cx="16" cy="10" r="2.6"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M14.5 14.4c.5-.2 1-.3 1.5-.3 2.2 0 3.9 1.5 4.4 4.4"/></svg><span>Profile</span></button>
+  </nav>
+  <main id="app"></main>
+</div>
+<button class="fab" id="fab" type="button" aria-label="Add an event" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+<div class="back" id="back" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden></section>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const app = $("#app"), sub = $("#sub");
+const H = 3600000, DAY = 86400000;
+let toastT;
+function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2600); }
+
+/* ---------- not signed in: sign in or make an account ---------- */
+if (!window.CLOUD_READY) {
+  $("#pair").innerHTML = `<div class="dot" style="background:var(--accent)">♥</div>`;
+  sub.textContent = window.CLOUD ? "Your week, side by side" : "Can't reach the internet right now";
+  if (!window.CLOUD) { app.innerHTML = `<div class="notice">Together needs the internet to sign in. Check your connection and reload.</div>`; return; }
+  app.innerHTML = `<div class="signin card"><form id="si">
+    <h2>Welcome to Together</h2>
+    <p class="hint">See your week next to your partner's and find the times you're both free. Already use the budget app or Recipe Box? Sign in with the same email and password.</p>
+    <div class="field"><label for="si-email">Email</label><input id="si-email" type="email" autocomplete="email" required></div>
+    <div class="field"><label for="si-pw">Password</label><input id="si-pw" type="password" autocomplete="current-password" minlength="6" required></div>
+    <div class="row2"><button class="btn primary" type="submit">Sign in</button><button class="btn" type="button" id="si-up">Make an account</button></div>
+    <p class="status" id="si-msg" role="status"></p></form></div>`;
+  const msg = $("#si-msg");
+  const go = async (mode) => {
+    const email = $("#si-email").value.trim(), pw = $("#si-pw").value;
+    if (!email || pw.length < 6) { msg.className = "status err"; msg.textContent = "Enter your email and a password of at least 6 characters."; return; }
+    msg.className = "status"; msg.textContent = mode === "in" ? "Signing in…" : "Making your account…";
+    try { await (mode === "in" ? CLOUD.signIn(email, pw) : CLOUD.signUp(email, pw)); location.reload(); }
+    catch (e) { msg.className = "status err"; msg.textContent = (e && e.message) || "Couldn't sign in. Check your email and password."; }
+  };
+  $("#si").addEventListener("submit", (e) => { e.preventDefault(); go("in"); });
+  $("#si-up").addEventListener("click", () => go("up"));
+  return;
+}
+
+/* ---------- state ---------- */
+const C = window.CLOUD, F = window.FREE;
+const S = { view: "home", weekStart: mondayOf(Date.now()), day: startOfDay(Date.now()), booted: false, err: "" };
+try { const v = sessionStorage.getItem("tg-view"); if (["home", "week", "profile"].includes(v)) S.view = v; } catch (e) {}
+const COLORS = ["#d9534f", "#e07b39", "#c9a227", "#3f9b6b", "#2f8fb3", "#5b6ee1", "#9a5bd1", "#d0508f"];
+
+/* ---------- dates, in this phone's time zone ---------- */
+function startOfDay(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return +d; }
+function addDays(t, n) { const d = new Date(t); d.setDate(d.getDate() + n); return +d; }
+function mondayOf(t) { const d = new Date(startOfDay(t)); return addDays(+d, -((d.getDay() + 6) % 7)); }
+function fmtTime(t) {
+  const d = new Date(t), m = d.getMinutes();
+  return d.toLocaleTimeString([], m ? { hour: "numeric", minute: "2-digit" } : { hour: "numeric" });
+}
+function fmtRange(a, b) {
+  const sameDay = startOfDay(a) === startOfDay(b) || (b === addDays(startOfDay(a), 1));
+  return sameDay ? `${fmtTime(a)} – ${b === addDays(startOfDay(a), 1) ? "midnight" : fmtTime(b)}` : `${fmtTime(a)} – ${dayName(b, true)} ${fmtTime(b)}`;
+}
+function dayName(t, short) {
+  const d = startOfDay(t), today = startOfDay(Date.now());
+  if (d === today) return short ? "today" : "Today";
+  if (d === addDays(today, 1)) return short ? "tomorrow" : "Tomorrow";
+  const opts = d < addDays(today, 7) && d > today ? { weekday: "long" } : { weekday: "short", month: "short", day: "numeric" };
+  return new Date(t).toLocaleDateString([], opts);
+}
+function heroDay(t) {
+  const d = startOfDay(t), today = startOfDay(Date.now()), hr = new Date(t).getHours();
+  if (d === today) return hr >= 17 ? "Tonight" : "Today";
+  if (d === addDays(today, 1)) return hr >= 17 ? "Tomorrow night" : "Tomorrow";
+  return new Date(t).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+}
+function dur(ms) {
+  const m = Math.round(ms / 60000), h = Math.floor(m / 60), r = m % 60;
+  if (!h) return `${r} min`; if (!r) return `${h} h`; if (r === 30) return `${h}½ h`; return `${h} h ${r} min`;
+}
+function until(ms) {
+  const m = Math.max(1, Math.round(ms / 60000));
+  if (m < 60) return `in ${m} min`;
+  if (m < 60 * 24) { const h = Math.floor(m / 60), r = m % 60; return `in ${h} h${r >= 10 ? ` ${r} min` : ""}`; }
+  const d = Math.round(m / 1440); return `in ${d} day${d > 1 ? "s" : ""}`;
+}
+const toDateInput = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const toTimeInput = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const minToInput = (m) => m >= 1440 ? "23:59" : `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+const inputToMin = (v) => { const [h, m] = String(v || "").split(":").map(Number); return isNaN(h) ? null : h * 60 + (m || 0); };
+const minLabel = (m) => { const d = new Date(2000, 0, 1, 0, m); return m >= 1440 ? "midnight" : fmtTime(+d); };
+
+/* ---------- people ---------- */
+const me = () => C.me || { user_id: C.uid, display_name: "", color: COLORS[0], day_start: 480, day_end: 1320, min_free: 60, timezone: "UTC" };
+const partner = () => C.partner;
+const nameOf = (p, fallback) => (p && p.display_name && p.display_name.trim()) || fallback;
+const myName = () => nameOf(C.me, "You");
+const pName = () => nameOf(partner(), "Your partner");
+const myColor = () => (C.me && C.me.color) || COLORS[0];
+const pColor = () => { const c = (partner() && partner().color) || COLORS[5]; return c.toLowerCase() === myColor().toLowerCase() ? (c.toLowerCase() === COLORS[5] ? COLORS[0] : COLORS[5]) : c; };
+const initial = (n) => esc((n || "?").trim().charAt(0).toUpperCase() || "?");
+const events = () => [...C.events.values()];
+const minFree = () => me().min_free || 60;
+const freeBetween = (a, b) => partner() ? F.bothFree(me(), partner(), events(), a, b, minFree()) : [];
+
+function header() {
+  const p = partner();
+  $("#pair").innerHTML = `<div class="dot" style="background:${esc(myColor())}">${initial(myName())}</div>` +
+    (p ? `<div class="dot" style="background:${esc(pColor())}">${initial(pName())}</div>` : `<div class="dot empty">+</div>`);
+  sub.textContent = p ? `${myName()} & ${pName()}` : "Connect with your partner to begin";
+}
+
+/* ---------- views ---------- */
+function render() {
+  header();
+  document.querySelectorAll("#tabs button").forEach((b) => b.setAttribute("aria-current", b.dataset.view === S.view ? "page" : "false"));
+  $("#tabs").hidden = false; $("#fab").hidden = S.view === "profile";
+  if (!S.booted && !C.me) { app.innerHTML = S.err ? errorBox() : `<p class="muted">Loading your week…</p>`; return; }
+  app.innerHTML = (S.err ? errorBox() : "") + (S.view === "week" ? weekView() : S.view === "profile" ? profileView() : homeView());
+  if (S.view === "week") placeNow();
+}
+function errorBox() { return `<div class="notice err" style="margin-bottom:16px">${esc(S.err)}</div>`; }
+
+function connectCard() {
+  return `<section class="card">
+    <div class="sect-h"><h2>Connect with your partner</h2></div>
+    <p class="hint" style="margin-bottom:12px">Together shows your week next to theirs. Send them the app link, then have them enter your code in Profile, or enter theirs.</p>
+    <div class="small muted">Your code</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px"><span class="code">${esc(C.invite || "…")}</span><button class="btn sm" data-act="copy">Copy code</button></div>
+    <form data-form="join" style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="field" style="flex:1 1 160px"><label for="joinCode">Partner's code</label><input id="joinCode" autocomplete="off" autocapitalize="characters" placeholder="e.g. 4F2A9C1B" required></div>
+      <button class="btn primary" type="submit" style="align-self:flex-end;min-height:44px">Connect</button>
+    </form>
+    <p class="hint" style="margin-top:10px">Heads up: this is the same shared space the budget app and Recipe Box use, so connecting shares those too.</p>
+  </section>`;
+}
+
+function homeView() {
+  const p = partner(), now = Date.now();
+  if (!p) return `<div class="stack">${connectCard()}${todayCard()}</div>`;
+  const slots = freeBetween(now, now + 14 * DAY);
+  const next = slots[0];
+  let hero;
+  if (next) {
+    const on = next.start <= now;
+    hero = `<section class="card hero" aria-live="polite">
+      <div class="k">${on ? "You're both free right now" : "Next time you're both free"}</div>
+      <div class="when">${on ? "Now" : esc(heroDay(next.start))}</div>
+      <div class="time">${on ? `until ${esc(next.end === addDays(startOfDay(next.start), 1) ? "midnight" : fmtTime(next.end))}` : esc(fmtRange(next.start, next.end))}</div>
+      <div class="meta"><span class="pill free">${esc(dur(next.end - Math.max(now, next.start)))} together</span>${on ? "" : `<span class="pill">starts ${esc(until(next.start - now))}</span>`}</div>
+      <div class="actions"><button class="btn" data-act="goslot" data-t="${next.start}">See it on the week</button></div>
+    </section>`;
+  } else {
+    hero = `<section class="card hero none"><div class="k">Next time you're both free</div>
+      <div class="when" style="font-size:26px">Nothing in the next two weeks</div>
+      <p class="hint" style="margin-top:6px">No gap of ${esc(dur(minFree() * 60000))} or more lines up inside both your free hours. You can shorten that in Profile.</p></section>`;
+  }
+  const more = slots.slice(1, 6);
+  const moreCard = more.length ? `<section class="card"><div class="sect-h"><h2>Coming up free</h2><span class="small muted">next 2 weeks</span></div>
+    <ul class="slots">${more.map((s) => `<li><button class="slot" data-act="goslot" data-t="${s.start}"><div><div class="d">${esc(dayName(s.start))}</div><div class="t">${esc(fmtRange(s.start, s.end))}</div></div><div class="len">${esc(dur(s.end - s.start))}</div></button></li>`).join("")}</ul></section>` : "";
+  const missing = p.missing ? `<div class="notice"><b>${esc(pName())}</b> hasn't opened Together yet, so their free hours are assumed to be 8 AM to 10 PM.</div>` : "";
+  const crowded = C.crowded ? `<div class="notice">Your shared space has more than two people in it. Together is showing the first person who joined as your partner.</div>` : "";
+  return `<div class="stack">${hero}${missing}${crowded}${moreCard}${todayCard()}</div>`;
+}
+
+function evsFor(uid, a, b) { return events().filter((e) => e.user_id === uid && +new Date(e.starts_at) < b && +new Date(e.ends_at) > a).sort((x, y) => new Date(x.starts_at) - new Date(y.starts_at)); }
+function evTime(e) { return e.all_day ? "All day" : fmtRange(+new Date(e.starts_at), +new Date(e.ends_at)); }
+function todayCard() {
+  const a = startOfDay(Date.now()), b = addDays(a, 1), p = partner();
+  const col = (uid, name, color) => {
+    const list = evsFor(uid, a, b);
+    return `<div><h3><i style="background:${esc(color)}"></i>${esc(name)}</h3>${list.length ? `<ul>${list.map((e) => `<li>${esc(e.title || "Busy")}<span>${esc(evTime(e))}</span></li>`).join("")}</ul>` : `<div class="none">Nothing planned</div>`}</div>`;
+  };
+  return `<section class="card"><div class="sect-h"><h2>Today</h2><span class="small muted">${esc(new Date().toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" }))}</span></div>
+    <div class="today">${col(C.uid, myName(), myColor())}${p ? col(p.user_id, pName(), pColor()) : `<div><h3><i style="background:var(--line)"></i>Partner</h3><div class="none">Not connected yet</div></div>`}</div></section>`;
+}
+
+/* week: a strip of seven days, then the chosen day as two lanes side by side */
+const PX = 46; // pixels per hour
+function weekView() {
+  const ws = S.weekStart, we = addDays(ws, 7), p = partner(), now = Date.now();
+  if (S.day < ws || S.day >= we) S.day = (startOfDay(now) >= ws && startOfDay(now) < we) ? startOfDay(now) : ws;
+  const free = freeBetween(ws, we);
+  const freeOn = (d) => free.reduce((n, s) => n + Math.max(0, Math.min(s.end, addDays(d, 1)) - Math.max(s.start, d)), 0);
+  const title = `${new Date(ws).toLocaleDateString([], { month: "short", day: "numeric" })} – ${new Date(addDays(ws, 6)).toLocaleDateString([], { month: "short", day: "numeric" })}`;
+  const isThis = ws === mondayOf(now);
+  let strip = "";
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(ws, i), f = freeOn(d), dd = new Date(d);
+    strip += `<button type="button" data-act="day" data-t="${d}" aria-pressed="${d === S.day}" class="${d === startOfDay(now) ? "today" : ""}" aria-label="${esc(dd.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }))}${p ? `, ${f ? dur(f) : "no time"} free together` : ""}">
+      <span class="wd">${esc(dd.toLocaleDateString([], { weekday: "short" }).slice(0, 3))}</span><span class="dn">${dd.getDate()}</span>${p ? `<span class="fh ${f ? "" : "zero"}">${f ? esc(shortHours(f)) : "–"}</span>` : ""}</button>`;
+  }
+  const upcoming = free.filter((s) => s.end > now);
+  const list = p ? `<section class="card"><div class="sect-h"><h2>Free together this week</h2><span class="small muted">${upcoming.length ? esc(dur(upcoming.reduce((n, s) => n + s.end - Math.max(s.start, now), 0))) + " total" : ""}</span></div>
+    ${upcoming.length ? `<ul class="slots">${upcoming.map((s) => `<li><button class="slot" data-act="day" data-t="${startOfDay(s.start)}"><div><div class="d">${esc(dayName(s.start))}</div><div class="t">${esc(fmtRange(s.start, s.end))}</div></div><div class="len">${esc(dur(s.end - Math.max(s.start, now)))}</div></button></li>`).join("")}</ul>` : `<p class="hint">No shared free time left this week.</p>`}</section>` : "";
+  return `<div class="stack"><section class="card">
+    <div class="weekhead"><h2>${esc(title)}</h2><div class="nav">
+      ${isThis ? "" : `<button class="btn sm" data-act="thisweek">This week</button>`}
+      <button class="iconbtn" data-act="wk" data-n="-1" aria-label="Previous week">‹</button><button class="iconbtn" data-act="wk" data-n="1" aria-label="Next week">›</button></div></div>
+    <div class="strip">${strip}</div>
+    <div class="legend"><span><i style="background:${esc(myColor())}"></i>${esc(myName())}</span>${p ? `<span><i style="background:${esc(pColor())}"></i>${esc(pName())}</span><span><i style="background:var(--free-soft);border:1.5px solid var(--free-edge)"></i>Both free</span>` : ""}</div>
+    ${dayTimeline(S.day, free)}
+  </section>${p ? "" : connectCard()}${list}</div>`;
+}
+const shortHours = (ms) => { const h = ms / H; return h >= 10 ? `${Math.round(h)}h` : `${Math.round(h * 2) / 2}h`.replace(".5", "½"); };
+
+function dayTimeline(d, free) {
+  const p = partner(), a = d, b = addDays(d, 1), now = Date.now();
+  const people = [me()].concat(p ? [p] : []);
+  // hours to show: both people's free hours on this day, stretched to fit any events
+  let lo = 24, hi = 0;
+  const windows = people.map((x) => F.wakingWindows(x, a, b));
+  windows.flat().forEach(([s, e]) => { lo = Math.min(lo, (s - a) / H); hi = Math.max(hi, (e - a) / H); });
+  const timed = people.map((x) => evsFor(x.user_id, a, b).filter((e) => !e.all_day));
+  timed.flat().forEach((e) => { lo = Math.min(lo, (Math.max(+new Date(e.starts_at), a) - a) / H); hi = Math.max(hi, (Math.min(+new Date(e.ends_at), b) - a) / H); });
+  if (lo >= hi) { lo = 8; hi = 22; }
+  lo = Math.max(0, Math.floor(lo)); hi = Math.min(24, Math.ceil(hi));
+  const top = (t) => ((t - a) / H - lo) * PX, height = (hi - lo) * PX;
+  const lanes = p ? 2 : 1;
+  const laneX = (i) => `left:calc(58px + (100% - 58px) * ${i}/${lanes} + ${i ? 3 : 0}px);width:calc((100% - 58px)/${lanes} - 3px)`;
+
+  let html = `<div class="tl" style="${p ? "" : "grid-template-columns:52px minmax(0,1fr)"}"><div></div>`;
+  people.forEach((x, i) => { html += `<div class="lanehead"><i style="background:${esc(i ? pColor() : myColor())}"></i><span>${esc(i ? pName() : myName())}</span></div>`; });
+  const allDay = people.map((x) => evsFor(x.user_id, a, b).filter((e) => e.all_day));
+  if (allDay.some((l) => l.length)) {
+    html += `<div class="adl">all day</div>` + allDay.map((l, i) => `<div class="adc">${l.map((e) => evBtn(e, i, "", "chip")).join("")}</div>`).join("");
+  }
+  html += `<div class="body" style="height:${height}px;grid-column:1 / ${p ? 4 : 3}">`;
+  for (let h = lo; h <= hi; h++) {
+    html += `<div class="hr" style="top:${(h - lo) * PX}px"></div>`;
+    if (h < hi || h === 24) html += `<div class="hl" style="top:${(h - lo) * PX}px">${h === 24 ? "12 AM" : esc(fmtTime(+new Date(new Date(a).setHours(h, 0, 0, 0))))}</div>`;
+  }
+  // outside someone's free hours: light hatching in their lane
+  people.forEach((x, i) => {
+    let t = a + lo * H;
+    const end = a + hi * H;
+    for (const [s, e] of windows[i].concat([[end, end]])) {
+      if (s > t) html += `<div class="off" style="top:${top(t)}px;height:${top(Math.min(s, end)) - top(t)}px;${laneX(i)}"></div>`;
+      t = Math.max(t, e);
+    }
+  });
+  free.filter((s) => s.start < b && s.end > a).forEach((s) => {
+    const s0 = Math.max(s.start, a), e0 = Math.min(s.end, b);
+    html += `<div class="band ${e0 <= now ? "past" : ""}" style="top:${top(s0)}px;height:${top(e0) - top(s0)}px" aria-label="Both free ${esc(fmtRange(s0, e0))}">${top(e0) - top(s0) >= 22 ? `<b>Both free · ${esc(dur(e0 - s0))}</b>` : ""}</div>`;
+  });
+  timed.forEach((list, i) => {
+    // side-by-side columns when someone's own events overlap
+    const cols = []; const placed = list.map((e) => {
+      const s = Math.max(+new Date(e.starts_at), a), en = Math.min(+new Date(e.ends_at), b);
+      let c = cols.findIndex((last) => last <= s); if (c < 0) { c = cols.length; cols.push(en); } else cols[c] = en;
+      return { e, s, en, c };
+    });
+    placed.forEach((x) => {
+      const group = placed.filter((y) => y.s < x.en && y.en > x.s), n = Math.max(...group.map((y) => y.c)) + 1;
+      const h = Math.max(20, top(x.en) - top(x.s) - 2);
+      const left = `calc(58px + (100% - 58px) * ${i}/${lanes} + ${i ? 3 : 0}px + ((100% - 58px)/${lanes} - 3px) * ${x.c}/${n})`;
+      const w = `calc(((100% - 58px)/${lanes} - 3px) / ${n} - 2px)`;
+      html += evBtn(x.e, i, `top:${top(x.s) + 1}px;height:${h}px;left:${left};width:${w}`, h < 34 ? "short" : "");
+    });
+  });
+  if (now >= a + lo * H && now < a + hi * H) html += `<div class="nowline" id="nowline" style="top:${top(now)}px"></div>`;
+  return html + `</div></div>`;
+}
+function evBtn(e, laneIdx, style, cls) {
+  const mine = e.user_id === C.uid, c = laneIdx ? pColor() : myColor();
+  const time = e.all_day ? "" : fmtRange(+new Date(e.starts_at), +new Date(e.ends_at));
+  return `<button type="button" class="ev ${mine ? "" : "theirs"} ${cls}" style="--c:${esc(c)};${style}" data-act="${mine ? "edit" : "peek"}" data-id="${esc(e.id)}"
+    aria-label="${esc((e.title || "Busy") + ", " + (e.all_day ? "all day" : time))}"><b>${esc(e.title || "Busy")}</b>${cls === "short" || cls === "chip" ? "" : `<span>${esc(time)}</span>`}</button>`;
+}
+function placeNow() {
+  const n = $("#nowline"); if (!n || S.scrolled) return;
+  S.scrolled = true; const r = n.getBoundingClientRect();
+  if (r.top > innerHeight - 140) scrollBy({ top: r.top - innerHeight / 2 });
+}
+
+function profileView() {
+  const m = me(), p = partner();
+  const mins = [30, 60, 90, 120, 180];
+  return `<div class="stack">
+  <section class="card"><div class="sect-h"><h2>Your profile</h2></div>
+    <form data-form="profile" class="stack" style="gap:14px">
+      <div class="field"><label for="pf-name">Name</label><input id="pf-name" maxlength="40" value="${esc(m.display_name)}" placeholder="What ${esc(p ? pName() : "your partner")} sees" autocomplete="nickname"></div>
+      <div class="field"><span class="lbl">Your colour</span><div class="swatches" role="radiogroup" aria-label="Your colour">${COLORS.map((c) => `<button type="button" data-act="color" data-c="${c}" style="background:${c}" aria-pressed="${c.toLowerCase() === (m.color || "").toLowerCase()}" aria-label="Colour ${c}"></button>`).join("")}</div></div>
+      <div><div class="row2">
+        <div class="field"><label for="pf-ds">Free from</label><input id="pf-ds" type="time" value="${minToInput(m.day_start)}"></div>
+        <div class="field"><label for="pf-de">Until</label><input id="pf-de" type="time" value="${minToInput(m.day_end)}"></div></div>
+        <p class="hint" style="margin-top:6px">The hours of each day you count as free time when nothing is booked. Outside them you're treated as busy (asleep, commuting).</p></div>
+      <div class="field"><label for="pf-min">Shortest free time to show</label><select id="pf-min">${mins.map((x) => `<option value="${x}" ${x === m.min_free ? "selected" : ""}>${esc(dur(x * 60000))}</option>`).join("")}${mins.includes(m.min_free) ? "" : `<option value="${m.min_free}" selected>${esc(dur(m.min_free * 60000))}</option>`}</select></div>
+      <p class="hint">Time zone: ${esc(m.timezone)} (from this phone)</p>
+      <div><button class="btn primary" type="submit">Save profile</button></div>
+      <p class="status" id="pf-msg" role="status"></p>
+    </form></section>
+  ${p ? `<section class="card"><div class="sect-h"><h2>Your partner</h2></div>
+    <div style="display:flex;align-items:center;gap:12px"><div class="dot" style="background:${esc(pColor())};width:44px;height:44px;font-size:18px">${initial(pName())}</div>
+    <div><div style="font-weight:700">${esc(pName())}</div><div class="small muted">${p.missing ? "Hasn't opened Together yet" : `Free ${esc(minLabel(p.day_start))} – ${esc(minLabel(p.day_end))}`}</div></div></div>
+    ${C.crowded ? `<p class="hint" style="margin-top:10px">Your shared space has more than two people, so Together is using the first one who joined.</p>` : ""}
+    <p class="hint" style="margin-top:12px">You're connected through the same shared space as the budget app. Your code is <span class="num">${esc(C.invite || "")}</span>.</p></section>` : connectCard()}
+  <section class="card"><div class="sect-h"><h2>Account</h2></div>
+    <p class="hint" style="margin-bottom:10px">Signed in as ${esc(C.email || "")}</p>
+    <button class="btn" data-act="signout">Sign out</button></section>
+  </div>`;
+}
+
+/* ---------- add / edit an event ---------- */
+function openSheet(ev) {
+  const editing = !!ev;
+  const base = S.view === "week" && S.day !== startOfDay(Date.now()) ? S.day + 18 * H : (Math.ceil(Date.now() / H) * H);
+  const s = ev ? +new Date(ev.starts_at) : base, e = ev ? +new Date(ev.ends_at) : s + H;
+  const allDay = ev ? ev.all_day : false;
+  const sh = $("#sheet");
+  sh.innerHTML = `<div class="grab"></div>
+    <div class="sheet-h"><h2 id="sheetTitle">${editing ? "Edit event" : "Add to my calendar"}</h2><button class="iconbtn" type="button" data-act="close" aria-label="Close">×</button></div>
+    <form data-form="event" class="stack" style="gap:12px">
+      <div class="field"><label for="ev-title">What</label><input id="ev-title" maxlength="80" value="${esc(ev ? ev.title : "")}" placeholder="e.g. Work, Gym, Dinner with Sam" required></div>
+      <label class="check"><input type="checkbox" id="ev-all" ${allDay ? "checked" : ""}> All day</label>
+      <div class="field"><label for="ev-date">Date</label><input id="ev-date" type="date" value="${toDateInput(s)}" required></div>
+      <div class="row2" id="ev-times" ${allDay ? "hidden" : ""}>
+        <div class="field"><label for="ev-s">Starts</label><input id="ev-s" type="time" value="${toTimeInput(s)}"></div>
+        <div class="field"><label for="ev-e">Ends</label><input id="ev-e" type="time" value="${toTimeInput(e)}"></div></div>
+      <p class="hint" id="ev-hint"></p>
+      <div class="bar">${editing ? `<button class="btn danger" type="button" data-act="del" data-id="${esc(ev.id)}">Delete</button>` : ""}<button class="btn primary" type="submit">${editing ? "Save" : "Add"}</button></div>
+      <p class="status" id="ev-msg" role="status"></p>
+    </form>`;
+  sh.dataset.id = ev ? ev.id : "";
+  sh.hidden = false; $("#back").hidden = false;
+  const hint = () => {
+    const a = inputToMin($("#ev-s").value), b = inputToMin($("#ev-e").value);
+    $("#ev-hint").textContent = !$("#ev-all").checked && a != null && b != null && b <= a ? "Ends the next day." : "";
+  };
+  $("#ev-all").addEventListener("change", (x) => { $("#ev-times").hidden = x.target.checked; hint(); });
+  $("#ev-s").addEventListener("change", hint); $("#ev-e").addEventListener("change", hint); hint();
+  if (!editing) setTimeout(() => $("#ev-title").focus(), 50);
+}
+function closeSheet() { $("#sheet").hidden = true; $("#back").hidden = true; $("#sheet").innerHTML = ""; }
+async function saveEventForm() {
+  const msg = $("#ev-msg"), title = $("#ev-title").value.trim(), date = $("#ev-date").value;
+  if (!title || !date) { msg.className = "status err"; msg.textContent = "Add a name and a date."; return; }
+  const [y, mo, d] = date.split("-").map(Number);
+  let s, e;
+  if ($("#ev-all").checked) { s = +new Date(y, mo - 1, d); e = +new Date(y, mo - 1, d + 1); }
+  else {
+    const a = inputToMin($("#ev-s").value), b = inputToMin($("#ev-e").value);
+    if (a == null || b == null) { msg.className = "status err"; msg.textContent = "Pick a start and end time."; return; }
+    s = +new Date(y, mo - 1, d, 0, a); e = +new Date(y, mo - 1, d + (b <= a ? 1 : 0), 0, b);
+  }
+  msg.className = "status"; msg.textContent = "Saving…";
+  try {
+    await C.saveEvent({ id: $("#sheet").dataset.id || null, title, starts_at: s, ends_at: e, all_day: $("#ev-all").checked });
+    closeSheet(); toast("Saved");
+    if (S.view === "week") { S.weekStart = mondayOf(s); S.day = startOfDay(s); render(); }
+  } catch (err) { msg.className = "status err"; msg.textContent = friendly(err); }
+}
+function friendly(e) {
+  const m = String((e && e.message) || e || "");
+  if (/couple_(events|profiles)|relation .* does not exist|schema cache/i.test(m)) return "Together isn't set up in Supabase yet. Run couples-setup.sql once, then reload.";
+  if (/fetch|network/i.test(m)) return "Can't reach the internet. Try again in a moment.";
+  return m || "Something went wrong. Try again.";
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", async (ev) => {
+  const t = ev.target.closest("[data-act],[data-view]"); if (!t) return;
+  if (t.dataset.view) { S.view = t.dataset.view; S.scrolled = false; try { sessionStorage.setItem("tg-view", S.view); } catch (e) {} render(); scrollTo(0, 0); return; }
+  const act = t.dataset.act;
+  if (act === "day") { S.day = +t.dataset.t; S.weekStart = mondayOf(S.day); S.view = "week"; S.scrolled = false; render(); loadWeek(); }
+  else if (act === "goslot") { S.day = startOfDay(+t.dataset.t); S.weekStart = mondayOf(S.day); S.view = "week"; S.scrolled = false; render(); scrollTo(0, 0); loadWeek(); }
+  else if (act === "wk") { S.weekStart = addDays(S.weekStart, 7 * +t.dataset.n); S.day = addDays(S.day, 7 * +t.dataset.n); render(); loadWeek(); }
+  else if (act === "thisweek") { S.weekStart = mondayOf(Date.now()); S.day = startOfDay(Date.now()); S.scrolled = false; render(); }
+  else if (act === "edit") { const e = C.events.get(t.dataset.id); if (e) openSheet(e); }
+  else if (act === "peek") { const e = C.events.get(t.dataset.id); if (e) toast(`${pName()}: ${e.title || "Busy"}, ${evTime(e)}`); }
+  else if (act === "close") closeSheet();
+  else if (act === "del") {
+    if (t.dataset.armed !== "1") { t.dataset.armed = "1"; t.textContent = "Tap again to delete"; return; }
+    try { await C.deleteEvent(t.dataset.id); closeSheet(); toast("Deleted"); } catch (e) { toast(friendly(e)); }
+  }
+  else if (act === "color") { document.querySelectorAll("[data-act=color]").forEach((b) => b.setAttribute("aria-pressed", b === t)); }
+  else if (act === "copy") { const c = C.invite || ""; navigator.clipboard.writeText(c).then(() => toast("Code copied"), () => toast("Your code is " + c)); }
+  else if (act === "signout") { await C.signOut(); location.reload(); }
+});
+$("#back").addEventListener("click", closeSheet);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#sheet").hidden) closeSheet(); });
+$("#fab").addEventListener("click", () => openSheet(null));
+document.addEventListener("submit", async (ev) => {
+  const f = ev.target.dataset.form; if (!f) return; ev.preventDefault();
+  if (f === "event") return saveEventForm();
+  if (f === "join") {
+    const code = $("#joinCode").value.trim(); if (!code) return;
+    if (code.toUpperCase() === (C.invite || "").toUpperCase()) { toast("That's your own code. Enter your partner's."); return; }
+    const btn = ev.target.querySelector("button[type=submit]"); btn.disabled = true;
+    try { await C.join(code); toast("Connected!"); setTimeout(() => location.reload(), 600); }
+    catch (e) { btn.disabled = false; toast(friendly(e)); }
+  }
+  if (f === "profile") {
+    const msg = $("#pf-msg"), ds = inputToMin($("#pf-ds").value); let de = inputToMin($("#pf-de").value);
+    if (de === 1439) de = 1440;
+    if (ds == null || de == null || de <= ds) { msg.className = "status err"; msg.textContent = "'Until' needs to be later than 'Free from'."; return; }
+    const pick = document.querySelector("[data-act=color][aria-pressed=true]");
+    msg.className = "status"; msg.textContent = "Saving…";
+    try {
+      await C.saveProfile({ display_name: $("#pf-name").value.trim().slice(0, 40), color: pick ? pick.dataset.c : me().color, day_start: ds, day_end: de, min_free: +$("#pf-min").value });
+      toast("Profile saved");
+    } catch (e) { msg.className = "status err"; msg.textContent = friendly(e); }
+  }
+});
+
+/* ---------- loading ---------- */
+let pending = false;
+C.onChange = () => {
+  // don't redraw under someone mid-edit on the profile form or with the sheet open
+  if (!$("#sheet").hidden || (S.view === "profile" && document.activeElement && document.activeElement.closest("form"))) { pending = true; return; }
+  render();
+};
+new MutationObserver(() => { if ($("#sheet").hidden && pending) { pending = false; render(); } }).observe($("#sheet"), { attributes: true, attributeFilter: ["hidden"] });
+function loadWeek() { C.ensureRange(addDays(S.weekStart, -1), addDays(S.weekStart, 8)).catch((e) => { S.err = friendly(e); render(); }); }
+render();
+C.refresh().then(() => { S.booted = true; S.err = ""; render(); loadWeek(); })
+  .catch((e) => { S.booted = !!C.me; S.err = friendly(e); render(); });
+setInterval(() => { if (document.visibilityState === "visible" && $("#sheet").hidden && S.view !== "profile") render(); }, 60000);
+})();
+</script>
+</body>
+</html>

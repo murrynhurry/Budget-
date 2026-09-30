@@ -757,6 +757,8 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
       h("button", { class: "btn ghost back", type: "button", onclick: () => { importCtl && importCtl.abort(); go("list"); } }, "← All recipes"),
       h("div", { class: "sheet" },
         h("div", { class: "dhead" }, h("h2", null, "Import a recipe"),
+          window.LOCAL_APP ? h("div", { class: "howto" },
+            "Paste the recipe's link and press Read recipe. Most cooking sites work. If one doesn't, open the recipe, select all, copy, and paste the page text into the big box; it gets sorted by its Ingredients and Method headings so you can tidy it before saving.") :
           h("div", { class: "howto" },
             "This page can't open other websites on its own, so bring the recipe to it:",
             h("ol", null,
@@ -787,6 +789,18 @@ Rules:
 
   async function runImport() {
     const urlVal = importFields.url.trim(), textVal = importFields.text.trim();
+    if (window.LOCAL_APP && window.CLOUD && window.CLOUD.importUrl && urlVal && !textVal) {
+      S.importState = { busy: true, err: false, msg: "Reading the recipe from that link" }; render();
+      try {
+        const data = await window.CLOUD.importUrl(urlVal);
+        const r = { ...blank(), ...normalize(null, data), id: null, sourceUrl: urlVal, createdAt: 0, example: false, favorite: false };
+        r.tags = r.tags.map((t) => t.toLowerCase()).slice(0, 5);
+        S.draft = r; S.importState = { busy: false, msg: "", err: false }; return go("edit");
+      } catch (e) {
+        S.importState = { busy: false, err: true, msg: ((e && e.message) || "Couldn't read that link.") + " Paste the recipe page text below instead." };
+        return render();
+      }
+    }
     if (!textVal && !importPhoto) {
       S.importState = { busy: false, err: true, msg: urlVal ? "Paste the text from the recipe page too. This page can't open the link by itself." : "Paste the recipe page text first." };
       return render();
@@ -1116,7 +1130,7 @@ Rules:
     return h("div", null,
       h("div", { class: "sheet" },
         h("div", { class: "dhead" }, h("h2", null, "Fridge, Freezer & Pantry"), tabs),
-        panel, matchSec, ideaSec));
+        panel, matchSec, window.LOCAL_APP ? null : ideaSec));
   }
 
   // ---------- buy often + deals (per tab) ----------

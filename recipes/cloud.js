@@ -126,59 +126,16 @@ function collRef(coll){
 }
 const db={doc:docRef,collection:collRef};
 
-/* ---------- Claude helper: recipe import and ideas, through the "recipe-ai" Supabase function ---------- */
-async function toImage(blob){
-  // Shrink to about 1500px so photos upload quickly; always send JPEG.
-  const url=URL.createObjectURL(blob);
-  try{
-    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
-    const k=Math.min(1,1500/Math.max(img.naturalWidth,img.naturalHeight));
-    const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
-    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-    return {media_type:"image/jpeg",data:c.toDataURL("image/jpeg",.85).split(",")[1]};
-  }finally{URL.revokeObjectURL(url)}
-}
-function codeFor(status,msg){
-  if(status===503||status===404)return "sampling_disabled";
-  if(status===429)return "rate_limited";
-  if(status===401)return "session_expired";
-  if(status===403)return "not_granted";
-  if(/Failed to send|FunctionsFetchError/i.test(msg||""))return "sampling_disabled";
-  return "upstream_error";
-}
-async function sample(input,opts){
-  opts=opts||{};
-  if(opts.signal&&opts.signal.aborted)throw {code:"cancelled",message:"Stopped"};
-  const body={tier:opts.modelTier||"default"};
-  if(typeof input==="string")body.prompt=input;else body.messages=input;
-  if(opts.images){const list=opts.images instanceof Blob?[opts.images]:[...opts.images];body.images=await Promise.all(list.slice(0,2).map(toImage))}
-  const call=sb.functions.invoke("recipe-ai",{body}).then(async r=>{
-    if(r.error){const x=r.error.context,st=x&&x.status;let m=r.error.message;try{const b=await x.json();if(b&&b.error)m=b.error}catch(e){}
-      throw {code:codeFor(st,r.error.name+" "+m),message:m}}
-    return r.data;
-  });
-  const stop=new Promise((_,rej)=>{if(opts.signal)opts.signal.addEventListener("abort",()=>rej({code:"cancelled",message:"Stopped"}),{once:true})});
-  const d=await Promise.race([call,stop]);
-  const text=String((d&&d.text)||"");
-  if(!text.trim())throw {code:"empty_completion",message:"No answer"};
-  if(opts.onText)try{opts.onText({text,delta:text})}catch(e){}
-  return {text,truncated:!!(d&&d.truncated),modelTierApplied:(d&&d.tier)||body.tier};
-}
-sample.json=async(input,opts)=>{
-  const {text}=await sample(typeof input==="string"?input+"\n\nReply with only the JSON, nothing else.":input,opts);
-  const tries=[text,(text.match(/```(?:json)?\s*([\s\S]*?)```/)||[])[1],(()=>{const a=text.search(/[\[{]/),b=Math.max(text.lastIndexOf("}"),text.lastIndexOf("]"));return a>=0&&b>a?text.slice(a,b+1):null})()];
-  for(const t of tries){if(!t)continue;try{return JSON.parse(t)}catch(e){}}
-  throw {code:"invalid_json",message:"Couldn't read the answer",text};
+/* ---------- recipe import from a link, through the free "recipe-import" Supabase function ---------- */
+C.importUrl=async url=>{
+  const r=await sb.functions.invoke("recipe-import",{body:{url}});
+  if(r.error){const x=r.error.context,st=x&&x.status;let m=r.error.message;try{const b=await x.json();if(b&&b.error)m=b.error}catch(e){}
+    if(st===404||r.error.name==="FunctionsFetchError")m="Link importing isn't set up in Supabase yet.";throw new Error(m)}
+  if(!r.data||!r.data.recipe)throw new Error("Couldn't find a recipe on that page.");
+  return r.data.recipe;
 };
-sample.limits=async()=>({maxPromptBytes:262144,images:{maxCount:1,maxInputBytes:20e6,mediaTypes:["image/jpeg","image/png","image/webp","image/gif"]}});
-
-/* ---------- deals: run the weekly check on demand ---------- */
-C.checkDeals=async()=>{const r=await sb.functions.invoke("recipe-deals",{body:{}});
-  if(r.error){const x=r.error.context;let m=r.error.message;try{const b=await x.json();if(b&&b.error)m=b.error}catch(e){}throw new Error(m)}
-  await loadAll().catch(()=>{}); return r.data};
 
 window.claude={use:async n=>{const id=await ready;if(!id)return null;
   if(n==="db"){try{await findHid()}catch(e){return null}return db}
-  if(n==="sample")return sample;
   return null}};
 })();

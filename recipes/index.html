@@ -229,6 +229,7 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .code { font-family: var(--f-mono); letter-spacing: .08em; }
 .signin { max-width: 420px; margin: 40px auto; display: flex; flex-direction: column; gap: 12px; }
 .signin input { font: inherit; font-size: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); width: 100%; }
+.livetext .howto { margin: 0; padding-left: 20px; }
 .photo-btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .photo-btns .btn { flex: 1 1 150px; justify-content: center; padding: 12px; }
 .cstack { display: flex; flex-direction: column; gap: 32px; }
@@ -802,7 +803,20 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
           h("div", { class: "field" }, h("label", { for: "imp-url" }, "Recipe link"), url),
           h("div", { class: "field" }, h("label", { for: "imp-text" }, "Recipe page text"), text),
           window.LOCAL_APP ? h("div", { class: "or" }, "or") : null,
-          window.LOCAL_APP ? h("div", { class: "field" }, h("label", null, "Photo of a recipe"),
+          window.LOCAL_APP ? h("div", { class: "field livetext" }, h("label", null, "From a photo, the most accurate way"),
+            h("ol", { class: "howto" },
+              h("li", null, "Open the photo in your Photos app (or point the Camera at the recipe)."),
+              h("li", null, "Press and hold on the words, tap Select All, then Copy."),
+              h("li", null, "Come back here and tap Paste copied text.")),
+            h("div", { class: "photo-btns" },
+              h("button", { class: "btn primary", type: "button", disabled: st.busy, onclick: async () => {
+                try {
+                  const t = await navigator.clipboard.readText();
+                  if (!t || !t.trim()) { toast("Nothing copied yet. Copy the recipe text first."); return; }
+                  importFields.text = cleanOcr(t); runImport();
+                } catch { toast("Tap in the big text box below and choose Paste instead."); const el = document.getElementById("imp-text"); if (el) el.focus(); }
+              } }, "📋 Paste copied text"))) : null,
+          window.LOCAL_APP ? h("div", { class: "field" }, h("label", null, "Or let the app read a photo (less accurate)"),
             h("div", { class: "photo-btns" },
               h("input", { id: "imp-cam", type: "file", accept: "image/*", capture: "environment", hidden: true, onchange: (e) => runPhotoImport(e.target.files) }),
               h("input", { id: "imp-pick", type: "file", accept: "image/*", multiple: true, hidden: true, onchange: (e) => runPhotoImport(e.target.files) }),
@@ -883,39 +897,101 @@ Rules:
   }
 
   // Fallback: split pasted text on Ingredients / Method headings.
-  // Sorts plain recipe text into title, ingredients and steps. Uses "Ingredients" / "Method" headings when
-  // present; otherwise it guesses: short lines that start with an amount are ingredients, the rest are steps.
+  // Sorts plain recipe text (pasted, or read from a photo) into a recipe.
+  // Handles cookbook pages with no headings: tags and title at the top, a times line, a story paragraph,
+  // ingredients that wrap onto a second line (in columns), sub-recipe headings, numbered steps that run
+  // over several lines, a note, and the page footer.
   function roughParse(text) {
-    const ls = lines(text).map((l) => l.replace(/\s+/g, " ").replace(/^[•·▪◦*\-–]\s*/, "")).filter((l) => l.length > 1);
+    const SUP = { "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4", "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9", "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4", "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9", "⁄": "/" };
+    const fix = (l) => l.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉⁄]/g, (c) => SUP[c])
+      .replace(/^(\d)(1\/[2-8])\b/, "$1 $2")           // "11/2 cups" read from "1½ cups"
+      .replace(/^(\d)\s*['’`]\s*\/\s*(\d)/, "$1 1/$2")    // "1'/2" from a small ½
+      .replace(/\s+/g, " ").replace(/^[•·▪◦*\-–]\s*/, "").trim();
+    const all = lines(text).map(fix).filter((l) => l.length > 1);
     const r = blank();
-    const isIngHead = (l) => /^ingredients?\b/i.test(l);
-    const isStepHead = (l) => /^(instructions|directions|method|steps|preparation|how to make)\b/i.test(l);
-    const isNoise = (l) => /^(notes?|nutrition|tips?|serving size|calories|prep time|cook time|total time)\b/i.test(l);
-    const amount = /^(\d|[½⅓⅔¼¾⅛]|one |two |three |a |an |pinch|dash|handful|salt|pepper)/i;
-    // Join lines that were split mid-sentence (common in photos): a line continues the last one
-    // unless the last one ended a sentence or this one starts a new numbered step.
-    const joinSteps = (arr) => {
+    const AMOUNT = /^(\d|[½⅓⅔¼¾⅛]|one |two |three |a |an |pinch|dash|handful)/i;
+    const isIngHead = (l) => /^ingredients?\b:?$/i.test(l) || /^ingredients?\b/i.test(l) && l.length < 25;
+    const isStepHead = (l) => /^(instructions|directions|method|steps|preparation|how to make)\b/i.test(l) && l.length < 30;
+    const isStepNum = (l) => /^(step\s*)?\d{1,2}[.):]\s+\S/i.test(l);
+    const isTimes = (l) => /\b(prep|cook|total)\s*time\b|\bserves\s*\d|\bservings?\s*:?\s*\d|\byield\b/i.test(l);
+    const isFooter = (l) => /^[a-z &]{2,30}\s*[•·|]\s*\d{1,4}$/i.test(l) || /^\d{1,4}\s*[•·|]\s*[a-z &]{2,30}$/i.test(l) || /^\d{1,4}$/.test(l);
+    const isNote = (l) => /^(notes?|tips?|cook'?s note)\s*:/i.test(l);
+    const isTitleCaseHead = (l) => l.length < 40 && !/\d/.test(l) && !/[,.;:()]/.test(l) && l.split(" ").length <= 4 && l.split(" ").every((w) => /^[A-Z&]/.test(w) || /^(and|or|of|the|for|with)$/.test(w));
+    const isAllCaps = (l) => l === l.toUpperCase() && /[A-Z]{3,}/.test(l);
+
+    // Times and servings
+    const tx = all.filter(isTimes).join(" · ");
+    const t = (re) => { const m = tx.match(re); return m ? m[1].replace(/minutes?/i, "min").replace(/hours?/i, "hr").trim() : ""; };
+    r.prepTime = t(/prep\s*time\s*:?\s*([\d\s]+(?:hours?|hrs?|minutes?|mins?)(?:\s*\d+\s*(?:minutes?|mins?))?)/i);
+    r.cookTime = t(/cook\s*time\s*:?\s*([\d\s]+(?:hours?|hrs?|minutes?|mins?)(?:\s*\d+\s*(?:minutes?|mins?))?)/i);
+    r.totalTime = t(/total\s*time\s*:?\s*([\d\s]+(?:hours?|hrs?|minutes?|mins?)(?:\s*\d+\s*(?:minutes?|mins?))?)/i);
+    const sv = (tx || text).match(/(?:serves|servings|yield|makes)\s*:?\s*(\d+)/i); if (sv) r.servings = +sv[1];
+
+    let ls = all.filter((l) => !isTimes(l) && !isFooter(l));
+    // Notes: from a "note:" line to the end (or to the next numbered step)
+    const ni = ls.findIndex(isNote);
+    if (ni >= 0) {
+      let end = ls.length; for (let k = ni + 1; k < ls.length; k++) if (isStepNum(ls[k])) { end = k; break; }
+      r.notes = ls.slice(ni, end).join(" ").replace(/^(notes?|tips?|cook'?s note)\s*:\s*/i, "");
+      ls = ls.slice(0, ni).concat(ls.slice(end));
+    }
+
+    // Join wrapped lines: a line that starts lowercase (or with ")" / "&") continues the one above.
+    const joinWraps = (arr) => {
       const out = [];
       for (const l of arr) {
-        const newStep = /^(step\s*)?\d+[.):]\s*/i.test(l) || !out.length || /[.!?:)]$/.test(out[out.length - 1]);
-        const clean = l.replace(/^(step\s*)?\d+[.):]?\s*/i, "");
-        if (newStep) out.push(clean); else out[out.length - 1] += " " + clean;
+        if (out.length && /^[a-z(&)]/.test(l) && !AMOUNT.test(l.replace(/^[a-z]+\s/, "x")) ) out[out.length - 1] += " " + l;
+        else out.push(l);
       }
-      return out.filter((x) => x.length > 8 && !isNoise(x)).slice(0, 40);
+      return out;
     };
+    const joinSteps = (arr) => {
+      const numbered = arr.some(isStepNum);
+      const out = [];
+      for (const l of arr) {
+        const clean = l.replace(/^(step\s*)?\d{1,2}[.):]?\s*/i, "");
+        const newStep = numbered ? isStepNum(l) || !out.length : (!out.length || /[.!?:)]$/.test(out[out.length - 1]));
+        if (newStep) out.push(clean); else out[out.length - 1] += " " + l;
+      }
+      return out.map((x) => x.trim()).filter((x) => x.length > 8).slice(0, 40);
+    };
+    const toIngredients = (arr) => joinWraps(arr).map((l) => isTitleCaseHead(l) && !AMOUNT.test(l) && l.split(" ").length <= 3 && /^[A-Z]/.test(l) && !/salt|pepper|oil|flakes/i.test(l) ? "# " + l : l)
+      .filter((l) => l.length < 140).slice(0, 70);
+
     const iI = ls.findIndex(isIngHead);
-    const iS = ls.findIndex((l, i) => i > iI && isStepHead(l));
-    r.title = (iI > 0 ? ls.slice(0, iI).find((l) => l.length > 3 && l.length < 70 && !amount.test(l)) : ls.find((l) => l.length > 3 && l.length < 70 && !amount.test(l))) || "";
-    if (iI >= 0) {
-      r.ingredients = ls.slice(iI + 1, iS > iI ? iS : undefined).filter((l) => l.length < 120 && !isStepHead(l)).slice(0, 60);
-      if (iS > iI) r.steps = joinSteps(ls.slice(iS + 1));
-    } else {
-      const body = ls.filter((l) => l !== r.title && !isIngHead(l) && !isStepHead(l));
-      r.ingredients = body.filter((l) => amount.test(l) && l.length < 90).slice(0, 60);
-      r.steps = joinSteps(body.filter((l) => !(amount.test(l) && l.length < 90)));
-      if (!r.ingredients.length && !r.steps.length) r.notes = text.slice(0, 4000);
+    const iS = ls.findIndex((l, k) => k > iI && isStepHead(l));
+    const firstNum = ls.findIndex(isStepNum);
+    // Top of the page: all-caps tag lines, then the title (a following "with ..." line is its subtitle)
+    let top = 0; const tags = [];
+    // Short all-caps labels at the top ("VEGETARIAN", "30 MINUTES OR LESS") are tags, unless that's all there is before the recipe.
+    while (top < ls.length - 1 && isAllCaps(ls[top]) && ls[top].length < 30 && !isIngHead(ls[top]) && ls.slice(top + 1).some((l) => !isAllCaps(l) && l.length > 3 && l.length < 80 && !AMOUNT.test(l))) { tags.push(ls[top].toLowerCase()); top++; }
+    const titleAt = ls.findIndex((l, k) => k >= top && l.length > 3 && l.length < 80 && !AMOUNT.test(l) && !isIngHead(l) && !isStepHead(l));
+    if (titleAt >= 0) {
+      let title = ls[titleAt];
+      if (ls[titleAt + 1] && /^(with|and|plus|&)\b/i.test(ls[titleAt + 1]) && ls[titleAt + 1].length < 60) title += " " + ls[titleAt + 1];
+      r.title = title.charAt(0).toUpperCase() + title.slice(1);
     }
-    const sv = text.match(/(?:serves|servings|yield|makes)\s*:?\s*(\d+)/i); if (sv) r.servings = +sv[1];
+    r.tags = tags.filter((x) => x.length <= 20).slice(0, 4);
+    const afterTitle = titleAt >= 0 ? titleAt + (r.title.includes(" " + (ls[titleAt + 1] || "~~")) ? 2 : 1) : 0;
+
+    if (iI >= 0) {
+      r.ingredients = toIngredients(ls.slice(iI + 1, iS > iI ? iS : firstNum > iI ? firstNum : undefined).filter((l) => !isStepHead(l)));
+      r.steps = joinSteps(ls.slice(iS > iI ? iS + 1 : firstNum > iI ? firstNum : ls.length));
+    } else if (firstNum > 0) {
+      // No headings, numbered steps: ingredients are the short lines between the story paragraph and step 1.
+      const pre = ls.slice(afterTitle, firstNum);
+      let lastLong = -1; pre.forEach((l, k) => { if (l.length > 55 && /[a-z]{3,} [a-z]{3,} [a-z]{3,}/.test(l)) lastLong = k; });
+      // The story's last line can be short ("...and she's not wrong!"); skip sentence-ending lines right after it.
+      let startAt = lastLong + 1;
+      while (lastLong >= 0 && startAt < pre.length && /[.!?"”]$/.test(pre[startAt]) && !AMOUNT.test(pre[startAt])) startAt++;
+      r.ingredients = toIngredients(pre.slice(startAt));
+      r.steps = joinSteps(ls.slice(firstNum));
+    } else {
+      const body = ls.slice(afterTitle);
+      r.ingredients = toIngredients(body.filter((l) => AMOUNT.test(l) && l.length < 90));
+      r.steps = joinSteps(body.filter((l) => !(AMOUNT.test(l) && l.length < 90)));
+    }
+    if (!r.ingredients.length && !r.steps.length) r.notes = text.slice(0, 4000);
     return r;
   }
 

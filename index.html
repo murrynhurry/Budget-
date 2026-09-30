@@ -339,6 +339,12 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .hrow>summary{list-style:none;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;cursor:pointer}
 .hrow>summary::-webkit-details-marker{display:none}
 .hrow.paused>summary{opacity:.55}
+.tx-day{display:flex;justify-content:space-between;align-items:baseline}
+.stat4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}.stat4 div{display:flex;flex-direction:column;background:var(--sunk);border-radius:14px;padding:8px 10px}
+.btiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.btile{border:2px solid var(--line);border-radius:16px;padding:12px}.btile.over{background:var(--bad-soft);border-color:transparent}
+.tx.txb{grid-template-columns:34px minmax(0,1fr) auto auto}
+.hbadge.sb{width:34px;height:34px;border-radius:10px;font-size:.92rem}
 .hbadge{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.05rem}
 .hname,.hval{display:flex;flex-direction:column;min-width:0}.hval{text-align:right}
 .hname b{font-size:1.02rem}.hval b{font-size:1rem;white-space:nowrap}
@@ -1111,15 +1117,24 @@ function viewSettings(){
   </div>`;
 }
 
+let spendView="budgets",spendFilter="all";
 function viewSpending(){
   const tx=txIn(viewMonth).slice().sort((a,b)=>b.date.localeCompare(a.date));
   const total=sum(tx,myAmt);
-  const byDay={}; tx.forEach(t=>(byDay[t.date]=byDay[t.date]||[]).push(t));
+  const byDay={}; tx.filter(t=>spendFilter==="all"||t.type===spendFilter).forEach(t=>(byDay[t.date]=byDay[t.date]||[]).push(t));
+  const BC=["#E35B8F","#9B84E0","#44B38D","#E0843A","#4A90D9","#C0567A"], ccol=id=>{const n=catName(id);return BC[[...n].reduce((x,c)=>x+c.charCodeAt(0),0)%BC.length]};
   const list=Object.keys(byDay).map(d=>{
     const dd=new Date(d+"T12:00:00");
-    return `<div class="tx-day">${dd.toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})}</div>`+
-      byDay[d].map(t=>`<div class="txw"><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx" data-swipe="1"><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))}</span> <span class="pill ${t.type}">${t.type==="want"?"Want":"Need"}</span>${t.billId?` <span class="pill bill">Bill</span>`:""}${t.split!=null?` <span class="pill share">Split ${Math.round(t.split)}/${Math.round(100-t.split)} · ${t.paidBy==="partner"?esc(pName())+" paid":"you paid"}</span>`:""}</div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete ${esc(t.note||"expense")}">×</button></div></div>`).join("");
+    return `<div class="tx-day"><span>${dd.toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})}</span><span class="num">${fmt(sum(byDay[d],myAmt))}</span></div>`+
+      byDay[d].map(t=>`<div class="txw"><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx txb" data-swipe="1"><span class="hbadge sb" style="background:${ccol(t.cat)}">${esc(catName(t.cat).slice(0,1))}</span><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · <span style="color:${t.type==="want"?"var(--want)":"var(--good)"};font-weight:700">${t.type==="want"?"Want":"Need"}</span>${t.billId?" · Bill":""}${t.split!=null?" · "+(t.paidBy==="partner"?esc(pName())+" paid":"you paid"):""}</span></div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete ${esc(t.note||"expense")}">×</button></div></div>`).join("");
   }).join("");
+  const mtx=txIn(viewMonth), needsM=sum(mtx.filter(t=>t.type==="need"),myAmt), limT=sum(S.categories,c=>num(c.limit));
+  const lrows=S.categories.map(c=>{const sp=sum(mtx.filter(t=>t.cat===c.id),myAmt),lim=num(c.limit);return {c,sp,lim}}).filter(x=>x.sp>0||x.lim>0)
+    .sort((x,y)=>((y.lim?y.sp/y.lim:y.sp?9:0)-(x.lim?x.sp/x.lim:x.sp?9:0))).map(({c,sp,lim})=>{const left=lim-sp,over=lim&&left<0;
+    return `<div class="btile${over?" over":""}"><div class="small" style="font-weight:700">${esc(c.name)}</div>
+      <div class="num" style="font-size:1.35rem;color:${over?"var(--bad)":"var(--ink)"}">${lim?(over?"−"+fmt0(-left):fmt0(left)):fmt0(sp)}</div>
+      <div class="muted small" style="margin-bottom:6px">${lim?(over?"over":"left")+` · ${fmt0(sp)} of ${fmt0(lim)}`:"spent · no limit"}</div>${barHTML(sp,lim)}</div>`}).join("");
+  const shown=spendFilter==="all"?null:spendFilter;
   const cur=monthKey(new Date());
   return `<div class="stack">
   <section class="panel logpanel">
@@ -1140,23 +1155,32 @@ function viewSpending(){
     <p class="muted small" style="margin:8px 0 0">Be honest with <b>Want</b>. Seeing the total is what helps you cut back.</p>
   </section>
 
-  <section class="grid2">
-    <div class="panel" style="min-width:0">
-      <div class="phead">
-        <div class="monthnav"><button class="btn sm" data-act="mPrev" aria-label="Previous month">‹</button><h2>${esc(monthLabel(viewMonth))}</h2><button class="btn sm" data-act="mNext" aria-label="Next month" ${viewMonth>=cur?"disabled":""}>›</button></div>
-        <span class="num">${fmt(total)}</span>
-      </div>
-      ${list||`<div class="empty">Nothing logged for ${esc(monthLabel(viewMonth))}.</div>`}
+  <section class="panel">
+    <div class="phead"><div class="monthnav"><button class="btn sm" data-act="mPrev" aria-label="Previous month">‹</button><h2>${esc(monthLabel(viewMonth))}</h2><button class="btn sm" data-act="mNext" aria-label="Next month" ${viewMonth>=cur?"disabled":""}>›</button></div></div>
+    <h3>${limT-total>=0?"Left to spend":"Over budget"}</h3>
+    <div class="left-big num${limT-total<0?" neg":""}" style="font-size:clamp(2.2rem,7vw,3rem)">${fmt0(Math.abs(limT-total))}</div>
+    ${barHTML(total,limT)}
+    <div class="stat4">
+      <div><span class="muted small">Spent</span><b class="num">${fmt0(total)}</b></div>
+      <div><span class="muted small">Budget</span><b class="num">${fmt0(limT)}</b></div>
+      <div><span class="muted small">Needs</span><b class="num" style="color:var(--good)">${fmt0(needsM)}</b></div>
+      <div><span class="muted small">Wants</span><b class="num" style="color:var(--want)">${fmt0(total-needsM)}</b></div>
     </div>
-    <div class="panel">
-      <div class="phead"><h2>Monthly limits</h2><span class="num small">${fmt0(sum(S.categories,c=>num(c.limit)))} total</span></div>
-      <div class="cats" style="margin-bottom:16px">${catList(viewMonth)}</div>
-      <h3 style="margin-bottom:8px">Edit categories</h3>
+  </section>
+  <div class="seg" role="tablist" style="align-self:center"><button data-act="spendView" data-v="budgets" aria-pressed="${spendView==="budgets"}">Budgets</button><button data-act="spendView" data-v="tx" aria-pressed="${spendView==="tx"}">Transactions</button></div>
+  ${spendView==="budgets"?`<section class="panel">
+      <div class="btiles">${lrows||`<div class="empty">No limits set yet.</div>`}</div>
+      <details class="acct-edit" style="margin-top:16px"><summary>Edit categories &amp; limits</summary>
+      <div style="margin-top:10px">
       ${S.categories.map(c=>`<div class="catedit"><input data-cat-name="${c.id}" value="${esc(c.name)}" aria-label="Category name"><input class="num" data-cat-limit="${c.id}" inputmode="decimal" value="${c.limit||""}" placeholder="Limit" aria-label="Monthly limit for ${esc(c.name)}">${c.shared?`<span class="pill share">Shared</span>`:`<span></span>`}<button class="x" data-act="delCat" data-id="${c.id}" aria-label="Delete ${esc(c.name)}">×</button></div>`).join("")}
       <form class="row" id="catForm" style="margin-top:8px"><label class="f">New category<input id="catName" placeholder="e.g. Gym" required></label><label class="f" style="flex:0 1 110px">Limit<input id="catLimit" class="num" inputmode="decimal" placeholder="0"></label><label class="chk" style="padding-bottom:10px"><input type="checkbox" id="catShared">Split with partner</label><button class="btn" type="submit">Add</button></form>
       <p class="muted small" style="margin:8px 0 0"><b>Shared</b> categories are seen by both of you. Their limits stay private: set yours to your share.</p>
-    </div>
-  </section></div>`;
+      </div></details>
+    </section>`:`<section class="panel" style="min-width:0">
+      <div class="chips" style="margin-bottom:6px">${[["all","All"],["need","Needs"],["want","Wants"]].map(([k,l])=>`<button type="button" class="chip" data-act="spendFilter" data-v="${k}" aria-pressed="${spendFilter===k}">${l}</button>`).join("")}</div>
+      ${list||`<div class="empty">Nothing to show for ${esc(monthLabel(viewMonth))}.</div>`}
+    </section>`}
+  </div>`;
 }
 
 function viewBills(){
@@ -1641,6 +1665,8 @@ document.addEventListener("click",e=>{
     case "reload":location.reload();break;
     case "pxRefresh":refreshPrices(true);break;
     case "delHold":S.holdings=(S.holdings||[]).filter(x=>x.id!==id);commit("Holding removed");break;
+    case "spendView":spendView=b.dataset.v;render();break;
+    case "spendFilter":spendFilter=b.dataset.v;render();break;
     case "goCards":tab="cards";render();window.scrollTo({top:0});break;
     case "delCard":S.cards=(S.cards||[]).filter(x=>x.id!==id);commit("Card removed");break;
     case "cardPaid":{const c=get(S.cards||[]),v=num((document.querySelector(`[data-card-amt="${id}"]`)||{}).value)||num(c&&c.stmt);if(!c)break;if(v<=0){toast("Enter the amount you paid");break}

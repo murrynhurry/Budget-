@@ -338,6 +338,7 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .hrow{border-bottom:2px dotted var(--line)}
 .hrow>summary{list-style:none;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;cursor:pointer}
 .hrow>summary::-webkit-details-marker{display:none}
+.hrow.paused>summary{opacity:.55}
 .hbadge{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.05rem}
 .hname,.hval{display:flex;flex-direction:column;min-width:0}.hval{text-align:right}
 .hname b{font-size:1.02rem}.hval b{font-size:1rem;white-space:nowrap}
@@ -1163,13 +1164,23 @@ function viewBills(){
   const active=bills.filter(b=>!b.paused), monthly=sum(active,b=>perMonth(b)*(isShared(b.cat)?num(S.split)/100:1));
   const due=dueRestOfMonth(), nx=upcoming(60)[0];
   const opts=sel=>S.categories.map(c=>`<option value="${c.id}" ${c.id===sel?"selected":""}>${esc(c.name)}${c.shared?" (split)":""}</option>`).join("");
-  const rows=bills.map(b=>{const n=nextDue(b);return `<tr class="${b.paused?"paused":""}">
-    <td data-l="Bill"><input data-bill="${b.id}" data-f="name" value="${esc(b.name)}" aria-label="Bill name" style="min-width:130px"></td>
-    <td class="r" data-l="Amount"><input class="num" data-bill="${b.id}" data-f="amount" inputmode="decimal" value="${b.amount}" aria-label="Amount" style="width:100px;text-align:right"></td>
-    <td data-l="How often"><select data-bill-sel="${b.id}" data-f="freq" aria-label="How often">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}" ${k===b.freq?"selected":""}>${v}</option>`).join("")}</select></td>
-    <td data-l="Category"><select data-bill-sel="${b.id}" data-f="cat" aria-label="Category">${opts(b.cat)}</select></td>
-    <td style="white-space:nowrap" data-l="Next due">${b.paused?`<span class="pill paused">Paused</span>`:n?whenLabel(n):"—"}${isShared(b.cat)&&!b.paused?`<br><span class="muted small">your share ${fmt(billShare(b))}</span>`:""}</td>
-    <td style="white-space:nowrap"><button class="btn sm" data-act="pauseBill" data-id="${b.id}">${b.paused?"Resume":"Pause"}</button><button class="x" data-act="delBill" data-id="${b.id}" aria-label="Delete ${esc(b.name)}">×</button></td></tr>`}).join("");
+  const BC=["#E35B8F","#9B84E0","#44B38D","#E0843A","#4A90D9","#C0567A"], bcol=t=>BC[[...String(t)].reduce((x,c)=>x+c.charCodeAt(0),0)%BC.length];
+  const dueTxt=n=>{if(!n)return "";const d=Math.round((D(n)-D(todayISO()))/864e5);return d===0?"Due today":d===1?"Due tomorrow":d<=7?"Due in "+d+" days":"Due "+whenLabel(n)};
+  const brow=b=>{const n=nextDue(b),sh=isShared(b.cat),dd=n?Math.round((D(n)-D(todayISO()))/864e5):99;return `<details class="hrow${b.paused?" paused":""}" data-hrow="${b.id}" ${holdOpen.has(b.id)?"open":""}>
+    <summary><span class="hbadge" style="background:${bcol(b.name)}">${esc(String(b.name).trim().slice(0,1).toUpperCase()||"•")}</span>
+      <span class="hname"><b>${esc(b.name)}</b><span class="muted small">${FREQ[b.freq]||""}${sh?" · split":""}</span></span>
+      <span class="hval"><b class="num">${fmt(billShare(b))}</b><span class="small" style="color:${b.paused?"var(--muted)":dd<=3?"var(--accent)":"var(--muted)"};font-weight:600">${b.paused?"Paused":dueTxt(n)}</span></span></summary>
+    <div class="hedit">
+      ${sh?`<div class="small muted" style="flex-basis:100%">Full bill ${fmt(num(b.amount))} · your share ${fmt(billShare(b))}</div>`:""}
+      <label class="f">Name<input data-bill="${b.id}" data-f="name" value="${esc(b.name)}"></label>
+      <label class="f">Amount<input class="num" data-bill="${b.id}" data-f="amount" inputmode="decimal" value="${b.amount}"></label>
+      <label class="f">How often<select data-bill-sel="${b.id}" data-f="freq">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}" ${k===b.freq?"selected":""}>${v}</option>`).join("")}</select></label>
+      <label class="f">Category<select data-bill-sel="${b.id}" data-f="cat">${opts(b.cat)}</select></label>
+      <div style="flex-basis:100%;display:flex;justify-content:flex-end;gap:8px"><button class="btn sm" data-act="pauseBill" data-id="${b.id}">${b.paused?"Resume":"Pause"}</button><button class="btn danger sm" data-act="delBill" data-id="${b.id}">Delete</button></div>
+    </div></details>`};
+  const gcats=[...new Set(bills.map(b=>b.cat))];
+  const rows=gcats.map(c=>{const list=bills.filter(b=>b.cat===c);const tot=sum(list.filter(b=>!b.paused),b=>perMonth(b)*(isShared(b.cat)?num(S.split)/100:1));
+    return `<div class="hgroup"><div class="hghead"><h3>${esc(catName(c))}</h3><span class="small num">${fmt(tot)} / month</span></div>${list.map(brow).join("")}</div>`}).join("");
   const n=new Date(), defDue=iso(new Date(n.getFullYear(),n.getMonth()+1,1));
   return `<div class="stack">
   <section class="panel">
@@ -1180,7 +1191,7 @@ function viewBills(){
       <div><h3>Next up</h3><span class="v">${nx?esc(nx.b.name):"—"}</span><span class="muted small">${nx?whenLabel(nx.d)+" · "+fmt(billShare(nx.b)):""}</span></div>
     </div>
     <p class="note" style="margin:0 0 14px">Each bill is added to your spending on its due date, so it counts toward its category budget. Bills that haven't come out yet are already taken off your "left this month" number.</p>
-    ${bills.length?`<div class="tbl-wrap"><table class="cardtbl billtbl"><thead><tr><th>Bill</th><th class="r">Amount</th><th>How often</th><th>Category</th><th>Next due</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">No bills yet. Add rent, phone, insurance, subscriptions and anything else that comes out regularly.</div>`}
+    ${bills.length?rows:`<div class="empty">No bills yet. Add rent, phone, insurance, subscriptions and anything else that comes out regularly.</div>`}
   </section>
   <section class="panel">
     <div class="phead"><h2>Add a bill</h2></div>

@@ -274,6 +274,9 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .subtabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; }
 .subtab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; min-width: 0; border: 0; background: transparent; padding: 10px 6px; font: inherit; font-size: 14px; font-weight: 700; color: var(--muted); border-radius: 9px; cursor: pointer; }
 @media (max-width: 460px) { .subtab { flex-wrap: wrap; row-gap: 2px; column-gap: 4px; font-size: 13px; padding: 7px 2px; } .subtab .si { flex-basis: 100%; text-align: center; font-size: 17px; line-height: 1.1; } .subtab { position: relative; } .subtab .tcount { position: absolute; top: 4px; right: 6px; margin: 0; font-size: 11px; padding-inline: 5px; } }
+@media (max-width: 460px) { .subtabs.four { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
+  .subtabs.four .subtab { flex-wrap: nowrap; padding: 9px 2px; font-size: 13px; column-gap: 4px; } .subtabs.four .subtab .si { flex-basis: auto; font-size: 16px; }
+  .subtabs.four .subtab .tcount { position: static; font-size: 12px; } }
 .subtab[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
 .fsplit { display: flex; flex-direction: column; gap: 18px; }
 .fgroup { display: flex; flex-direction: column; gap: 6px; }
@@ -292,6 +295,9 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .fmeta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .chipdate { position: relative; display: inline-flex; align-items: center; font-family: var(--f-mono); font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; white-space: nowrap; cursor: pointer; }
 .chipdate.empty { border-style: dashed; }
+.movepick { position: relative; display: inline-grid; place-items: center; font-size: 17px; }
+.movepick select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; font-size: 16px; cursor: pointer; }
+.movepick:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .chipdate:hover { color: var(--ink); border-color: var(--muted); }
 .chipdate:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .chipdate input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; font-size: 16px; cursor: pointer; }
@@ -1191,7 +1197,7 @@ Rules:
   const SOON_DAYS = { fridge: 2, freezer: 14, pantry: 14 };
   const isSoon = (it, loc) => { const n = daysLeft(it.expires); return n != null && n <= SOON_DAYS[loc]; };
   const normItem = (x) => typeof x === "string" ? { name: x, expires: "", est: false, added: Date.now(), ...(isCondiment(x) ? { cond: true } : {}) }
-    : { name: String(x.name || ""), expires: String(x.expires || ""), est: !!x.est, added: Number(x.added) || 0, ...(x.cond != null ? { cond: !!x.cond } : {}), ...(x.sec ? { sec: String(x.sec) } : {}) };
+    : { name: String(x.name || ""), expires: String(x.expires || ""), est: !!x.est, added: Number(x.added) || 0, ...(x.cond != null ? { cond: !!x.cond } : {}), ...(x.sec ? { sec: String(x.sec) } : {}), ...(x.pin ? { pin: true } : {}) };
   // Condiments: sauces, spreads, pickles and dressings that live in the fridge door.
   const CONDIMENTS = ["ketchup", "mustard", "dijon", "mayo", "mayonnaise", "aioli", "relish", "soy sauce", "tamari", "hot sauce", "sriracha", "tabasco", "chili sauce", "chili crisp", "chili oil",
     "gochujang", "hoisin", "oyster sauce", "fish sauce", "teriyaki", "bbq sauce", "barbecue sauce", "steak sauce", "worcestershire", "salsa", "jam", "jelly", "marmalade", "preserves",
@@ -1205,23 +1211,30 @@ Rules:
     "curry powder", "garam masala", "five spice", "italian seasoning", "taco seasoning", "cajun", "creole", "everything bagel", "msg", "bouillon", "stock cube", "oxo", "dashida", "sesame seed", "vanilla",
     "vanilla extract", "seasoning", "spice", "spices", "furikake", "za atar", "zaatar", "sumac", "herbes de provence", "poultry seasoning", "steak spice", "lemon pepper", "celery salt", "seasoned salt",
     "baking soda", "baking powder", "cream of tartar", "saffron", "anise", "caraway", "marjoram", "tarragon", "herbs", "dried herbs", "chicken powder", "hondashi", "sichuan peppercorn"];
+  // Canned and jarred goods for the pantry's Canned shelf.
+  const CANNED = ["canned", "can", "cans", "tinned", "tin", "tins", "canned soup", "soup", "tuna", "sardine", "anchovy", "spam", "corned beef", "canned chicken", "canned salmon", "coconut milk",
+    "coconut cream", "evaporated milk", "condensed milk", "tomato paste", "diced tomato", "crushed tomato", "whole tomato", "tomato puree", "passata", "tomato sauce", "chickpea", "garbanzo", "kidney bean",
+    "black bean", "pinto bean", "cannellini", "white bean", "baked bean", "refried bean", "canned corn", "creamed corn", "pumpkin puree", "chipotle in adobo", "water chestnut", "bamboo shoot", "mandarin orange",
+    "pineapple chunk", "fruit cocktail", "canned peach", "canned pear", "canned fruit", "chili con carne", "ravioli", "spaghettios", "beef stew", "mushroom soup", "cream of mushroom", "cream of chicken", "chef boyardee"];
+  function isCanned(x) { const n = " " + toks(typeof x === "string" ? x : x.name).join(" ") + " "; return CANNED.some((c) => n.includes(" " + toks(c).join(" ") + " ")); }
   function isSeasoning(x) { const n = " " + toks(typeof x === "string" ? x : x.name).join(" ") + " "; return SEASONINGS.some((c) => n.includes(" " + toks(c).join(" ") + " ")); }
   // Sections within a place. The fridge has Food and Condiments; the pantry adds Seasonings.
-  const SECS = { food: { label: "Food", icon: "🥕", word: "food" }, cond: { label: "Condiments", icon: "🫙", word: "condiments" }, season: { label: "Seasonings", icon: "🧂", word: "seasonings" } };
-  const SECS_OF = { fridge: ["food", "cond"], pantry: ["food", "cond", "season"], freezer: ["food"] };
+  const SECS = { food: { label: "Food", icon: "🥕", word: "food" }, cond: { label: "Condiments", icon: "🫙", word: "condiments" }, season: { label: "Seasonings", icon: "🧂", word: "seasonings" }, can: { label: "Canned", icon: "🥫", word: "canned" } };
+  const SECS_OF = { fridge: ["food", "cond"], pantry: ["food", "can", "cond", "season"], freezer: ["food"] };
   function autoSec(name, loc) {
     const ok = SECS_OF[loc] || ["food"];
+    if (ok.includes("can") && isCanned(name)) return "can";
     if (ok.includes("season") && isSeasoning(name)) return "season";
     if (ok.includes("cond") && isCondiment(name)) return "cond";
     return "food";
   }
   function secOf(it, loc) {
     const ok = SECS_OF[loc] || ["food"];
-    if (it.sec && ok.includes(it.sec)) return it.sec;
+    if (it.sec && ok.includes(it.sec) && (it.sec !== "food" || it.pin)) return it.sec;
     if (it.cond != null && !it.sec) return it.cond && ok.includes("cond") ? "cond" : (it.cond ? autoSec(it.name, loc) : "food");
     return autoSec(it.name, loc);
   }
-  const withSec = (it, sec) => { const o = { ...it, sec }; delete o.cond; return o; };
+  const withSec = (it, sec) => { const o = { ...it, sec, pin: true }; delete o.cond; return o; };
   const condOf = (it) => secOf(it, "fridge") === "cond";
   const LOC_KEYS = ["fridge", "freezer", "pantry"];
   const allOnHand = () => LOC_KEYS.flatMap((loc) => S[loc].map((i) => ({ ...i, loc })));
@@ -1313,7 +1326,7 @@ Rules:
     if (!S.sub) S.sub = {};
     if (S.addCond != null) { S.sub.fridge = S.addCond ? "cond" : "food"; S.addCond = null; }
     const cur = secs.includes(S.sub[loc]) ? S.sub[loc] : "food";
-    const PH = { "fridge:cond": "e.g. ketchup, soy sauce, ranch, pickles", "pantry:cond": "e.g. soy sauce, vinegar, olive oil, hot sauce", "pantry:season": "e.g. salt, cumin, oregano, garlic powder" };
+    const PH = { "fridge:cond": "e.g. ketchup, soy sauce, ranch, pickles", "pantry:cond": "e.g. soy sauce, vinegar, olive oil, hot sauce", "pantry:season": "e.g. salt, cumin, oregano, garlic powder", "pantry:can": "e.g. canned tomatoes, chickpeas, tuna, coconut milk" };
     const input = h("input", { id: "onhand-in", placeholder: PH[loc + ":" + cur] || L.placeholder, "aria-label": "Add to " + L.label.toLowerCase(),
       onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addItems(e.target.value, loc, expVal(), cur); refocus(); } } });
 
@@ -1358,7 +1371,12 @@ Rules:
           const moveBtn = (k) => h("button", { class: "iconbtn", type: "button", "aria-label": "Move " + it.name + " to " + SECS[k].word, title: "Move to " + SECS[k].word,
             onclick: () => { const next = [...S[loc]]; next[idx] = withSec(it, k); setList(loc, next); toast("Moved to " + SECS[k].word); } }, SECS[k].icon);
           if (loc === "fridge") return [moveBtn(others[0]), h("button", { class: "iconbtn", type: "button", "aria-label": "Move " + it.name + " to the freezer", title: "Move to freezer", onclick: () => moveItem(it, "fridge", "freezer") }, "❄")];
-          if (loc === "pantry") return others.map(moveBtn);
+          if (loc === "pantry") return [h("label", { class: "iconbtn movepick", title: "Move to another shelf" },
+            h("span", { "aria-hidden": "true" }, "⇄"),
+            h("select", { "aria-label": "Move " + it.name + " to another pantry section",
+              onchange: (e) => { const k = e.target.value; if (!SECS[k] || k === here) return; const next = [...S[loc]]; next[idx] = withSec(it, k); setList(loc, next); toast("Moved " + it.name + " to " + SECS[k].word); } },
+              h("option", { value: "", selected: true, disabled: true }, "Move to…"),
+              ...others.map((k) => h("option", { value: k }, SECS[k].icon + " " + SECS[k].label)))), h("span")];
           return [null, h("span")];
         })(),
         h("button", { class: "iconbtn", type: "button", "aria-label": "Remove " + it.name, title: "Used up", onclick: () => setList(loc, S[loc].filter((x) => x !== it)) }, "×"));
@@ -1368,6 +1386,7 @@ Rules:
       const shown = items.filter((i) => secOf(i, loc) === cur);
       const EMPTY = { "fridge:food": "No food in the fridge yet.", "fridge:cond": "No condiments yet. Sauces, spreads, dressings and pickles go here.",
         "pantry:food": "No food in the pantry yet. Rice, pasta, cans, baking supplies and snacks go here.", "pantry:cond": "No condiments yet. Sauces, oils, vinegars and syrups go here.",
+        "pantry:can": "No canned goods yet. Cans of beans, tomatoes, soup, tuna and coconut milk go here.",
         "pantry:season": "No seasonings yet. Salt, spices, dried herbs, blends and stock cubes go here." };
       rows = h("div", { class: "frows fridge" }, shown.length ? shown.map((i) => rowFor(i)) : h("p", { class: "hint" }, EMPTY[loc + ":" + cur]));
     } else {
@@ -1393,8 +1412,8 @@ Rules:
         ? "Switch between Food and Condiments at the top; whatever you add goes to the one you're on. Common foods get an estimated expiry date; change it to the date on the package. Tap 🫙 or 🥕 to move something to the other list, ❄ to move it to the freezer, × when it's used up, and ☆ for things you buy often."
         : loc === "freezer"
         ? "Add what's in the freezer. Each item gets an estimated use-by date for best quality (frozen food stays safe longer, but tastes best by then); change it if you like. Tap × when it's used up, and ☆ for things you buy often."
-        : "Switch between Food, Condiments and Seasonings at the top; whatever you add goes to the one you're on. Common items get an estimated best-before date; change it to the date on the package. Tap 🥕, 🫙 or 🧂 to move something to another list, × when it runs out, and ☆ for things you buy often."),
-      secs.length > 1 ? h("div", { class: "subtabs", role: "tablist", "aria-label": L.label + " sections" },
+        : "Switch between Food, Canned, Condiments and Seasonings at the top; whatever you add goes to the one you're on. Common items get an estimated best-before date; change it to the date on the package. Tap ⇄ to move something to another shelf, × when it runs out, and ☆ for things you buy often."),
+      secs.length > 1 ? h("div", { class: "subtabs" + (secs.length > 3 ? " four" : ""), role: "tablist", "aria-label": L.label + " sections" },
         secs.map((k) => h("button", { class: "subtab", type: "button", role: "tab", "aria-selected": String(cur === k), onclick: () => { S.sub[loc] = k; render(); } },
           h("span", { class: "si", "aria-hidden": "true" }, SECS[k].icon), h("span", { class: "sl" }, SECS[k].label), h("span", { class: "tcount" }, String(list.filter((i) => secOf(i, loc) === k).length))))) : null,
       h("div", { class: "fridge-in add-exp" }, input,

@@ -344,6 +344,8 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .btiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .btile{border:2px solid var(--line);border-radius:16px;padding:12px}.btile{cursor:pointer}.btile.open{grid-column:1 / -1;cursor:default}.btile.open>div:first-child{cursor:pointer}.btx{margin-top:8px;background:var(--surface);border-radius:12px;padding:0 10px}.btx .txw:last-child .tx{border-bottom:0}
 .btile.over{background:var(--bad-soft);border-color:transparent}
+.swipe-edit{position:absolute;left:0;top:0;bottom:0;width:96px;border:0;background:var(--lav);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.tx.txb{cursor:pointer}
 .tx.txb{grid-template-columns:34px minmax(0,1fr) auto auto}
 .hbadge.sb{width:34px;height:34px;border-radius:10px;font-size:.92rem}
 .hbadge{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.05rem}
@@ -1123,7 +1125,7 @@ function viewSpending(){
   const total=sum(tx,myAmt);
   const byDay={}; tx.filter(t=>spendFilter==="all"||t.type===spendFilter).forEach(t=>(byDay[t.date]=byDay[t.date]||[]).push(t));
   const BC=["#E35B8F","#9B84E0","#44B38D","#E0843A","#4A90D9","#C0567A"], ccol=id=>{const n=catName(id);return BC[[...n].reduce((x,c)=>x+c.charCodeAt(0),0)%BC.length]};
-  const txr=t=>`<div class="txw"><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx txb" data-swipe="1"><span class="hbadge sb" style="background:${ccol(t.cat)}">${esc(catName(t.cat).slice(0,1))}</span><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · <span style="color:${t.type==="want"?"var(--want)":"var(--good)"};font-weight:700">${t.type==="want"?"Want":"Need"}</span>${t.billId?" · Bill":""}${t.split!=null?" · "+(t.paidBy==="partner"?esc(pName())+" paid":"you paid"):""}</span></div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete ${esc(t.note||"expense")}">×</button></div></div>`;
+  const txr=t=>`<div class="txw"><button class="swipe-edit" data-act="editTx" data-id="${t.id}" tabindex="-1">Edit</button><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx txb" data-swipe="1" data-act="editTx" data-id="${t.id}"><span class="hbadge sb" style="background:${ccol(t.cat)}">${esc(catName(t.cat).slice(0,1))}</span><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · <span style="color:${t.type==="want"?"var(--want)":"var(--good)"};font-weight:700">${t.type==="want"?"Want":"Need"}</span>${t.billId?" · Bill":""}${t.split!=null?" · "+(t.paidBy==="partner"?esc(pName())+" paid":"you paid"):""}</span></div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete ${esc(t.note||"expense")}">×</button></div></div>`;
   const list=Object.keys(byDay).map(d=>{
     const dd=new Date(d+"T12:00:00");
     return `<div class="tx-day"><span>${dd.toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})}</span><span class="num">${fmt(sum(byDay[d],myAmt))}</span></div>`+
@@ -1641,6 +1643,7 @@ document.addEventListener("click",e=>{
     case "txType":txType=b.dataset.v;document.querySelectorAll('[data-act="txType"]').forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===txType));break;
     case "setFont":S.font=b.dataset.v;commit(b.dataset.v+" it is!");break;
     case "qaOpen":qaOpen();break;
+    case "editTx":{if(Date.now()-lastSwipe<500)break;if(e.target.closest(".tx.swiped")){e.target.closest(".tx").classList.remove("swiped");break}const t=S.tx.find(x=>x.id===id);if(t)qaOpen(t);break}
     case "qaClose":qaClose();break;
     case "qaSave":qaSave();break;
     case "qaCat":QA.cat=b.dataset.v;qaSync();break;
@@ -1798,10 +1801,11 @@ function qaSync(){
   $("#qaPartnerBtn").textContent=pName()+" paid";
   $("#qaSplit").hidden=!(QA.cat&&isShared(QA.cat));
 }
-function qaOpen(){
+function qaOpen(t){
   if(boot!=="ready")return;
-  QA.cat=null;QA.type="need";QA.paid="me";
-  $("#qaAmt").value="";$("#qaNote").value="";$("#qaDate").value=todayISO();
+  QA.edit=t?t.id:null;QA.cat=t?t.cat:null;QA.type=t?t.type||"need":"need";QA.paid=t&&t.paidBy==="partner"?"partner":"me";
+  $("#qaAmt").value=t?num(t.amount):"";$("#qaNote").value=t?t.note||"":"";$("#qaDate").value=t?t.date:todayISO();
+  $("#qa h2").textContent=t?"Edit expense":"Add an expense";$("#qa .qa-save").textContent=t?"Save changes":"Add expense";
   qaSync();$("#qaBack").hidden=false;$("#qa").hidden=false;
   setTimeout(()=>{try{$("#qaAmt").focus()}catch(e){}},60);
 }
@@ -1811,13 +1815,20 @@ function qaSave(){
   if(amt<=0){toast("Enter an amount");$("#qaAmt").focus();return}
   if(!QA.cat){toast("Pick a category");return}
   const tx={id:uid(),date:$("#qaDate").value||todayISO(),cat:QA.cat,amount:amt,type:QA.type,note:$("#qaNote").value.trim()};
+  if(QA.edit){const old=S.tx.find(x=>x.id===QA.edit);QA.edit=null;if(!old){qaClose();return}
+    const wasSh=old.split!=null,nowSh=isShared(tx.cat);delete tx.id;
+    if(nowSh){tx.split=wasSh?old.split:num(S.split);tx.paidBy=QA.paid}
+    if(!wasSh&&!nowSh)Object.assign(old,tx);
+    else{if(wasSh)shDelTx(old.id);else S.tx=S.tx.filter(x=>x.id!==old.id);
+      if(nowSh)shAddTx(tx);else S.tx.push(Object.assign({id:uid()},tx,old.billId?{billId:old.billId}:{}))}
+    qaClose();commit("Expense updated");return}
   if(isShared(tx.cat)){tx.split=num(S.split);tx.paidBy=QA.paid}
   if(tx.split!=null)shAddTx(tx);else S.tx.push(tx);
   qaClose();commit(QA.type==="want"?"Added. That's a want.":"Added "+fmt(amt));
 }
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#qa").hidden)qaClose();if(e.key==="Enter"&&!$("#qa").hidden&&e.target.id!=="qaNote"&&(e.target.id==="qaAmt")){e.preventDefault();qaSave()}});
 /* ---------- swipe left to delete ---------- */
-let sw=null;
+let sw=null,lastSwipe=0;
 document.addEventListener("touchstart",e=>{
   const row=e.target.closest&&e.target.closest("[data-swipe]");
   document.querySelectorAll(".tx.swiped").forEach(x=>{if(x!==row)x.classList.remove("swiped")});
@@ -1828,12 +1839,12 @@ document.addEventListener("touchmove",e=>{
   if(!sw)return;const t=e.touches[0],dx=t.clientX-sw.x,dy=t.clientY-sw.y;
   if(sw.h===null){if(Math.abs(dx)<8&&Math.abs(dy)<8)return;sw.h=Math.abs(dx)>Math.abs(dy)}
   if(!sw.h)return;
-  sw.dx=dx;const base=sw.open?-88:0,v=Math.max(-110,Math.min(0,base+dx));
+  sw.dx=dx;const base=sw.open?-88:0,v=Math.max(-110,Math.min(sw.open?0:96,base+dx));
   sw.row.classList.add("dragging");sw.row.style.transform=`translateX(${v}px)`;
 },{passive:true});
 document.addEventListener("touchend",()=>{
   if(!sw)return;const r=sw.row;r.classList.remove("dragging");r.style.transform="";
-  if(sw.h){const end=(sw.open?-88:0)+sw.dx;r.classList.toggle("swiped",end<-44)}
+  if(sw.h){const end=(sw.open?-88:0)+sw.dx;r.classList.toggle("swiped",end<-44);if(end>60){const t=S.tx.find(x=>x.id===r.dataset.id);if(t)setTimeout(()=>qaOpen(t),120)}lastSwipe=Date.now()}
   sw=null;
 });
 

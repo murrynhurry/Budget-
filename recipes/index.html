@@ -271,6 +271,9 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .ksearch input { padding-right: 40px; }
 .ksearch .iconbtn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
 .fwhere { display: block; font-size: 12px; font-weight: 500; color: var(--muted); }
+.subtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; }
+.subtab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; min-width: 0; border: 0; background: transparent; padding: 10px 6px; font: inherit; font-size: 14px; font-weight: 700; color: var(--muted); border-radius: 9px; cursor: pointer; }
+.subtab[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
 .fsplit { display: flex; flex-direction: column; gap: 18px; }
 .fgroup { display: flex; flex-direction: column; gap: 6px; }
 .fsplit .fgroup { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 6px; background: color-mix(in srgb, var(--bg) 55%, var(--card)); }
@@ -1270,7 +1273,7 @@ Rules:
     const list = S[loc];
     const refocus = () => { const el = document.getElementById("onhand-in"); if (el) { el.value = ""; el.focus(); } const d = document.getElementById("onhand-exp"); if (d) d.value = ""; };
     const expVal = () => { const d = document.getElementById("onhand-exp"); return d ? d.value : ""; };
-    const input = h("input", { id: "onhand-in", placeholder: L.placeholder, "aria-label": "Add to " + L.label.toLowerCase(),
+    const input = h("input", { id: "onhand-in", placeholder: loc === "fridge" && S.addCond ? "e.g. ketchup, soy sauce, ranch, pickles" : L.placeholder, "aria-label": "Add to " + L.label.toLowerCase(),
       onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addItems(e.target.value, loc, expVal(), loc === "fridge" && S.addCond); refocus(); } } });
 
     let clearArmed = false;
@@ -1313,13 +1316,11 @@ Rules:
         h("button", { class: "iconbtn", type: "button", "aria-label": "Remove " + it.name, title: "Used up", onclick: () => setList(loc, S[loc].filter((x) => x !== it)) }, "×"));
     };
     let rows;
-    if (loc === "fridge" && items.length) {
+    if (loc === "fridge") {
       const food = items.filter((i) => !condOf(i)), conds = items.filter(condOf);
-      rows = h("div", { class: "fsplit" },
-        h("div", { class: "fgroup" }, h("h4", { class: "fgh" }, "🥕 Food", h("span", { class: "tcount" }, String(food.length))),
-          h("div", { class: "frows fridge" }, food.length ? food.map((i) => rowFor(i)) : h("p", { class: "hint" }, "No food in the fridge yet."))),
-        h("div", { class: "fgroup" }, h("h4", { class: "fgh" }, "🫙 Condiments", h("span", { class: "tcount" }, String(conds.length))),
-          h("div", { class: "frows fridge" }, conds.length ? conds.map((i) => rowFor(i)) : h("p", { class: "hint" }, "Sauces, spreads and pickles show up here. Tap 🫙 on anything to move it."))));
+      const shown = S.addCond ? conds : food;
+      rows = h("div", { class: "frows fridge" }, shown.length ? shown.map((i) => rowFor(i))
+        : h("p", { class: "hint" }, S.addCond ? "No condiments yet. Sauces, spreads, dressings and pickles go here." : "No food in the fridge yet."));
     } else {
       rows = h("div", { class: "frows" + (loc === "fridge" ? " fridge" : "") }, items.length ? items.map((i) => rowFor(i)) : h("p", { class: "hint" }, L.empty));
     }
@@ -1340,17 +1341,19 @@ Rules:
 
     const panel = searchResults || h("div", { class: "form", id: "onhand-panel", role: "tabpanel", "aria-labelledby": "tab-" + loc },
       h("p", { class: "howto" }, loc === "fridge"
-        ? "Add what's in the fridge, with commas between items or Enter after each. Common foods get an estimated expiry date; change it to the date on the package. Sauces and spreads go under Condiments; tap 🫙 or 🥕 to move something between the two. Tap ❄ to move it to the freezer, × when it's used up, and ☆ for things you buy often."
+        ? "Switch between Food and Condiments at the top; whatever you add goes to the one you're on. Common foods get an estimated expiry date; change it to the date on the package. Tap 🫙 or 🥕 to move something to the other list, ❄ to move it to the freezer, × when it's used up, and ☆ for things you buy often."
         : loc === "freezer"
         ? "Add what's in the freezer. Each item gets an estimated use-by date for best quality (frozen food stays safe longer, but tastes best by then); change it if you like. Tap × when it's used up, and ☆ for things you buy often."
         : "Add what's in the cupboards: dry goods, cans, baking supplies, snacks. Common items get an estimated best-before date; change it to the date on the package. Tap × when something runs out, and ☆ for things you buy often."),
+      loc === "fridge" ? (() => {
+        const nFood = list.filter((i) => !condOf(i)).length, nCond = list.length - nFood;
+        return h("div", { class: "subtabs", role: "tablist", "aria-label": "Fridge sections" },
+          h("button", { class: "subtab", type: "button", role: "tab", "aria-selected": String(!S.addCond), onclick: () => { S.addCond = false; render(); } }, "🥕 Food", h("span", { class: "tcount" }, String(nFood))),
+          h("button", { class: "subtab", type: "button", role: "tab", "aria-selected": String(!!S.addCond), onclick: () => { S.addCond = true; render(); } }, "🫙 Condiments", h("span", { class: "tcount" }, String(nCond))));
+      })() : null,
       h("div", { class: "fridge-in add-exp" }, input,
         h("label", { class: "expbox", for: "onhand-exp" }, h("span", null, "Expires"), h("input", { id: "onhand-exp", type: "date", "aria-label": "Expiry date (optional)" })),
         h("button", { class: "btn", type: "button", onclick: () => { addItems(document.getElementById("onhand-in").value, loc, expVal(), loc === "fridge" && S.addCond); refocus(); } }, "Add")),
-      loc === "fridge" ? h("div", { class: "check", style: "gap: 10px" }, "Adding to",
-        h("span", { class: "seg" },
-          h("button", { type: "button", "aria-pressed": String(!S.addCond), onclick: () => { S.addCond = false; render(); } }, "🥕 Food"),
-          h("button", { type: "button", "aria-pressed": String(!!S.addCond), onclick: () => { S.addCond = true; render(); } }, "🫙 Condiments"))) : null,
       h("p", { class: "hint", style: "margin-top: -6px" }, "Expires is optional. Leave it blank and the app estimates a date."),
       soon.length ? h("div", { class: "usesoon" }, h("strong", null, loc === "fridge" ? "Use soon: " : "Use in the next two weeks: "), soon.map((i) => i.name + " (" + statusOf(i.expires).text.toLowerCase() + ")").join(", ")) : null,
       rows,

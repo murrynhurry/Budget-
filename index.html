@@ -408,6 +408,7 @@ input,select,textarea{font-size:16px}
   <label class="qa-amt"><span>$</span><input id="qaAmt" inputmode="decimal" placeholder="0.00" autocomplete="off" aria-label="Amount"></label>
   <input id="qaNote" placeholder="What was it? (optional)" autocomplete="off" aria-label="What was it">
   <div><h3 style="margin-bottom:8px">Category</h3><div class="chips" id="qaCats"></div></div>
+  <div id="qaCardWrap" hidden><h3 style="margin-bottom:8px">Paid with</h3><div class="chips" id="qaCards"></div></div>
   <div class="qa-row">
     <div class="seg" role="group" aria-label="Need or want"><button type="button" data-act="qaType" data-v="need" aria-pressed="true">Need</button><button type="button" data-act="qaType" data-v="want" aria-pressed="false">Want</button></div>
     <input id="qaDate" type="date" aria-label="Date">
@@ -769,7 +770,7 @@ const fmtK=v=>v>=1000?"$"+(v/1000).toFixed(v>=10000?0:1).replace(/\.0$/,"")+"k":
 const SH={on:false,db:null,uid:null,meta:null,metaRef:null,tx:[],settle:[],bills:[],raw:{},canWrite:true,posted:new Set()};
 const DEFAULT_SHARED={"sh-groceries":{name:"Shared groceries",order:1},"sh-bills":{name:"Shared bills",order:2},"sh-home":{name:"Household & furniture",order:3}};
 const otherId=()=>{const m=(SH.meta&&SH.meta.members)||{};return Object.keys(m).find(k=>k!==SH.uid)||null};
-function txView(id,d){const mine=d.by===SH.uid;return {id,date:d.date,cat:d.cat,amount:num(d.amount),type:d.type||"need",note:d.note||"",
+function txView(id,d){const mine=d.by===SH.uid;return {id,date:d.date,cat:d.cat,amount:num(d.amount),type:d.type||"need",note:d.note||"",card:mine?d.byCard||"":"",
   split:mine?num(d.byShare):100-num(d.byShare),paidBy:(mine?!!d.byPaid:!d.byPaid)?"me":"partner",billId:d.billId||undefined,sh:true}}
 function setView(id,d){const mine=d.by===SH.uid;return {id,date:d.date,amount:num(d.amount),dir:(mine?!!d.byPaid:!d.byPaid)?"toPartner":"fromPartner",sh:true}}
 function billView(id,d){const mine=d.by===SH.uid;return {id,name:d.name,amount:num(d.amount),cat:d.cat,freq:d.freq,anchor:d.anchor,type:d.type||"need",
@@ -793,7 +794,7 @@ async function shTry(fn){try{await fn()}catch(e){SH.canWrite=false;toast("Couldn
 const col=n=>SH.db.collection(n);
 function shAddTx(v){
   if(!SH.on){S.tx.push(Object.assign({id:uid()},v));return}
-  const d={date:v.date,cat:v.cat,amount:num(v.amount),type:v.type||"need",note:v.note||"",by:SH.uid,byShare:num(v.split),byPaid:v.paidBy!=="partner",created:Date.now()};
+  const d={date:v.date,cat:v.cat,amount:num(v.amount),type:v.type||"need",note:v.note||"",byCard:v.card||"",by:SH.uid,byShare:num(v.split),byPaid:v.paidBy!=="partner",created:Date.now()};
   shTry(()=>col("stx").doc(uid()).set(d));
 }
 function shDelTx(id){if(!SH.on){S.tx=S.tx.filter(t=>t.id!==id);return}SH.tx=SH.tx.filter(t=>t.id!==id);shTry(()=>col("stx").doc(id).delete())}
@@ -991,6 +992,7 @@ function cardsSection(){
       <div><span class="num" style="font-size:1.5rem">${fmt(num(c.bal))}</span> <span class="muted small">of ${fmt0(num(c.limit))} limit</span></div>
       ${barHTML(num(c.bal),num(c.limit))}
       <div class="small">Statement <b>${fmt(num(c.stmt))}</b> · Available <b>${fmt(cAvail(c))}</b> · ${cUtil(c)}% used</div>
+      ${(()=>{const k=monthKey(new Date()),ct=(S.tx||[]).filter(t=>t.card===c.id&&t.date.startsWith(k));return `<div class="small">Spent on it this month: <b>${fmt(sum(ct,t=>num(t.amount)))}</b> <span class="muted">(${ct.length} purchase${ct.length===1?"":"s"})</span></div>`})()}
       <div class="small">Due <b>${c.due?whenLabel(c.due):"—"}</b> · Min <b>${fmt(num(c.min))}</b> · Autopay ${cAuto(c)}${num(c.apr)?` · ${num(c.apr)}% APR`:""}</div>
       <div class="row-form"><input class="num" data-card-amt="${c.id}" inputmode="decimal" placeholder="Amount (${fmt(num(c.stmt))})" style="flex:1 1 110px"><input data-card-note="${c.id}" placeholder="Note (optional)" style="flex:1 1 110px"><button class="btn pri sm" data-act="cardPaid" data-id="${c.id}">Mark statement paid</button></div>
       <details class="acct-edit"><summary class="small">Edit card</summary><div class="row-form" style="margin-top:8px">
@@ -1080,7 +1082,7 @@ function viewSpending(){
   const total=sum(tx,myAmt);
   const byDay={}; tx.filter(t=>spendFilter==="all"||t.type===spendFilter).forEach(t=>(byDay[t.date]=byDay[t.date]||[]).push(t));
   const BC=["#E35B8F","#9B84E0","#44B38D","#E0843A","#4A90D9","#C0567A"], ccol=id=>{const n=catName(id);return BC[[...n].reduce((x,c)=>x+c.charCodeAt(0),0)%BC.length]};
-  const txr=t=>`<div class="txw"><button class="swipe-edit" data-act="editTx" data-id="${t.id}" tabindex="-1">Edit</button><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx txb" data-swipe="1" data-act="editTx" data-id="${t.id}"><span class="hbadge sb" style="background:${ccol(t.cat)}">${esc(catName(t.cat).slice(0,1))}</span><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · <span style="color:${t.type==="want"?"var(--want)":"var(--good)"};font-weight:700">${t.type==="want"?"Want":"Need"}</span>${t.billId?" · Bill":""}${t.split!=null?" · "+(t.paidBy==="partner"?esc(pName())+" paid":"you paid"):""}</span></div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete ${esc(t.note||"expense")}">×</button></div></div>`;
+  const txr=t=>`<div class="txw"><button class="swipe-edit" data-act="editTx" data-id="${t.id}" tabindex="-1">Edit</button><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx txb" data-swipe="1" data-act="editTx" data-id="${t.id}"><span class="hbadge sb" style="background:${ccol(t.cat)}">${esc(catName(t.cat).slice(0,1))}</span><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · <span style="color:${t.type==="want"?"var(--want)":"var(--good)"};font-weight:700">${t.type==="want"?"Want":"Need"}</span>${t.billId?" · Bill":""}${t.card&&cardById(t.card)?" · "+esc(cardLabel(cardById(t.card))):""}${t.split!=null?" · "+(t.paidBy==="partner"?esc(pName())+" paid":"you paid"):""}</span></div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete ${esc(t.note||"expense")}">×</button></div></div>`;
   const list=Object.keys(byDay).map(d=>{
     const dd=new Date(d+"T12:00:00");
     return `<div class="tx-day"><span>${dd.toLocaleDateString("en-CA",{weekday:"short",month:"short",day:"numeric"})}</span><span class="num">${fmt(sum(byDay[d],myAmt))}</span></div>`+
@@ -1602,6 +1604,7 @@ document.addEventListener("click",e=>{
     case "qaClose":qaClose();break;
     case "qaSave":qaSave();break;
     case "qaCat":QA.cat=b.dataset.v;qaSync();break;
+    case "qaCard":QA.card=b.dataset.v;qaSync();break;
     case "qaType":QA.type=b.dataset.v;qaSync();break;
     case "qaPaid":QA.paid=b.dataset.v;qaSync();break;
     case "copyAll":{mergeShared();const st=JSON.parse(JSON.stringify(S));delete st.savedAt;
@@ -1749,7 +1752,11 @@ function qaCats(){
   S.tx.forEach(t=>{if(t.date>=since)cnt[t.cat]=(cnt[t.cat]||0)+1});
   return S.categories.slice().sort((a,b)=>(cnt[b.id]||0)-(cnt[a.id]||0));
 }
+const cardById=id=>(S.cards||[]).find(c=>c.id===id);
+const cardLabel=c=>c.name+(c.last4?" ••"+c.last4:"");
 function qaSync(){
+  {const cs=S.cards||[];$("#qaCardWrap").hidden=!cs.length;
+   $("#qaCards").innerHTML=[{id:"",name:"Debit / cash"}].concat(cs).map(c=>`<button type="button" class="chip" data-act="qaCard" data-v="${c.id}" aria-pressed="${(QA.card||"")===c.id}">${esc(c.id?cardLabel(c):c.name)}</button>`).join("")}
   $("#qaCats").innerHTML=qaCats().map(c=>`<button type="button" class="chip${c.shared?" shared":""}" data-act="qaCat" data-v="${c.id}" aria-pressed="${c.id===QA.cat}">${esc(c.name)}</button>`).join("");
   document.querySelectorAll('[data-act="qaType"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===QA.type));
   document.querySelectorAll('[data-act="qaPaid"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===QA.paid));
@@ -1758,7 +1765,7 @@ function qaSync(){
 }
 function qaOpen(t){
   if(boot!=="ready")return;
-  QA.edit=t?t.id:null;QA.cat=t?t.cat:null;QA.type=t?t.type||"need":"need";QA.paid=t&&t.paidBy==="partner"?"partner":"me";
+  QA.edit=t?t.id:null;QA.card=t?(t.card||""):(cardById(S.lastCard)?S.lastCard:"");QA.cat=t?t.cat:null;QA.type=t?t.type||"need":"need";QA.paid=t&&t.paidBy==="partner"?"partner":"me";
   $("#qaAmt").value=t?num(t.amount):"";$("#qaNote").value=t?t.note||"":"";$("#qaDate").value=t?t.date:todayISO();
   $("#qa h2").textContent=t?"Edit expense":"Add an expense";$("#qa .qa-save").textContent=t?"Save changes":"Add expense";
   qaSync();$("#qaBack").hidden=false;$("#qa").hidden=false;
@@ -1769,7 +1776,8 @@ function qaSave(){
   const amt=num($("#qaAmt").value);
   if(amt<=0){toast("Enter an amount");$("#qaAmt").focus();return}
   if(!QA.cat){toast("Pick a category");return}
-  const tx={id:uid(),date:$("#qaDate").value||todayISO(),cat:QA.cat,amount:amt,type:QA.type,note:$("#qaNote").value.trim()};
+  const tx={id:uid(),date:$("#qaDate").value||todayISO(),cat:QA.cat,amount:amt,type:QA.type,note:$("#qaNote").value.trim(),card:QA.card||""};
+  if((S.cards||[]).length)S.lastCard=tx.card;
   if(QA.edit){const old=S.tx.find(x=>x.id===QA.edit);QA.edit=null;if(!old){qaClose();return}
     const wasSh=old.split!=null,nowSh=isShared(tx.cat);delete tx.id;
     if(nowSh){tx.split=wasSh?old.split:num(S.split);tx.paidBy=QA.paid}

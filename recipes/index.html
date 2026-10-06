@@ -166,6 +166,20 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .ings label { display: flex; gap: 10px; padding: 7px 0; cursor: pointer; align-items: baseline; }
 .ings input { accent-color: var(--red); transform: translateY(2px); flex: none; }
 .ings input:checked + span { text-decoration: line-through; color: var(--muted); }
+.ings li:not(.sub) { display: flex; align-items: center; gap: 8px; }
+.ings li:not(.sub) label { flex: 1; min-width: 0; }
+.imark { flex: none; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; font-family: inherit; line-height: 1.3; }
+.imark.have { background: var(--ok-soft); color: var(--ok); }
+.imark.basic { background: var(--chip); color: var(--muted); }
+.imark.listed { background: var(--warn-soft); color: var(--warn); }
+.imark.add { background: var(--card); color: var(--red); border-color: var(--red); cursor: pointer; }
+.imark.add.opt { color: var(--muted); border-color: var(--line); }
+.imark.add:active { transform: scale(.95); }
+.havebar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; margin: 4px 0 10px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+.havebar.all { background: var(--ok-soft); border-color: transparent; }
+.havetext { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 200px; font-size: 14px; }
+.havetext span { color: var(--muted); font-size: 13px; }
+@media (max-width: 560px) { .havebar .btn { flex: 1 1 100%; } }
 .qty { font-family: var(--f-mono); font-weight: 500; font-size: 14px; }
 .qty.scaled { color: var(--red); }
 .steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; gap: 14px; }
@@ -704,13 +718,33 @@ body.formview .fab { display: none; }
 
     const wakeBtn = h("button", { class: "btn", type: "button", "aria-pressed": String(!!S.wake), onclick: toggleWake }, S.wake ? "Screen stays on ✓" : "Keep screen on");
 
+    // What's already in the kitchen, what's already on To Buy, and what's missing.
+    const stat = r.ingredients.map((line) => isSub(line) ? null : ingStatus(line));
+    const need = stat.filter((x) => x && x.kind !== "opt");
+    const haveN = need.filter((x) => x.kind === "have" || x.kind === "staple").length;
+    const missing = [...new Map(stat.filter((x) => x && x.kind === "missing").map((x) => [x.name, x])).values()];
+    const notListed = missing.filter((x) => !x.listed);
+    const mark = (st) => {
+      if (!st) return null;
+      if (st.kind === "have") return h("span", { class: "imark have", title: "You have " + st.item + " in the " + LOCS[st.where].label.toLowerCase() }, "✓ " + LOCS[st.where].label);
+      if (st.kind === "staple") return h("span", { class: "imark basic", title: "You said you always have the basics" }, "✓ Basic");
+      if (st.listed) return h("span", { class: "imark listed" }, "🛒 On To Buy");
+      return h("button", { class: "imark add" + (st.kind === "opt" ? " opt" : ""), type: "button", "aria-label": "Add " + st.name + " to To Buy", onclick: () => addToBuy([st.name], r.title) }, "+ To Buy");
+    };
     const ingList = h("ul", { class: "ings" }, r.ingredients.map((line, i) => {
       if (isSub(line)) return h("li", { class: "sub" }, subText(line));
       const key = r.id + ":" + i;
       const { qty, rest } = splitQty(line, factor);
       const cb = h("input", { type: "checkbox", id: "ing-" + i, checked: S.checked.has(key), onchange: (e) => { e.target.checked ? S.checked.add(key) : S.checked.delete(key); } });
-      return h("li", null, h("label", { for: "ing-" + i }, cb, h("span", null, qty ? h("span", { class: "qty" + (factor !== 1 ? " scaled" : "") }, qty) : null, rest)));
+      return h("li", { class: "ing-" + (stat[i] ? stat[i].kind : "x") }, h("label", { for: "ing-" + i }, cb, h("span", null, qty ? h("span", { class: "qty" + (factor !== 1 ? " scaled" : "") }, qty) : null, rest)), mark(stat[i]));
     }));
+    const haveBar = need.length ? h("div", { class: "havebar" + (missing.length ? "" : " all") },
+      h("div", { class: "havetext" },
+        h("strong", null, missing.length ? `You have ${haveN} of ${need.length}` : "You have everything"),
+        h("span", null, missing.length ? (missing.length === 1 ? "1 thing missing: " : missing.length + " things missing: ") + missing.map((x) => x.name).join(", ") : "All the ingredients are in your kitchen.")),
+      missing.length ? (notListed.length
+        ? h("button", { class: "btn primary", type: "button", onclick: () => addToBuy(notListed.map((x) => x.name), r.title) }, notListed.length === missing.length ? `Add ${notListed.length} missing to To Buy` : `Add the other ${notListed.length} to To Buy`)
+        : h("button", { class: "btn", type: "button", onclick: () => go("shop") }, "✓ All on To Buy · open list")) : null) : null;
 
     const stepList = h("ol", { class: "steps" }, r.steps.map((s, i) => {
       if (isSub(s)) return h("li", { class: "sub" }, subText(s));
@@ -746,7 +780,8 @@ body.formview .fab { display: none; }
                 h("button", { type: "button", "aria-label": "Fewer servings", onclick: () => setScale(target - 1) }, "−"),
                 h("output", null, String(target)),
                 h("button", { type: "button", "aria-label": "More servings", onclick: () => setScale(target + 1) }, "+")) : null),
-            factor !== 1 ? h("p", { class: "hint" }, "Amounts scaled from " + base + " servings. ", h("a", { href: "#", onclick: (e) => { e.preventDefault(); setScale(base); } }, "Reset")) : h("p", { class: "hint" }, "Tick items off as you gather them."),
+            factor !== 1 ? h("p", { class: "hint" }, "Amounts scaled from " + base + " servings. ", h("a", { href: "#", onclick: (e) => { e.preventDefault(); setScale(base); } }, "Reset")) : h("p", { class: "hint" }, "Tick items off as you gather them. ✓ means it's in your kitchen; tap + To Buy for anything you need."),
+            haveBar,
             ingList),
           h("section", { class: "sect" },
             h("h3", null, "Method"),
@@ -1128,6 +1163,28 @@ Rules:
     }
     const total = need.length || 1;
     return { r, have, missing, score: (have.length + staple) / total, hits: have.length };
+  }
+
+  // One ingredient line: in the kitchen (and where), a basic you always have, or missing (and whether it's already on To Buy).
+  function ingStatus(line) {
+    const t = new Set(toks(core(line)));
+    const oh = allOnHand();
+    const k = oh.findIndex((i) => { const ft = toks(i.name); return ft.length && ft.every((w) => t.has(w)); });
+    if (k >= 0) return { kind: "have", where: oh[k].loc, item: oh[k].name };
+    if (S.staples && STAPLES.some((st) => toks(st).every((w) => t.has(w)))) return { kind: "staple" };
+    const name = itemName(line).toLowerCase();
+    return { kind: /to taste|optional|to serve|for serving|for garnish|garnish/i.test(line) ? "opt" : "missing", name, listed: onToBuyList(name) };
+  }
+  function onToBuyList(name) {
+    const nt = toks(name); if (!nt.length) return false;
+    return groceryList().items.some((i) => { const it = toks(i.name); return it.length && (it.join(" ") === nt.join(" ") || it.every((w) => nt.includes(w)) || nt.every((w) => it.includes(w))); });
+  }
+  function addToBuy(names, forTitle) {
+    const next = [...S.shop.groceries]; let n = 0;
+    for (const raw of names) { const name = String(raw).trim().toLowerCase(); if (!name || next.some((x) => x.name === name)) continue; next.push({ name, done: false, ...(forTitle ? { for: forTitle } : {}) }); n++; }
+    if (!n) { toast("Already on your To Buy list"); return; }
+    setShop({ groceries: next });
+    toast(n === 1 ? "Added " + next[next.length - 1].name + " to To Buy" : "Added " + n + " items to To Buy");
   }
 
   // ---------- fridge & pantry: items, expiry, buy-often ----------
@@ -1604,7 +1661,8 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     }
     for (const g of S.shop.groceries) {
       const key = toks(g.name).join(" ") || g.name;
-      if (merged.has(key)) merged.get(key).manual = true; else merged.set(key, { name: g.name, for: [], manual: true });
+      if (!merged.has(key)) merged.set(key, { name: g.name, for: [], manual: true });
+      const m = merged.get(key); m.manual = true; if (g.for && !m.for.includes(g.for)) m.for.push(g.for);
     }
     for (const n of buyOften()) {
       if (onHandHas(n)) continue;
@@ -2222,7 +2280,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     db.doc("shopping/list").onSnapshot((snap) => {
       if (!snap.exists || snap.metadata.hasPendingWrites) return;
       const d = snap.data() || {};
-      const clean = (a) => Array.isArray(a) ? a.filter((x) => x && x.name).map((x) => ({ name: String(x.name), done: !!x.done })) : [];
+      const clean = (a) => Array.isArray(a) ? a.filter((x) => x && x.name).map((x) => ({ name: String(x.name), done: !!x.done, ...(x.for ? { for: String(x.for) } : {}) })) : [];
       const next = { groceries: clean(d.groceries), household: clean(d.household), other: clean(d.other), checked: d.checked && typeof d.checked === "object" ? { ...d.checked } : {} };
       if (JSON.stringify(next) === JSON.stringify(S.shop)) return;
       S.shop = next; rerenderFridge();

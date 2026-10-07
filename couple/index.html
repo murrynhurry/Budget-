@@ -560,6 +560,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
   <section class="page" id="foodPage" role="tabpanel" aria-labelledby="tabFood" hidden>
     <div class="choresHead"><h2>Restaurants to try</h2><span class="count" id="foodCount"></span></div>
     <p class="lede">Save places you hear about, plan a dinner on a free evening, then rate them once you've been.</p>
+    <div class="hgroups" id="foodList"></div>
     <form class="panel choreAdd" id="foodForm">
       <h3>New restaurant</h3>
       <label>Restaurant<input type="text" id="rName" maxlength="80" placeholder="That ramen place" required></label>
@@ -571,11 +572,11 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
       <label>Link<input type="text" id="rLink" maxlength="300" placeholder="Optional website or map link"></label>
       <button class="primary" type="submit" id="rAdd">Add restaurant</button>
     </form>
-    <div class="hgroups" id="foodList"></div>
   </section>
   <section class="page" id="hobbyPage" role="tabpanel" aria-labelledby="tabHobbies" hidden>
     <div class="choresHead"><h2>Hobbies</h2><span class="count" id="hobbyCount"></span></div>
     <p class="lede">Things to do together instead of scrolling. Plan one onto a free evening to make it stick.</p>
+    <div class="hgroups" id="hobbyList"></div>
     <form class="panel choreAdd" id="hobbyForm">
       <h3>New hobby</h3>
       <label>Hobby<input type="text" id="hTitle" maxlength="80" placeholder="Pottery class" required></label>
@@ -587,10 +588,13 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
       <div class="dnStatus" id="hStatus" hidden></div>
       <ul class="dnList" id="hSuggestList"></ul>
     </div>
-    <div class="hgroups" id="hobbyList"></div>
   </section>
   <section class="chores page" id="chorePage" role="tabpanel" aria-labelledby="tabChores" hidden>
     <div class="choresHead"><h2 id="choresH">Chores</h2><span class="count" id="choreCount"></span></div>
+    <div class="panel">
+      <ul class="clist" id="choreList"><li class="cempty">Loading chores…</li></ul>
+      <details id="doneBox" hidden><summary>Done recently</summary><ul class="clist" id="doneList"></ul></details>
+    </div>
     <form class="panel choreAdd" id="choreForm">
       <h3>New chore</h3>
       <label>Chore<input type="text" id="cTitle" maxlength="100" placeholder="Take out the recycling" required></label>
@@ -601,10 +605,6 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
       </div>
       <button class="primary" type="submit" id="cAdd">Add chore</button>
     </form>
-    <div class="panel">
-      <ul class="clist" id="choreList"><li class="cempty">Loading chores…</li></ul>
-      <details id="doneBox" hidden><summary>Done recently</summary><ul class="clist" id="doneList"></ul></details>
-    </div>
   </section>
   </div>
   </div>
@@ -761,7 +761,7 @@ function renderChores(){
   $('#tabChoreN').textContent=open.length||'';
   $('#choreCount').textContent=open.length?`${open.length} to do${overdue?`, ${overdue} overdue`:''}`:'';
   const list=$('#choreList');list.replaceChildren();
-  if(!open.length)list.append(h('li',{class:'cempty',text:db?'Nothing to do. Add a chore above and pick who it belongs to.':'Chores appear here once the calendar is synced.'}));
+  if(!open.length)list.append(h('li',{class:'cempty',text:db?'Nothing to do. Add a chore below and pick who it belongs to.':'Chores appear here once the calendar is synced.'}));
   open.forEach(c=>list.append(choreItem(c,today)));
   $('#doneBox').hidden=!done.length;
   $('#doneList').replaceChildren(...done.map(c=>choreItem(c,today)));
@@ -945,7 +945,7 @@ function renderHobbies(){
     return h('li',{class:'hcard'+(x.status==='love'?' love':'')},h('b',{text:x.title}),x.note?h('p',{text:x.note}):null,
       planned?h('p',{text:'Planned for '+fmtDate(planned.date)}):null,row);
   };
-  if(!hobbies.length)box.append(h('div',{class:'panel'},h('p',{class:'cempty',text:db?'No hobbies yet. Add one above, or press Suggest more.':'Hobbies appear here once the page is synced.'})));
+  if(!hobbies.length)box.append(h('div',{class:'panel'},h('p',{class:'cempty',text:db?'No hobbies yet. Add one below, or press Suggest more.':'Hobbies appear here once the page is synced.'})));
   if(want.length)box.append(h('h3',{text:'Want to try'}),h('ul',{class:'hgrid'},...want.map(card)));
   if(love.length)box.append(h('h3',{text:'Our hobbies'}),h('ul',{class:'hgrid'},...love.map(card)));
   const sl=$('#hSuggestList');sl.replaceChildren(...hs.ideas.map((it,i)=>h('li',{class:'idea'},h('span',{class:'tags',text:it.where==='home'?'At home':'Out'}),h('b',{text:it.title}),h('p',{text:it.note}),

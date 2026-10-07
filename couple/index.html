@@ -190,6 +190,9 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .bird svg{width:100%;height:100%;display:block;overflow:visible;animation:flap var(--f,.45s) ease-in-out infinite alternate;transform-origin:50% 70%}
 @keyframes flap{from{transform:scaleY(1)}to{transform:scaleY(-.45)}}
 .choreAdd h3{margin:0;font:600 16px var(--display)}
+.choreAdd>label>input{width:100%}
+.choreAdd>label{min-width:0}
+.choreAdd>button.primary{width:100%;padding:11px}
 .choreAdd #cTitle{width:100%}
 .choreAdd .row>label{flex:1 1 120px}
 .choreAdd .row select,.choreAdd .row input{width:100%}
@@ -557,32 +560,30 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
   <section class="page" id="foodPage" role="tabpanel" aria-labelledby="tabFood" hidden>
     <div class="choresHead"><h2>Restaurants to try</h2><span class="count" id="foodCount"></span></div>
     <p class="lede">Save places you hear about, plan a dinner on a free evening, then rate them once you've been.</p>
-    <div class="panel">
-      <form id="foodForm">
-        <div class="row">
-          <label>Restaurant<input type="text" id="rName" maxlength="80" placeholder="That ramen place" required></label>
-          <label>Food<input type="text" id="rCuisine" maxlength="40" placeholder="Ramen"></label>
-          <label>Price<select id="rPrice"><option value="">Not sure</option><option>$</option><option>$$</option><option>$$$</option><option>$$$$</option></select></label>
-          <label>Where or note<input type="text" id="rNote" maxlength="120" placeholder="Downtown, get the spicy miso"></label>
-          <label>Link<input type="text" id="rLink" maxlength="300" placeholder="Optional website or map link"></label>
-          <button class="primary" type="submit" id="rAdd">Add restaurant</button>
-        </div>
-      </form>
-    </div>
+    <form class="panel choreAdd" id="foodForm">
+      <h3>New restaurant</h3>
+      <label>Restaurant<input type="text" id="rName" maxlength="80" placeholder="That ramen place" required></label>
+      <div class="row">
+        <label>Food<input type="text" id="rCuisine" maxlength="40" placeholder="Ramen"></label>
+        <label>Price<select id="rPrice"><option value="">Not sure</option><option>$</option><option>$$</option><option>$$$</option><option>$$$$</option></select></label>
+      </div>
+      <label>Where or note<input type="text" id="rNote" maxlength="120" placeholder="Downtown, get the spicy miso"></label>
+      <label>Link<input type="text" id="rLink" maxlength="300" placeholder="Optional website or map link"></label>
+      <button class="primary" type="submit" id="rAdd">Add restaurant</button>
+    </form>
     <div class="hgroups" id="foodList"></div>
   </section>
   <section class="page" id="hobbyPage" role="tabpanel" aria-labelledby="tabHobbies" hidden>
     <div class="choresHead"><h2>Hobbies</h2><span class="count" id="hobbyCount"></span></div>
     <p class="lede">Things to do together instead of scrolling. Plan one onto a free evening to make it stick.</p>
+    <form class="panel choreAdd" id="hobbyForm">
+      <h3>New hobby</h3>
+      <label>Hobby<input type="text" id="hTitle" maxlength="80" placeholder="Pottery class" required></label>
+      <label>Note<input type="text" id="hNote" maxlength="140" placeholder="Optional"></label>
+      <button class="primary" type="submit" id="hAdd">Add hobby</button>
+    </form>
     <div class="panel">
-      <form id="hobbyForm">
-        <div class="row">
-          <label>Hobby<input type="text" id="hTitle" maxlength="80" placeholder="Pottery class" required></label>
-          <label>Note<input type="text" id="hNote" maxlength="140" placeholder="Optional"></label>
-          <button class="primary" type="submit" id="hAdd">Add hobby</button>
-          <button type="button" id="hSuggest">Suggest more</button>
-        </div>
-      </form>
+      <div class="tHead"><h3>Need ideas?</h3><button type="button" id="hSuggest">Suggest more</button></div>
       <div class="dnStatus" id="hStatus" hidden></div>
       <ul class="dnList" id="hSuggestList"></ul>
     </div>

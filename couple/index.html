@@ -197,6 +197,18 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .choreAdd .row>label{flex:1 1 120px}
 .choreAdd .row select,.choreAdd .row input{width:100%}
 .choreAdd #cAdd{width:100%;padding:11px}
+.notif{gap:10px}
+.notif .tHead h3{font:700 18px/1.2 var(--display)}
+.notif .notesH svg{color:#e8a92c}
+.nlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.nitem{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border-radius:10px;background:var(--both-soft);color:var(--ink)}
+.nitem.from-a{background:var(--a-soft)}.nitem.from-b{background:var(--b-soft)}
+.nitem p{margin:0;flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+.nitem .acts{display:flex;gap:6px;flex-wrap:wrap}
+.nitem .acts button{padding:6px 14px}
+.ev.pending{border-left-style:dashed;opacity:.9}
+.ev.pending .t::after{content:" · suggested";font-weight:600}
+.mev.pending{opacity:.75}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .sw{all:unset;box-sizing:border-box;width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
 .sw:hover{transform:scale(1.08)}
@@ -457,6 +469,10 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
 
   <div class="shell">
   <div class="mainTop">
+  <section class="panel notif" id="notif" aria-labelledby="notifH">
+    <div class="tHead"><h3 id="notifH" class="notesH"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.2L4.4 15a1 1 0 0 0 .9 1.5h13.4a1 1 0 0 0 .9-1.5L18 12.2V9a6 6 0 0 0-6-6zm-2.3 15a2.4 2.4 0 0 0 4.6 0z" fill="currentColor"/></svg>For you</h3><span class="badge" id="notifN"></span></div>
+    <ul class="nlist" id="notifList"><li class="cempty">You're all caught up.</li></ul>
+  </section>
   <div class="tabs" role="tablist" aria-label="Sections">
     <button type="button" role="tab" id="tabCal" aria-selected="true" aria-controls="calPage">Calendar</button>
     <button type="button" role="tab" id="tabChores" aria-selected="false" aria-controls="chorePage">Chores <span class="badge" id="tabChoreN"></span></button>
@@ -636,7 +652,7 @@ function nextOcc(d,yearly,from){
   return n;
 }
 function allEvents(){
-  const list=manual.map(e=>({...e,src:'manual'}));
+  const list=manual.filter(e=>e.status!=='no').map(e=>({...e,src:'manual'}));
   const y=new Date().getFullYear();
   for(const c of specials){
     if(!c.date)continue;
@@ -669,7 +685,7 @@ function renderMonth(evs,today){
     const num=h('div',{class:'num'},h('span',{text:d.getDate()}));
     if(key>=today&&eveningFree(dayEvs))num.append(h('span',{class:'fd',title:'Evening free together'}));
     cell.append(num);
-    dayEvs.slice(0,3).forEach(e=>cell.append(h('div',{class:'mev '+(e.together?'both':seat(e.who)),title:`${e.start?fmtTime(e.start)+' ':''}${e.title||''} · ${nameOf(e.who)}`},
+    dayEvs.slice(0,3).forEach(e=>cell.append(h('div',{class:'mev '+(e.together?'both':seat(e.who))+(e.status==='pending'?' pending':''),title:`${e.start?fmtTime(e.start)+' ':''}${e.title||''} · ${nameOf(e.who)}`},
       e.start?h('span',{class:'tm',text:fmtTime(e.start)+' '}):null,e.title||'(No title)')));
     if(dayEvs.length>3)cell.append(h('div',{class:'more',text:`+${dayEvs.length-3} more`}));
     m.append(cell);
@@ -688,7 +704,7 @@ function setView(v){
 function render(){
   const evs=allEvents();
   const today=ymd(new Date());
-  renderImportInfo();renderToday();renderCountdowns();renderDateNight();renderHobbies();renderFood();
+  renderImportInfo();renderNotif();renderToday();renderCountdowns();renderDateNight();renderHobbies();renderFood();
   const end=addDays(weekStart,6);
   $('#range').textContent=weekStart.getMonth()===end.getMonth()
     ?`${MONTHS[weekStart.getMonth()]} ${weekStart.getDate()}–${end.getDate()}`
@@ -702,13 +718,14 @@ function render(){
     if(key>=today&&eveningFree(dayEvs))col.append(h('button',{type:'button',class:'free',title:'Get date night ideas for this evening',text:'Evening free together · plan',onclick:()=>openDateNight(key)}));
     for(const e of dayEvs){
       const open=openId===e.id;
-      const btn=h('div',{class:'ev '+(e.together?'both':seat(e.who)),tabindex:'0',role:'button','aria-expanded':String(open),
+      const btn=h('div',{class:'ev '+(e.together?'both':seat(e.who))+(e.status==='pending'?' pending':''),tabindex:'0',role:'button','aria-expanded':String(open),
         onclick:()=>{openId=open?null:e.id;render()},
         onkeydown:ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();openId=open?null:e.id;render()}}},
         h('span',{class:'t',text:e.start?`${fmtTime(e.start)}${e.end?' – '+fmtTime(e.end):''}`:'All day'}),
         h('span',{class:'n',text:e.title||'(No title)'}));
       if(open){
-        const x=h('div',{class:'x'},h('small',{text:(e.together?'Both of you':nameOf(e.who))+(e.src==='ics'?' · from calendar import':'')}));
+        const x=h('div',{class:'x'},h('small',{text:e.status==='pending'?`${e.proposedBy===me?'You':nameOf(e.proposedBy)} suggested this · waiting for ${e.proposedBy===me?otherName():'you'}`:(e.together?'Both of you':nameOf(e.who))+(e.src==='ics'?' · from calendar import':'')}));
+        if(e.status==='pending'&&e.proposedBy!==me&&db&&me)x.append(h('button',{type:'button',class:'primary',text:'Yes',onclick:ev=>{ev.stopPropagation();respond(e,true)}}),h('button',{type:'button',text:'No',onclick:ev=>{ev.stopPropagation();respond(e,false)}}));
         if(db&&me)x.append(h('button',{type:'button',text:'Add again',title:'Copy this plan to another day',onclick:ev=>{ev.stopPropagation();openAdd({title:e.title,start:e.start,end:e.end,date:ymd(new Date()),again:true})}}));
         if(e.src==='manual'&&db)x.append(h('button',{type:'button',text:'Delete',onclick:ev=>{ev.stopPropagation();delEvent(e.id)}}));
         btn.append(x);
@@ -835,7 +852,7 @@ function renderDateNight(){
     list.append(h('li',{class:'idea'},
       h('span',{class:'tags',text:[idea.where==='home'?'At home':'Out',idea.cost].filter(Boolean).join(' · ')}),
       h('b',{text:idea.title}),h('p',{text:idea.detail||''}),
-      h('button',{type:'button',disabled:added||!db||!me?'':null,text:added?'Added to calendar':`Add to ${fmtDate(dn.date)}, 7 pm`,onclick:()=>addIdea(idea,i)})));
+      h('button',{type:'button',disabled:added||!db||!me?'':null,text:added?`Suggested to ${otherName()}`:`Suggest for ${fmtDate(dn.date)}, 7 pm`,onclick:()=>addIdea(idea,i)})));
   });
 }
 function openDateNight(k){showPage('date');dn.date=k;if(dn.ideasFor!==k){dn.ideas=[];dn.err=''}renderDateNight();try{window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}catch{}}
@@ -862,8 +879,8 @@ async function suggestIdeas(){
 async function addIdea(idea,i){
   if(!db||!me)return;
   try{
-    await db.collection('events').add({title:'Date night: '+idea.title,date:dn.date,start:'19:00',end:'21:00',who:me,together:true,created:new Date().toISOString()});
-    dn.added[dn.date+'|'+i]=true;banner(`Date night added to ${fmtDate(dn.date)}.`);renderDateNight();
+    await propose({title:'Date night: '+idea.title,date:dn.date});
+    dn.added[dn.date+'|'+i]=true;renderDateNight();
   }catch(e){banner(e.code==='invalid_argument'?'You can view this calendar but not add to it. Ask the owner to share it with you as an Editor.':'Could not add the date night. Try again.')}
 }
 
@@ -938,12 +955,12 @@ function renderHobbies(){
       const sel=h('select',{'aria-label':'Free evening for '+x.title},...evenings.map(k=>h('option',{value:k,text:(k===ymd(new Date())?'Tonight, ':'')+fmtDate(k)})));
       row.append(sel,h('button',{type:'button',class:'primary',text:'Add, 7 pm',disabled:evenings.length?null:'',onclick:()=>planHobby(x,sel.value)}),h('button',{type:'button',text:'Cancel',onclick:()=>{hs.plan=null;renderHobbies()}}));
     }else{
-      row.append(h('button',{type:'button',text:'Plan it',onclick:()=>{hs.plan=x.id;renderHobbies()},disabled:db&&me?null:''}),
+      row.append(h('button',{type:'button',text:'Plan it',onclick:()=>planHobby(x,freeEvenings(1)[0]),disabled:db&&me?null:''}),
         h('button',{type:'button',text:x.status==='love'?'Move to try list':'We love it',onclick:()=>setHobby(x.id,{status:x.status==='love'?'want':'love'}),disabled:db&&me?null:''}),
         h('button',{type:'button',class:'del','aria-label':'Delete hobby: '+x.title,title:'Delete',text:'×',onclick:()=>delHobby(x.id)}));
     }
     return h('li',{class:'hcard'+(x.status==='love'?' love':'')},h('b',{text:x.title}),x.note?h('p',{text:x.note}):null,
-      planned?h('p',{text:'Planned for '+fmtDate(planned.date)}):null,row);
+      planned?h('p',{text:(planned.status==='pending'?'Suggested for ':'Planned for ')+fmtDate(planned.date)}):null,row);
   };
   if(!hobbies.length)box.append(h('div',{class:'panel'},h('p',{class:'cempty',text:db?'No hobbies yet. Add one below, or press Suggest more.':'Hobbies appear here once the page is synced.'})));
   if(want.length)box.append(h('h3',{text:'Want to try'}),h('ul',{class:'hgrid'},...want.map(card)));
@@ -962,9 +979,8 @@ async function addHobbyIdea(i){const it=hs.ideas[i];if(!it||it.added)return;try{
 async function setHobby(id,data){try{await db.doc('hobbies/'+id).update(data)}catch{banner('Could not update that hobby.')}}
 async function delHobby(id){try{await db.doc('hobbies/'+id).delete()}catch{banner('Could not delete that hobby.')}}
 async function planHobby(x,date){
-  if(!date||!db||!me)return;
-  try{await db.collection('events').add({title:x.title,date,start:'19:00',end:'21:00',who:me,together:true,hobby:x.id,created:new Date().toISOString()});hs.plan=null;banner(`${x.title} is on the calendar for ${fmtDate(date)}.`)}
-  catch{banner('Could not add it to the calendar.')}
+  if(!db||!me)return;if(!date){banner('No free evenings together in the next five weeks.');return}
+  try{await propose({title:x.title,date,hobby:x.id})}catch{banner('Could not add it to the calendar.')}
 }
 async function suggestHobbies(){
   if(!sample||hs.busy)return;hs.busy=true;$('#hStatus').hidden=true;renderHobbies();
@@ -990,7 +1006,7 @@ function renderNotes(){
   const isFresh=n=>n.from!==me&&seen&&(n.created||'')>seen;
   const fresh=sorted.filter(isFresh).length;
   $('#notesNew').textContent=fresh?fresh+' new':'';$('#notesTabN').textContent=fresh||'';
-  list.replaceChildren();
+  list.replaceChildren();renderNotif();
   if(!sorted.length)list.append(h('li',{class:'cempty',text:db?'No notes yet. Leave the first one.':'Notes appear here once the page is synced.'}));
   for(const n of sorted){
     const hearts=Array.isArray(n.hearts)?n.hearts:[],mine=!!(me&&hearts.includes(me));
@@ -1019,6 +1035,7 @@ async function delNote(id){try{await db.doc('notes/'+id).delete()}catch{banner('
 let notesSeenTimer=null;
 function markNotesSeen(){
   if(!db||!me)return;
+  if(innerWidth<760&&!$('#notesBoard').classList.contains('open'))return;
   const latest=notes.filter(n=>n.from!==me).map(n=>n.created||'').sort().pop();
   if(!latest||latest<=(prefs.notesSeen||''))return;
   clearTimeout(notesSeenTimer);
@@ -1042,9 +1059,9 @@ function renderFood(){
       const sel=h('select',{'aria-label':'Evening for '+x.name},...evenings.map(k=>h('option',{value:k,text:(k===ymd(new Date())?'Tonight, ':'')+fmtDate(k)})));
       row.append(sel,h('button',{type:'button',class:'primary',text:'Add, 7 pm',disabled:evenings.length?null:'',onclick:()=>planFood(x,sel.value)}),h('button',{type:'button',text:'Cancel',onclick:()=>{fs.plan=null;renderFood()}}));
     }else{
-      if(x.status!=='been')row.append(h('button',{type:'button',text:'Plan dinner',disabled:can?null:'',onclick:()=>{fs.plan=x.id;renderFood()}}),
+      if(x.status!=='been')row.append(h('button',{type:'button',text:'Plan dinner',disabled:can?null:'',onclick:()=>planFood(x,freeEvenings(1)[0])}),
         h('button',{type:'button',text:'We went',disabled:can?null:'',onclick:()=>setFood(x.id,{status:'been',visited:ymd(new Date())})}));
-      else row.append(h('button',{type:'button',text:'Go again',disabled:can?null:'',onclick:()=>{fs.plan=x.id;renderFood()}}));
+      else row.append(h('button',{type:'button',text:'Go again',disabled:can?null:'',onclick:()=>planFood(x,freeEvenings(1)[0])}));
       row.append(h('button',{type:'button',class:'del','aria-label':'Delete '+x.name,title:'Delete',text:'×',onclick:()=>delFood(x.id)}));
     }
     const stars=x.status==='been'?h('div',{class:'stars',role:'group','aria-label':'Rating'},...[1,2,3,4,5].map(n=>h('button',{type:'button',class:'star'+((x.rating||0)>=n?' on':''),'aria-label':`${n} star${n>1?'s':''}`,'aria-pressed':String((x.rating||0)===n),text:'★',disabled:can?null:'',onclick:()=>setFood(x.id,{rating:x.rating===n?0:n})}))):null;
@@ -1053,7 +1070,7 @@ function renderFood(){
       meta?h('span',{class:'rmeta',text:meta}):null,h('b',{text:x.name}),x.note?h('p',{text:x.note}):null,
       link?h('a',{href:link,target:'_blank',rel:'noopener noreferrer',text:'Website or map ↗'}):null,
       x.status==='been'?h('p',{text:'Went '+(x.visited?fmtDate(x.visited):'')}):null,stars,
-      planned?h('p',{text:'Dinner planned for '+fmtDate(planned.date)}):null,row);
+      planned?h('p',{text:(planned.status==='pending'?'Dinner suggested for ':'Dinner planned for ')+fmtDate(planned.date)}):null,row);
   };
   box.replaceChildren();
   if(!foods.length)box.append(h('div',{class:'panel'},h('p',{class:'cempty',text:db?'No restaurants yet. Add one you have been meaning to try.':'Restaurants appear here once the page is synced.'})));
@@ -1070,9 +1087,8 @@ async function addFood(ev){
 async function setFood(id,data){try{await db.doc('restaurants/'+id).update(data)}catch{banner('Could not update that restaurant.')}}
 async function delFood(id){try{await db.doc('restaurants/'+id).delete()}catch{banner('Could not delete that restaurant.')}}
 async function planFood(x,date){
-  if(!date||!db||!me)return;
-  try{await db.collection('events').add({title:'Dinner at '+x.name,date,start:'19:00',end:'21:00',who:me,together:true,food:x.id,created:new Date().toISOString()});fs.plan=null;banner(`Dinner at ${x.name} is on the calendar for ${fmtDate(date)}.`)}
-  catch{banner('Could not add it to the calendar.')}
+  if(!db||!me)return;if(!date){banner('No free evenings together in the next five weeks.');return}
+  try{await propose({title:'Dinner at '+x.name,date,food:x.id})}catch{banner('Could not add it to the calendar.')}
 }
 
 /* --- countdowns --- */
@@ -1106,6 +1122,39 @@ async function addSpecial(ev){
   catch(e){banner(e.code==='invalid_argument'?'You can view countdowns but not add them. Ask the owner to share this with you as an Editor.':'Could not save the date.')}
 }
 async function delSpecial(id){try{await db.doc('specials/'+id).delete()}catch{banner('Could not delete that date.')}}
+
+/* --- suggestions and notifications --- */
+function otherName(){const o=partnerId();return o?nameOf(o):'Matthew'}
+async function propose(d){
+  await db.collection('events').add({title:d.title,date:d.date,start:'19:00',end:'21:00',who:me,together:true,status:'pending',proposedBy:me,...(d.hobby?{hobby:d.hobby}:{}),...(d.food?{food:d.food}:{}),created:new Date().toISOString()});
+  banner(`${d.title} is on the calendar for ${fmtDate(d.date)} at 7 pm. ${otherName()} will get a notification to say yes or no.`);
+}
+async function respond(e,yes){
+  try{await db.doc('events/'+e.id).update({status:yes?'yes':'no',respondedBy:me,respondedAt:new Date().toISOString()});openId=null}
+  catch{banner('Could not send your answer. Try again.')}
+}
+function renderNotif(){
+  const list=$('#notifList');if(!list)return;
+  const items=[];
+  if(db&&me){
+    for(const e of manual.filter(e=>e.status==='pending'&&e.proposedBy&&e.proposedBy!==me).sort((a,b)=>a.date.localeCompare(b.date)))
+      items.push(h('li',{class:'nitem from-'+seat(e.proposedBy)},h('p',{text:`${nameOf(e.proposedBy)} suggested ${e.title} on ${fmtDate(e.date)} at ${fmtTime(e.start||'19:00')}.`}),
+        h('div',{class:'acts'},h('button',{type:'button',class:'primary',text:'Yes',onclick:()=>respond(e,true)}),h('button',{type:'button',text:'No',onclick:()=>respond(e,false)}))));
+    for(const e of manual.filter(e=>e.proposedBy===me&&(e.status==='yes'||e.status==='no')&&!e.ack))
+      items.push(h('li',{class:'nitem'},h('p',{text:`${nameOf(e.respondedBy)} said ${e.status==='yes'?'yes':'no'} to ${e.title} on ${fmtDate(e.date)}.`}),
+        h('div',{class:'acts'},h('button',{type:'button',text:'OK',onclick:async()=>{try{if(e.status==='no')await db.doc('events/'+e.id).delete();else await db.doc('events/'+e.id).update({ack:true})}catch{}}}))));
+    for(const c of chores.filter(c=>!c.done&&c.who===me&&c.createdBy&&c.createdBy!==me&&!c.seen))
+      items.push(h('li',{class:'nitem from-'+seat(c.createdBy)},h('p',{text:`${nameOf(c.createdBy)} added a chore for you: ${c.title}${c.due?', due '+fmtDate(c.due):''}.`}),
+        h('div',{class:'acts'},h('button',{type:'button',text:'Got it',onclick:async()=>{try{await db.doc('chores/'+c.id).update({seen:true})}catch{}}}))));
+    const seen=prefs.notesSeen||'';const fresh=notes.filter(n=>n.from!==me&&(n.created||'')>seen);
+    if(fresh.length){const who=fresh[0].from;
+      items.push(h('li',{class:'nitem from-'+seat(who)},h('p',{text:`${nameOf(who)} left you ${fresh.length===1?'a love note':fresh.length+' love notes'}.`}),
+        h('div',{class:'acts'},h('button',{type:'button',text:'Read',onclick:async()=>{if(innerWidth<760)setNotesOpen(true);else $('#notesBoard').scrollIntoView({block:'nearest'});
+          const latest=fresh.map(n=>n.created||'').sort().pop();prefs={...prefs,notesSeen:latest};renderNotes();try{await prefsRef().set(prefs)}catch{}}}))));}
+  }
+  $('#notifN').textContent=items.length||'';
+  list.replaceChildren(...(items.length?items:[h('li',{class:'cempty',text:db?"You're all caught up.":'Notifications show here once you sign in.'})]));
+}
 
 function renderImportInfo(){
   const mine=me&&imports[me];
@@ -1280,7 +1329,7 @@ $('#fAll').onchange=e=>{$('#fStart').disabled=$('#fEnd').disabled=e.target.check
 $('#addForm').addEventListener('submit',addEvent);
 $('#choreForm').addEventListener('submit',addChore);
 $('#noteForm').addEventListener('submit',postNote);
-function setNotesOpen(o){$('#notesBoard').classList.toggle('open',o);$('#notesBack').classList.toggle('on',o);$('#notesTab').setAttribute('aria-expanded',String(o));if(o)$('#notesClose').focus({preventScroll:true});else $('#notesTab').focus({preventScroll:true})}
+function setNotesOpen(o){if(o)setTimeout(markNotesSeen,0);$('#notesBoard').classList.toggle('open',o);$('#notesBack').classList.toggle('on',o);$('#notesTab').setAttribute('aria-expanded',String(o));if(o)$('#notesClose').focus({preventScroll:true});else $('#notesTab').focus({preventScroll:true})}
 $('#notesTab').onclick=()=>setNotesOpen(true);
 $('#notesClose').onclick=()=>setNotesOpen(false);
 $('#notesBack').onclick=()=>setNotesOpen(false);

@@ -346,6 +346,13 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .btile.over{background:var(--bad-soft);border-color:transparent}
 .swipe-edit{position:absolute;left:0;top:0;bottom:0;width:96px;border:0;background:var(--lav);color:#fff;font:inherit;font-weight:700;cursor:pointer}
 .tx.txb{cursor:pointer}
+.csheet{z-index:35;max-height:92vh}
+.dbox{width:34px;height:38px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.dbox b{font-size:.95rem}.dbox span{font-size:.55rem;font-weight:800;letter-spacing:.05em}
+.wkbars{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:end;height:110px}
+.wkbars div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%}
+.wkbars i{display:block;width:70%;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,var(--accent),var(--lav))}
+.wkbars .small{font-size:.66rem}
 .tx.txb{grid-template-columns:34px minmax(0,1fr) auto auto}
 .hbadge.sb{width:34px;height:34px;border-radius:10px;font-size:.92rem}
 .hbadge{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.05rem}
@@ -419,6 +426,8 @@ input,select,textarea{font-size:16px}
   </div>
   <button class="btn pri qa-save" data-act="qaSave">Add expense</button>
 </section>
+<div class="qa-back" id="catBack" data-act="catClose" hidden style="z-index:34"></div>
+<section class="sheet csheet" id="catSheet" role="dialog" aria-modal="true" aria-label="Category details" hidden></section>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -1092,7 +1101,7 @@ function viewSpending(){
   const lrows=S.categories.map(c=>{const sp=sum(mtx.filter(t=>t.cat===c.id),myAmt),lim=num(c.limit);return {c,sp,lim}}).filter(x=>x.sp>0||x.lim>0)
     .sort((x,y)=>((y.lim?y.sp/y.lim:y.sp?9:0)-(x.lim?x.sp/x.lim:x.sp?9:0))).map(({c,sp,lim})=>{const left=lim-sp,over=lim&&left<0;
     const open=spendCat===c.id, ctx=open?mtx.filter(t=>t.cat===c.id).sort((a,b)=>b.date.localeCompare(a.date)):[];
-    return `<div class="btile${over?" over":""}${open?" open":""}" data-act="spendCat" data-v="${c.id}" role="button" aria-expanded="${open}"><div class="small" style="font-weight:700;display:flex;justify-content:space-between;gap:6px"><span>${esc(c.name)}</span><span class="muted">${open?"▴":"▾"}</span></div>
+    return `<div class="btile${over?" over":""}${open?" open":""}" data-act="catOpen" data-v="${c.id}" role="button" aria-expanded="${open}"><div class="small" style="font-weight:700;display:flex;justify-content:space-between;gap:6px"><span>${esc(c.name)}</span><span class="muted">${open?"▴":"▾"}</span></div>
       <div class="num" style="font-size:1.35rem;color:${over?"var(--bad)":"var(--ink)"}">${lim?(over?"−"+fmt0(-left):fmt0(left)):fmt0(sp)}</div>
       <div class="muted small" style="margin-bottom:6px">${lim?(over?"over":"left")+` · ${fmt0(sp)} of ${fmt0(lim)}`:"spent · no limit"}</div>${barHTML(sp,lim)}
       ${open?`<div class="btx">${ctx.length?ctx.map(t=>txr(t).replace('<div class="tx txb"','<div class="tx txb" data-date="1"').replace('<span class="muted small">'+esc(catName(t.cat))+' · ','<span class="muted small">'+D(t.date).toLocaleDateString("en-CA",{month:"short",day:"numeric"})+' · ')).join(""):`<div class="muted small" style="padding:10px 0">Nothing spent here in ${esc(monthLabel(viewMonth).split(" ")[0])}.</div>`}</div>`:""}</div>`}).join("");
@@ -1584,6 +1593,7 @@ function render(){
   if(tab==="spending"){document.querySelectorAll('[data-act="txType"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===txType));syncSplitRow();}
   if(focusId&&document.getElementById(focusId)){const el=document.getElementById(focusId);el.focus();if(el.setSelectionRange&&el.type!=="date")try{el.setSelectionRange(el.value.length,el.value.length)}catch(e){}}
   else if(focusSel){const el=document.querySelector(focusSel);if(el){el.focus();try{el.setSelectionRange(el.value.length,el.value.length)}catch(e){}}}
+  if(catView)renderCat();
 }
 
 /* ---------- events ---------- */
@@ -1637,6 +1647,11 @@ document.addEventListener("click",e=>{
     case "delHold":S.holdings=(S.holdings||[]).filter(x=>x.id!==id);commit("Holding removed");break;
     case "spendView":spendView=b.dataset.v;render();break;
     case "spendCat":spendCat=spendCat===b.dataset.v?null:b.dataset.v;render();break;
+    case "catOpen":catView={id:b.dataset.v,m:viewMonth,sort:"new"};renderCat();break;
+    case "catClose":catView=null;renderCat();break;
+    case "catPrev":case "catNext":{const[y,m]=catView.m.split("-").map(Number);catView.m=monthKey(new Date(y,m-1+(a==="catPrev"?-1:1),1));renderCat();break}
+    case "catSort":catView.sort=b.dataset.v;renderCat();break;
+    case "catAdd":{const id=catView.id;qaOpen();QA.cat=id;qaSync();break}
     case "spendFilter":spendFilter=b.dataset.v;render();break;
     case "goCards":tab="cards";render();window.scrollTo({top:0});break;
     case "delCard":S.cards=(S.cards||[]).filter(x=>x.id!==id);commit("Card removed");break;
@@ -1754,6 +1769,39 @@ function qaCats(){
 }
 const cardById=id=>(S.cards||[]).find(c=>c.id===id);
 const cardLabel=c=>c.name+(c.last4?" ••"+c.last4:"");
+let catView=null;
+function renderCat(){
+  const el=$("#catSheet"),bk=$("#catBack");
+  const c=catView&&S.categories.find(x=>x.id===catView.id);
+  if(!c){catView=null;el.hidden=true;bk.hidden=true;return}
+  const k=catView.m,cur=monthKey(new Date()),[y,mo]=k.split("-").map(Number);
+  const tx=txIn(k).filter(t=>t.cat===c.id),sp=sum(tx,myAmt),lim=num(c.limit),left=lim-sp;
+  const prev=sum(txIn(monthKey(new Date(y,mo-2,1))).filter(t=>t.cat===c.id),myAmt),diff=sp-prev;
+  const needs=sum(tx.filter(t=>t.type==="need"),myAmt);
+  const wk=[0,0,0,0,0];tx.forEach(t=>{wk[Math.min(4,Math.floor((+t.date.slice(8)-1)/7))]+=myAmt(t)});const wmax=Math.max(...wk,1),dim=new Date(y,mo,0).getDate();
+  const wl=["1–7","8–14","15–21","22–28","29–"+dim];
+  const list=catView.sort==="big"?tx.slice().sort((a,b)=>myAmt(b)-myAmt(a)):tx.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const row=t=>{const d=D(t.date),cd=t.card&&cardById(t.card);return `<div class="txw"><button class="swipe-edit" data-act="editTx" data-id="${t.id}" tabindex="-1">Edit</button><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx txb" data-swipe="1" data-act="editTx" data-id="${t.id}"><span class="dbox"><b>${d.getDate()}</b><span>${MONTHS[d.getMonth()]}</span></span><div class="what"><b>${esc(t.note||c.name)}</b><span class="muted small">${d.toLocaleDateString("en-CA",{weekday:"short"})} · <span style="color:${t.type==="want"?"var(--want)":"var(--good)"};font-weight:700">${t.type==="want"?"Want":"Need"}</span>${t.billId?" · Bill":""}${cd?" · "+esc(cardLabel(cd)):""}${t.split!=null?" · split":""}</span></div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete">×</button></div></div>`};
+  el.innerHTML=`<div class="grab"></div>
+    <div class="qa-head"><h2>${esc(c.name)}</h2><button class="x" data-act="catClose" aria-label="Close">×</button></div>
+    <div class="monthnav"><button class="btn sm" data-act="catPrev" aria-label="Previous month">‹</button><b>${esc(monthLabel(k))}</b><button class="btn sm" data-act="catNext" aria-label="Next month" ${k>=cur?"disabled":""}>›</button></div>
+    <div>
+      <div class="left-big num${lim&&left<0?" neg":""}" style="font-size:2.4rem;margin:0">${fmt(sp)}</div>
+      <div class="small" style="margin-bottom:8px">${lim?`<span class="muted">of ${fmt0(lim)} budget · </span><b style="color:${left<0?"var(--bad)":"var(--good)"}">${left<0?fmt0(-left)+" over":fmt0(left)+" left"}</b>`:`<span class="muted">No limit set</span>`}</div>
+      ${barHTML(sp,lim)}
+    </div>
+    <div class="stat4" style="grid-template-columns:repeat(3,minmax(0,1fr));margin:0">
+      <div><span class="muted small">Purchases</span><b class="num">${tx.length}</b></div>
+      <div><span class="muted small">Average</span><b class="num">${tx.length?fmt0(sp/tx.length):"—"}</b></div>
+      <div><span class="muted small">vs last month</span><b class="num" style="color:${diff>0?"var(--bad)":"var(--good)"}">${prev||sp?(diff>0?"+":"−")+fmt0(Math.abs(diff)):"—"}</b></div>
+    </div>
+    ${sp>0?`<div><h3 style="margin-bottom:6px">By week</h3><div class="wkbars">${wk.map((v,i)=>`<div><span class="num small">${v?fmt0(v):""}</span><i style="height:${Math.max(v?6:2,v/wmax*64)}px"></i><span class="muted small">${wl[i]}</span></div>`).join("")}</div>
+      ${needs>0&&sp-needs>0?`<div class="small" style="margin-top:8px"><b style="color:var(--good)">${fmt0(needs)} needs</b> · <b style="color:var(--want)">${fmt0(sp-needs)} wants</b></div>`:""}</div>`:""}
+    <div class="phead" style="margin:0"><h3>Transactions</h3><div class="seg"><button data-act="catSort" data-v="new" aria-pressed="${catView.sort!=="big"}">Newest</button><button data-act="catSort" data-v="big" aria-pressed="${catView.sort==="big"}">Biggest</button></div></div>
+    <div>${list.length?list.map(row).join(""):`<div class="empty">Nothing in ${esc(c.name)} for ${esc(monthLabel(k))}.</div>`}</div>
+    <button class="btn pri" data-act="catAdd" style="align-self:stretch">+ Add to ${esc(c.name)}</button>`;
+  el.hidden=false;bk.hidden=false;
+}
 function qaSync(){
   {const cs=S.cards||[];$("#qaCardWrap").hidden=!cs.length;
    $("#qaCards").innerHTML=[{id:"",name:"Debit / cash"}].concat(cs).map(c=>`<button type="button" class="chip" data-act="qaCard" data-v="${c.id}" aria-pressed="${(QA.card||"")===c.id}">${esc(c.id?cardLabel(c):c.name)}</button>`).join("")}

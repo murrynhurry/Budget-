@@ -229,6 +229,8 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .feedList li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--both-soft);font-size:14px}
 .feedList li span{flex:1;min-width:0}
 .feedList:empty{display:none}
+.hideBox{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.hideBox input{width:100%}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .sw{all:unset;box-sizing:border-box;width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
 .sw:hover{transform:scale(1.08)}
@@ -481,6 +483,12 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
         <p class="note">Google Calendar, on a computer: Settings → pick your calendar → Integrate calendar → copy the "Secret address in iCal format". iPhone Calendar (iCloud): share the calendar as a Public Calendar and copy its link. Your events then refresh each time you open the app.</p>
       </div>
       <div id="importInfo" class="note" hidden></div>
+      <div class="hideBox" id="hideBox" hidden>
+        <span class="setLbl">Hidden from the calendar</span>
+        <p class="note">Tap any of your synced events on the calendar to hide it, hide every event with that name, or show it to Matthew as Busy. You can also hide anything containing a word.</p>
+        <form class="row" id="hideWordForm" style="align-items:end"><label style="flex:1 1 180px">Hide events containing<input type="text" id="hideWord" maxlength="40" placeholder="e.g. dentist or work"></label><button type="submit">Hide</button></form>
+        <ul class="feedList" id="hideList"></ul>
+      </div>
     </div>
     <div class="setGroup"><span class="setLbl">Font</span><div class="fontGrid" id="fontGrid" role="group" aria-label="Font"></div></div>
     <div class="setGroup"><span class="setLbl">Text size</span>
@@ -689,7 +697,9 @@ function allEvents(){
     const dates=c.yearly?[y-1,y,y+1].map(yy=>{const b=new Date(c.date+'T12:00');return ymd(new Date(yy,b.getMonth(),b.getDate(),12))}).filter(k=>k>=c.date):[c.date];
     for(const k of dates)list.push({id:'sp-'+c.id+'-'+k,title:c.title,date:k,start:null,end:null,together:true,who:c.addedBy||null,src:'special'});
   }
-  for(const[who,doc]of Object.entries(imports))for(const[i,e]of (doc.events||[]).entries())list.push({...e,who,src:'ics',id:'ics-'+who+'-'+i});
+  for(const[who,doc]of Object.entries(imports)){const r=calRules[who]||{};
+    for(const[i,e]of (doc.events||[]).entries()){const v=ruleFor(r,e);if(v==='hide')continue;
+      list.push({...e,title:v==='busy'&&who!==me?'Busy':e.title,origTitle:e.title,busy:v==='busy',who,src:'ics',id:'ics-'+who+'-'+i})}}
   return list;
 }
 
@@ -734,7 +744,7 @@ function setView(v){
 function render(){
   const evs=allEvents();
   const today=ymd(new Date());
-  renderImportInfo();renderNotif();renderToday();renderCountdowns();renderDateNight();renderHobbies();renderFood();
+  renderImportInfo();renderHides();renderNotif();renderToday();renderCountdowns();renderDateNight();renderHobbies();renderFood();
   const end=addDays(weekStart,6);
   $('#range').textContent=weekStart.getMonth()===end.getMonth()
     ?`${MONTHS[weekStart.getMonth()]} ${weekStart.getDate()}–${end.getDate()}`
@@ -757,6 +767,11 @@ function render(){
         const x=h('div',{class:'x'},h('small',{text:e.status==='pending'?`${e.proposedBy===me?'You':nameOf(e.proposedBy)} suggested this · waiting for ${e.proposedBy===me?otherName():'you'}`:(e.together?'Both of you':nameOf(e.who))+(e.src==='ics'?' · from calendar import':'')}));
         if(e.status==='pending'&&e.proposedBy!==me&&db&&me)x.append(h('button',{type:'button',class:'primary',text:'Yes',onclick:ev=>{ev.stopPropagation();respond(e,true)}}),h('button',{type:'button',text:'No',onclick:ev=>{ev.stopPropagation();respond(e,false)}}));
         if(db&&me)x.append(h('button',{type:'button',text:'Add again',title:'Copy this plan to another day',onclick:ev=>{ev.stopPropagation();openAdd({title:e.title,start:e.start,end:e.end,date:ymd(new Date()),again:true})}}));
+        if(e.src==='ics'&&e.who===me&&db)x.append(
+          h('button',{type:'button',text:'Hide',title:'Hide just this one',onclick:ev=>{ev.stopPropagation();addRule('keys',ruleKey(e))}}),
+          h('button',{type:'button',text:'Hide all like this',title:'Hide every event with this name',onclick:ev=>{ev.stopPropagation();addRule('titles',(e.origTitle||e.title).toLowerCase())}}),
+          e.busy?h('button',{type:'button',text:'Show the name',onclick:ev=>{ev.stopPropagation();removeRule('busy',(e.origTitle||'').toLowerCase())}})
+            :h('button',{type:'button',text:'Show as Busy',title:'Matthew sees Busy instead of the name',onclick:ev=>{ev.stopPropagation();addRule('busy',(e.origTitle||e.title).toLowerCase())}}));
         if(e.src==='manual'&&db)x.append(h('button',{type:'button',text:'Delete',onclick:ev=>{ev.stopPropagation();delEvent(e.id)}}));
         btn.append(x);
       }
@@ -1199,6 +1214,32 @@ function renderNotif(){
   list.replaceChildren(...(items.length?items:[h('li',{class:'cempty',text:db?"You're all caught up.":'Notifications show here once you sign in.'})]));
 }
 
+/* --- choose which synced events show --- */
+let calRules={};
+const ruleKey=e=>e.date+'|'+(e.start||'')+'|'+String(e.origTitle||e.title).toLowerCase();
+function ruleFor(r,e){
+  const t=String(e.title||'').toLowerCase();
+  if((r.keys||[]).includes(e.date+'|'+(e.start||'')+'|'+t))return'hide';
+  if((r.titles||[]).includes(t))return'hide';
+  if((r.words||[]).some(w=>w&&t.includes(w)))return'hide';
+  if((r.busy||[]).includes(t))return'busy';
+  return'';
+}
+async function saveRules(r){calRules={...calRules,[me]:r};render();try{await db.doc('calrules/'+me).set(r)}catch{banner('Could not save that. Try again.')}}
+function addRule(kind,val){if(!db||!me||!val)return;const r={...(calRules[me]||{})};r[kind]=[...new Set([...(r[kind]||[]),val])].slice(-300);openId=null;saveRules(r);
+  banner(kind==='busy'?'Matthew will see Busy instead of the name.':'Hidden. You can show it again in Settings → Calendar sync.')}
+function removeRule(kind,val){if(!db||!me)return;const r={...(calRules[me]||{})};r[kind]=(r[kind]||[]).filter(x=>x!==val);saveRules(r)}
+function renderHides(){
+  const box=$('#hideBox');if(!box)return;const mine=me&&imports[me];box.hidden=!db||!me||!mine;if(box.hidden)return;
+  const r=calRules[me]||{},rows=[];
+  const add=(label,kind,val)=>rows.push(h('li',{},h('span',{text:label}),h('button',{type:'button',text:'Show again',onclick:()=>removeRule(kind,val)})));
+  (r.words||[]).forEach(w=>add(`Anything with "${w}"`,'words',w));
+  (r.titles||[]).forEach(t=>add(`All "${t}"`,'titles',t));
+  (r.busy||[]).forEach(t=>add(`"${t}" shown as Busy`,'busy',t));
+  (r.keys||[]).forEach(k=>{const[d,st,t]=k.split('|');add(`"${t}" on ${fmtDate(d)}${st?' at '+fmtTime(st):''}`,'keys',k)});
+  $('#hideList').replaceChildren(...rows);
+}
+
 function renderImportInfo(){
   const mine=me&&imports[me];
   const info=$('#importInfo');
@@ -1449,6 +1490,7 @@ $('#hSuggest').onclick=suggestHobbies;
 $('#gSyncBtn').onclick=()=>syncGoogle(true);
 if(PAGES[location.hash.slice(1)])showPage(location.hash.slice(1));
 $('#feedSave').onclick=saveFeed;
+$('#hideWordForm').addEventListener('submit',ev=>{ev.preventDefault();const w=$('#hideWord').value.trim().toLowerCase();if(!w)return;$('#hideWord').value='';addRule('words',w)});
 $('#feedStop').onclick=stopFeed;
 $('#ics').onchange=e=>{const f=e.target.files[0];if(f)importICS(f);e.target.value=''};
 
@@ -1700,6 +1742,7 @@ render();
   db.collection('events').onSnapshot(s=>{manual=s.docs.map(d=>({id:d.id,...d.data()}));render()},onErr);
   db.collection('chores').onSnapshot(s=>{chores=s.docs.map(d=>({id:d.id,...d.data()}));renderChores();render()},onErr);
   renderChores();
+  db.collection('calrules').onSnapshot(s=>{calRules={};s.docs.forEach(d=>calRules[d.id]=d.data());render()},onErr);
   db.collection('imports').onSnapshot(s=>{imports={};s.docs.forEach(d=>imports[d.id]=d.data());render()},onErr);
   db.collection('specials').onSnapshot(s=>{specials=s.docs.map(d=>({id:d.id,...d.data()}));render()},onErr);
   db.collection('notes').onSnapshot(s=>{notes=s.docs.map(d=>({id:d.id,...d.data()}));renderNotes();markNotesSeen()},onErr);

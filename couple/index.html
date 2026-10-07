@@ -483,16 +483,13 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
 
   <div class="shell">
   <div class="mainTop">
-  <section class="panel notif" id="notif" aria-labelledby="notifH">
-    <div class="tHead"><h3 id="notifH" class="notesH"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.2L4.4 15a1 1 0 0 0 .9 1.5h13.4a1 1 0 0 0 .9-1.5L18 12.2V9a6 6 0 0 0-6-6zm-2.3 15a2.4 2.4 0 0 0 4.6 0z" fill="currentColor"/></svg>For you</h3><span class="badge" id="notifN"></span></div>
-    <ul class="nlist" id="notifList"><li class="cempty">You're all caught up.</li></ul>
-  </section>
   <div class="tabs" role="tablist" aria-label="Sections">
     <button type="button" role="tab" id="tabCal" aria-selected="true" aria-controls="calPage">Calendar</button>
     <button type="button" role="tab" id="tabChores" aria-selected="false" aria-controls="chorePage">Chores <span class="badge" id="tabChoreN"></span></button>
     <button type="button" role="tab" id="tabDate" aria-selected="false" aria-controls="datePage">Date night</button>
     <button type="button" role="tab" id="tabHobbies" aria-selected="false" aria-controls="hobbyPage">Hobbies</button>
     <button type="button" role="tab" id="tabFood" aria-selected="false" aria-controls="foodPage">Restaurants</button>
+    <button type="button" role="tab" id="tabNotif" aria-selected="false" aria-controls="notifPage">For you <span class="badge" id="tabNotifN"></span></button>
   </div>
   <section class="panel today" id="today" aria-labelledby="tDate">
     <div class="tHead"><h2 id="tDate">Today</h2></div>
@@ -587,6 +584,12 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     </div>
     <ul class="dnList" id="dnList"></ul>
   </section>
+  </section>
+  <section class="page" id="notifPage" role="tabpanel" aria-labelledby="tabNotif" hidden>
+    <section class="panel notif" id="notif" aria-labelledby="notifH">
+      <div class="tHead"><h3 id="notifH" class="notesH"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.2L4.4 15a1 1 0 0 0 .9 1.5h13.4a1 1 0 0 0 .9-1.5L18 12.2V9a6 6 0 0 0-6-6zm-2.3 15a2.4 2.4 0 0 0 4.6 0z" fill="currentColor"/></svg>For you</h3><span class="badge" id="notifN"></span></div>
+      <ul class="nlist" id="notifList"><li class="cempty">You're all caught up.</li></ul>
+    </section>
   </section>
   <section class="page" id="foodPage" role="tabpanel" aria-labelledby="tabFood" hidden>
     <div class="choresHead"><h2>Restaurants to try</h2><span class="count" id="foodCount"></span></div>
@@ -1180,7 +1183,7 @@ function renderNotif(){
         h('div',{class:'acts'},h('button',{type:'button',text:'Read',onclick:async()=>{if(innerWidth<760)setNotesOpen(true);else $('#notesBoard').scrollIntoView({block:'nearest'});
           const latest=fresh.map(n=>n.created||'').sort().pop();prefs={...prefs,notesSeen:latest};renderNotes();try{await prefsRef().set(prefs)}catch{}}}))));}
   }
-  $('#notifN').textContent=items.length||'';
+  $('#notifN').textContent=items.length||'';$('#tabNotifN').textContent=items.length||'';
   list.replaceChildren(...(items.length?items:[h('li',{class:'cempty',text:db?"You're all caught up.":'Notifications show here once you sign in.'})]));
 }
 
@@ -1368,7 +1371,7 @@ $('#cdToggle').onclick=()=>{const f=$('#cdForm');f.hidden=!f.hidden;$('#cdToggle
 $('#noteText').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))$('#noteForm').requestSubmit()});
 $('#dnGo').onclick=suggestIdeas;
 $('#dnTime').onchange=e=>{dn.time=e.target.value;renderDateNight()};
-const PAGES={cal:['calPage','tabCal'],chores:['chorePage','tabChores'],date:['datePage','tabDate'],hobbies:['hobbyPage','tabHobbies'],food:['foodPage','tabFood']};
+const PAGES={cal:['calPage','tabCal'],chores:['chorePage','tabChores'],date:['datePage','tabDate'],hobbies:['hobbyPage','tabHobbies'],food:['foodPage','tabFood'],notif:['notifPage','tabNotif']};
 function showPage(p){
   if(!PAGES[p])p='cal';
   for(const[k,[pg,tb]]of Object.entries(PAGES)){$('#'+pg).hidden=k!==p;$('#'+tb).setAttribute('aria-selected',String(k===p))}
@@ -1380,6 +1383,7 @@ $('#tabChores').onclick=()=>showPage('chores');
 $('#tabDate').onclick=()=>showPage('date');
 $('#tabHobbies').onclick=()=>showPage('hobbies');
 $('#tabFood').onclick=()=>showPage('food');
+$('#tabNotif').onclick=()=>showPage('notif');
 $('#foodForm').addEventListener('submit',addFood);
 $('#hobbyForm').addEventListener('submit',addHobby);
 $('#hSuggest').onclick=suggestHobbies;

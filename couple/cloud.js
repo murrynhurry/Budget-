@@ -194,6 +194,15 @@ const sample={json:async prompt=>{
   return out.map(([title,detail,cost,where])=>({title,detail,cost,where}));
 }};
 
+/* ---------- calendar link: the calendar-feed function fetches a private iCal link ---------- */
+C.calendarFeed=async url=>{
+  const r=await sb.functions.invoke("calendar-feed",{body:{url}});
+  if(r.error){const x=r.error.context,st=x&&x.status;let m=r.error.message;try{const b=await x.json();if(b&&b.error)m=b.error}catch(e){}
+    if(st===404||r.error.name==="FunctionsFetchError")m="Calendar syncing isn't set up in Supabase yet.";throw new Error(m)}
+  if(!r.data||!r.data.ics)throw new Error("That calendar link didn't return any events.");
+  return r.data.ics;
+};
+
 window.claude={use:async n=>{const id=await ready;if(!id)return null;
   if(n==="db"){try{await findHid()}catch(e){return null}return db}
   if(n==="user")return user;

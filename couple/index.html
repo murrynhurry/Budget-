@@ -223,6 +223,8 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .dncal .dd.sel::after{background:var(--bg)}
 .dncal .dd[disabled]{opacity:.3;cursor:default}
 .dncal .dd.blank{visibility:hidden}
+.feedBox{display:flex;flex-direction:column;gap:8px}
+.feedBox input{width:100%}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .sw{all:unset;box-sizing:border-box;width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
 .sw:hover{transform:scale(1.08)}
@@ -467,6 +469,11 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
       <label class="btn" id="importBtn" title="Export your calendar as .ics and choose it here">
         Import my calendar (.ics)<input type="file" id="ics" accept=".ics,text/calendar">
       </label>
+      </div>
+      <div class="feedBox" id="feedBox" hidden>
+        <label>Calendar link<input type="text" id="feedUrl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste your calendar's secret iCal address"></label>
+        <div class="actions"><button type="button" class="primary" id="feedSave">Save and sync</button><button type="button" id="feedStop" hidden>Stop syncing</button></div>
+        <p class="note">Google Calendar, on a computer: Settings → pick your calendar → Integrate calendar → copy the "Secret address in iCal format". iPhone Calendar (iCloud): share the calendar as a Public Calendar and copy its link. Your events then refresh each time you open the app.</p>
       </div>
       <div id="importInfo" class="note" hidden></div>
     </div>
@@ -1194,6 +1201,7 @@ function renderImportInfo(){
   if(mine&&mine.source==='google'){info.hidden=false;info.replaceChildren(`Your Google Calendar is synced: ${(mine.events||[]).length} events, updated ${new Date(mine.importedAt).toLocaleString([], {weekday:'short',hour:'numeric',minute:'2-digit'})}. ${mine.busyOnly?'Your partner sees them as Busy. ':''}`,
     h('button',{type:'button',text:mine.busyOnly?'Show titles':'Show as Busy only',onclick:()=>setBusyOnly(!mine.busyOnly)}),' ',
     h('button',{type:'button',text:'Stop syncing',onclick:stopSync}))}
+  else if(mine&&mine.source==='feed'){info.hidden=false;info.replaceChildren(`Your calendar is synced from your calendar link: ${(mine.events||[]).length} events, updated ${new Date(mine.importedAt).toLocaleString([], {weekday:'short',hour:'numeric',minute:'2-digit'})}.`)}
   else if(mine){info.hidden=false;info.replaceChildren(`Your calendar import: ${(mine.events||[]).length} events from ${mine.fileName||'a file'}, ${new Date(mine.importedAt).toLocaleString()}. Import again to refresh it. `,h('button',{type:'button',text:'Remove my import',onclick:removeImport}))}
   else info.hidden=true;
 }
@@ -1315,11 +1323,8 @@ function occurrences(ev,from,to){
   }
   return out;
 }
-async function importICS(file){
-  if(!db||!me)return;
-  let text;try{text=await file.text()}catch{banner('Could not read that file.');return}
+function icsToItems(text){
   const raw=parseICS(text);
-  if(!raw.length){banner('No events found in that file. Make sure it is an .ics calendar export.');return}
   const from=addDays(startOfWeek(new Date()),-14),to=addDays(from,14+120);
   const seen=new Set(),items=[];
   for(const ev of raw){
@@ -1331,8 +1336,44 @@ async function importICS(file){
     }
   }
   items.sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+  return {count:raw.length,items};
+}
+async function importICS(file){
+  if(!db||!me)return;
+  let text;try{text=await file.text()}catch{banner('Could not read that file.');return}
+  const {count,items}=icsToItems(text);
+  if(!count){banner('No events found in that file. Make sure it is an .ics calendar export.');return}
   try{await db.doc('imports/'+me).set({events:items.slice(0,600),fileName:file.name.slice(0,80),importedAt:new Date().toISOString()});banner(`Imported ${Math.min(items.length,600)} events for the next four months.`);await claimSeat()}
   catch(e){banner(e.code==='invalid_argument'?'You can view this calendar but not import into it. Ask the owner to share it with you as an Editor.':'Could not save the import. Try again in a moment.')}
+}
+/* --- calendar link (phone app): refreshes from a private iCal address --- */
+const feedOK=()=>!!(window.CLOUD&&window.CLOUD.calendarFeed);
+let feedBusy=false;
+function renderFeed(){
+  const b=$('#feedBox');if(!b)return;b.hidden=!feedOK()||!me;const on=!!prefs.icsUrl;
+  $('#feedStop').hidden=!on;$('#feedSave').textContent=on?'Sync now':'Save and sync';
+  $('#feedUrl').placeholder=on?'Link saved. Paste a new one to change it':"Paste your calendar's secret iCal address";
+}
+async function syncFeed(manual){
+  if(!feedOK()||!db||!me||feedBusy||!prefs.icsUrl)return;
+  feedBusy=true;$('#feedSave').disabled=true;if(manual){gs.status='Syncing your calendar…';renderImportInfo()}
+  try{
+    const {count,items}=icsToItems(await window.CLOUD.calendarFeed(prefs.icsUrl));
+    if(!count)throw new Error('That calendar link has no events in it.');
+    await db.doc('imports/'+me).set({events:items.slice(0,600),source:'feed',fileName:'your calendar link',importedAt:new Date().toISOString()});
+    gs.status='';await claimSeat();
+  }catch(e){gs.status='Calendar sync: '+String((e&&e.message)||e)}
+  feedBusy=false;$('#feedSave').disabled=false;renderImportInfo();
+}
+async function saveFeed(){
+  const u=$('#feedUrl').value.trim();
+  if(!u){if(prefs.icsUrl)syncFeed(true);return}
+  prefs={...prefs,icsUrl:u};try{await prefsRef().set(prefs)}catch{}
+  $('#feedUrl').value='';renderFeed();syncFeed(true);
+}
+async function stopFeed(){
+  prefs={...prefs,icsUrl:null};try{await prefsRef().set(prefs);await db.doc('imports/'+me).delete()}catch{}
+  gs.status='';renderFeed();renderImportInfo();
 }
 async function removeImport(){try{await db.doc('imports/'+me).delete();banner('Your calendar import was removed.')}catch{banner('Could not remove the import.')}}
 
@@ -1389,6 +1430,8 @@ $('#hobbyForm').addEventListener('submit',addHobby);
 $('#hSuggest').onclick=suggestHobbies;
 $('#gSyncBtn').onclick=()=>syncGoogle(true);
 if(PAGES[location.hash.slice(1)])showPage(location.hash.slice(1));
+$('#feedSave').onclick=saveFeed;
+$('#feedStop').onclick=stopFeed;
 $('#ics').onchange=e=>{const f=e.target.files[0];if(f)importICS(f);e.target.value=''};
 
 
@@ -1645,6 +1688,7 @@ render();
   db.collection('restaurants').onSnapshot(s=>{foods=s.docs.map(d=>({id:d.id,...d.data()}));renderFood()},onErr);
   db.collection('hobbies').onSnapshot(s=>{hobbies=s.docs.map(d=>({id:d.id,...d.data()}));renderHobbies()},onErr);
   if(me){try{const p=await prefsRef().get();prefs=p.exists?{...p.data()}:{}}catch{}
+    renderFeed();if(prefs.icsUrl){syncFeed(false);setInterval(()=>{if(document.visibilityState==='visible')syncFeed(false)},15*60*1000)}
     if(prefs.look&&typeof prefs.look==='object'){look={...look,...prefs.look};applyLook();try{localStorage.setItem('mm-look',JSON.stringify(look))}catch{}}}
   db.doc('meta/place').onSnapshot(d=>{if(d.exists){const v=d.data()||{};const np={...place,...v};if(JSON.stringify(np)!==JSON.stringify(place)){place=np;fetchWeather(false)}}},()=>{});
   fetchWeather(false);setInterval(()=>{if(document.visibilityState==='visible')fetchWeather(false)},20*60*1000);

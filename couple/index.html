@@ -453,10 +453,6 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
 
   <section class="panel settings" id="settings" aria-labelledby="setH" hidden>
     <div class="tHead"><h3 id="setH">Settings</h3><button type="button" id="setClose">Done</button></div>
-    <div class="setGroup"><span class="setLbl" id="lblA">Mary's color</span><div class="swatches" id="swA" role="group" aria-labelledby="lblA"></div></div>
-    <div class="setGroup"><span class="setLbl" id="lblB">Matthew's color</span><div class="swatches" id="swB" role="group" aria-labelledby="lblB"></div></div>
-    <div class="setGroup"><span class="setLbl" id="lblBoth">Together color</span><div class="swatches" id="swBoth" role="group" aria-labelledby="lblBoth"></div></div>
-    <p class="note" id="colorNote">Colors are shared, so you both see the same ones.</p>
     <div class="setGroup"><span class="setLbl">Background</span>
       <div class="seg" role="group" aria-label="Background" style="margin-left:0;align-self:flex-start;flex-wrap:wrap" id="skySeg">
         <button type="button" data-sky="auto" aria-pressed="true">Follow the sky</button><button type="button" data-sky="day" aria-pressed="false">Day</button><button type="button" data-sky="sunset" aria-pressed="false">Sunset</button><button type="button" data-sky="night" aria-pressed="false">Night</button>
@@ -490,13 +486,12 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
         <ul class="feedList" id="hideList"></ul>
       </div>
     </div>
-    <div class="setGroup"><span class="setLbl">Font</span><div class="fontGrid" id="fontGrid" role="group" aria-label="Font"></div></div>
     <div class="setGroup"><span class="setLbl">Text size</span>
       <div class="seg" role="group" aria-label="Text size" style="margin-left:0;align-self:flex-start">
         <button type="button" data-size="s" aria-pressed="false">Small</button><button type="button" data-size="m" aria-pressed="true">Normal</button><button type="button" data-size="l" aria-pressed="false">Large</button>
       </div>
     </div>
-    <p class="note">Background, font and size are saved just for you, on every device you use.</p>
+    <p class="note">Background and text size are saved just for you, on every device you use.</p>
     <div class="setGroup"><span class="setLbl">Account</span><div class="acct" id="acctBox"></div></div>
     <p class="note" id="appVersion">Version: Oct 7, 12:45 pm (with love notes on the side, weather, birds and fireflies)</p>
   </section>
@@ -1663,12 +1658,12 @@ try{Object.assign(look,JSON.parse(localStorage.getItem('mm-look')||'{}'))}catch{
 function applyLook(){
   const f=FONTS[look.font]||FONTS.classic,r=document.documentElement.style;
   r.setProperty('--display',f.d);r.setProperty('--body',f.b);r.setProperty('--zoom',ZOOM[look.size]||1);
-  const g=$('#fontGrid');
+  const g=$('#fontGrid');if(g){
   const opt=([k,v])=>h('button',{type:'button',class:'fontOpt','aria-pressed':String(look.font===k),onclick:()=>setLook({font:k})},
     h('span',{class:'pv',style:`font-family:${v.d}`,text:'Murry & Matty'}),h('span',{class:'nm',text:v.label}));
   const all=Object.entries(FONTS);
   g.replaceChildren(h('span',{class:'fontSub',text:'Print'}),...all.filter(([,v])=>!v.hand).map(opt),
-    h('span',{class:'fontSub',text:'Handwritten'}),...all.filter(([,v])=>v.hand).map(opt));
+    h('span',{class:'fontSub',text:'Handwritten'}),...all.filter(([,v])=>v.hand).map(opt));}
   document.querySelectorAll('[data-size]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.size===look.size)));
   skyPref=look.sky||'auto';applySky();applyWeather(currentWx());
   document.querySelectorAll('[data-sky]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.sky===skyPref)));
@@ -1712,6 +1707,7 @@ function applyColors(){
   renderColorSettings();
 }
 function renderColorSettings(){
+  if(!$('#swA'))return;
   const names_={a:couple?.a?nameOf(couple.a):'Mary',b:couple?.b?nameOf(couple.b):'Matthew'};
   $('#lblA').textContent=`${names_.a}'s color`;$('#lblB').textContent=`${names_.b}'s color`;
   const dark=isDark();

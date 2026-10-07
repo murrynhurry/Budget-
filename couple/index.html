@@ -26,7 +26,25 @@ if("serviceWorker" in navigator){
 <body>
 <title>Murry &amp; Matty</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=Fredoka:wght@500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Lora:wght@400;500;600&family=Caveat:wght@600;700&family=Quicksand:wght@500;600;700&family=Poppins:wght@400;500;600;700&family=Comfortaa:wght@500;700&family=Playfair+Display:wght@600;700&family=Lato:wght@400;700&family=Pacifico&family=Patrick+Hand&family=Courier+Prime:wght@400;700&family=Baloo+2:wght@500;600;700&family=Lexend:wght@400;500;600&family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&family=Indie+Flower&family=Shadows+Into+Light&family=Kalam:wght@400;700&family=Gaegu:wght@400;700&family=Gochi+Hand&family=Amatic+SC:wght@700&family=Dancing+Script:wght@600;700&family=Architects+Daughter&family=Nanum+Pen+Script&family=Sacramento&family=Homemade+Apple&family=Coming+Soon&family=Reenie+Beanie&family=Delius&display=swap">
+<script>
+/* Load only the font this person uses, before anything draws, so there's no flash of a different font. */
+(function(){
+  var GF={"Bricolage Grotesque": "Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700", "Figtree": "Figtree:wght@400;500;600;700", "Nunito": "Nunito:wght@400;600;700;800", "Fredoka": "Fredoka:wght@500;600;700", "Fraunces": "Fraunces:opsz,wght@9..144,600;9..144,700", "Lora": "Lora:wght@400;500;600", "Caveat": "Caveat:wght@600;700", "Quicksand": "Quicksand:wght@500;600;700", "Poppins": "Poppins:wght@400;500;600;700", "Comfortaa": "Comfortaa:wght@500;700", "Playfair Display": "Playfair+Display:wght@600;700", "Lato": "Lato:wght@400;700", "Pacifico": "Pacifico", "Patrick Hand": "Patrick+Hand", "Courier Prime": "Courier+Prime:wght@400;700", "Baloo 2": "Baloo+2:wght@500;600;700", "Lexend": "Lexend:wght@400;500;600", "DM Serif Display": "DM+Serif+Display", "DM Sans": "DM+Sans:wght@400;500;600", "Indie Flower": "Indie+Flower", "Shadows Into Light": "Shadows+Into+Light", "Kalam": "Kalam:wght@400;700", "Gaegu": "Gaegu:wght@400;700", "Gochi Hand": "Gochi+Hand", "Amatic SC": "Amatic+SC:wght@700", "Dancing Script": "Dancing+Script:wght@600;700", "Architects Daughter": "Architects+Daughter", "Nanum Pen Script": "Nanum+Pen+Script", "Sacramento": "Sacramento", "Homemade Apple": "Homemade+Apple", "Coming Soon": "Coming+Soon", "Reenie Beanie": "Reenie+Beanie", "Delius": "Delius"},ST={"classic": ["\"Bricolage Grotesque\",ui-sans-serif,system-ui,sans-serif", "\"Figtree\",ui-sans-serif,system-ui,sans-serif"], "rounded": ["\"Nunito\",ui-rounded,system-ui,sans-serif", "\"Nunito\",ui-rounded,system-ui,sans-serif"], "playful": ["\"Fredoka\",\"Nunito\",ui-rounded,sans-serif", "\"Nunito\",ui-rounded,system-ui,sans-serif"], "elegant": ["\"Fraunces\",Georgia,serif", "\"Lora\",Georgia,serif"], "handwritten": ["\"Caveat\",ui-rounded,system-ui,sans-serif", "\"Nunito\",ui-rounded,system-ui,sans-serif"], "simple": ["system-ui,-apple-system,\"Segoe UI\",sans-serif", "system-ui,-apple-system,\"Segoe UI\",sans-serif"], "soft": ["\"Quicksand\",ui-rounded,sans-serif", "\"Quicksand\",ui-rounded,sans-serif"], "modern": ["\"Poppins\",ui-sans-serif,sans-serif", "\"Poppins\",ui-sans-serif,sans-serif"], "bubbly": ["\"Comfortaa\",ui-rounded,sans-serif", "\"Nunito\",ui-rounded,sans-serif"], "chunky": ["\"Baloo 2\",ui-rounded,sans-serif", "\"Baloo 2\",ui-rounded,sans-serif"], "romantic": ["\"Playfair Display\",Georgia,serif", "\"Lato\",ui-sans-serif,sans-serif"], "script": ["\"Pacifico\",ui-rounded,system-ui,sans-serif", "\"Quicksand\",ui-rounded,sans-serif"], "notebook": ["\"Patrick Hand\",ui-rounded,system-ui,sans-serif", "\"Patrick Hand\",ui-rounded,system-ui,sans-serif"], "typewriter": ["\"Courier Prime\",\"Courier New\",monospace", "\"Courier Prime\",\"Courier New\",monospace"], "editorial": ["\"DM Serif Display\",Georgia,serif", "\"DM Sans\",ui-sans-serif,sans-serif"], "clear": ["\"Lexend\",ui-sans-serif,sans-serif", "\"Lexend\",ui-sans-serif,sans-serif"], "indie": ["\"Indie Flower\",ui-rounded,system-ui,sans-serif", "\"Indie Flower\",ui-rounded,system-ui,sans-serif"], "shadows": ["\"Shadows Into Light\",ui-rounded,system-ui,sans-serif", "\"Shadows Into Light\",ui-rounded,system-ui,sans-serif"], "kalam": ["\"Kalam\",ui-rounded,system-ui,sans-serif", "\"Kalam\",ui-rounded,system-ui,sans-serif"], "gaegu": ["\"Gaegu\",ui-rounded,system-ui,sans-serif", "\"Gaegu\",ui-rounded,system-ui,sans-serif"], "gochi": ["\"Gochi Hand\",ui-rounded,system-ui,sans-serif", "\"Gochi Hand\",ui-rounded,system-ui,sans-serif"], "architect": ["\"Architects Daughter\",ui-rounded,system-ui,sans-serif", "\"Architects Daughter\",ui-rounded,system-ui,sans-serif"], "comingsoon": ["\"Coming Soon\",ui-rounded,system-ui,sans-serif", "\"Coming Soon\",ui-rounded,system-ui,sans-serif"], "delius": ["\"Delius\",ui-rounded,system-ui,sans-serif", "\"Delius\",ui-rounded,system-ui,sans-serif"], "nanum": ["\"Nanum Pen Script\",ui-rounded,system-ui,sans-serif", "\"Nunito\",ui-rounded,system-ui,sans-serif"], "reenie": ["\"Reenie Beanie\",ui-rounded,system-ui,sans-serif", "\"Nunito\",ui-rounded,system-ui,sans-serif"], "amatic": ["\"Amatic SC\",ui-rounded,system-ui,sans-serif", "\"Nunito\",ui-rounded,system-ui,sans-serif"], "dancing": ["\"Dancing Script\",ui-rounded,system-ui,sans-serif", "\"Quicksand\",ui-rounded,sans-serif"], "sacramento": ["\"Sacramento\",ui-rounded,system-ui,sans-serif", "\"Quicksand\",ui-rounded,sans-serif"], "homemade": ["\"Homemade Apple\",ui-rounded,system-ui,sans-serif", "\"Quicksand\",ui-rounded,sans-serif"]};
+  function fam(stack){return (stack.match(/"([^"]+)"/g)||[]).map(function(x){return x.slice(1,-1)})}
+  window.mmLoadFont=function(key){
+    var st=ST[key]||ST.classic,need=fam(st[0]).concat(fam(st[1])).filter(function(n,i,a){return GF[n]&&a.indexOf(n)===i});
+    var id='mmfont-'+key;if(document.getElementById(id)||!need.length)return;
+    var l=document.createElement('link');l.rel='stylesheet';l.id=id;
+    l.href='https://fonts.googleapis.com/css2?family='+need.map(function(n){return GF[n]}).join('&family=')+'&display=block';
+    document.head.appendChild(l);
+  };
+  var look={};try{look=JSON.parse(localStorage.getItem('mm-look')||'{}')||{}}catch(e){}
+  var key=ST[look.font]?look.font:'classic',st=ST[key],r=document.documentElement.style;
+  r.setProperty('--display',st[0]);r.setProperty('--body',st[1]);
+  var z={s:.92,m:1,l:1.12}[look.size];if(z)r.setProperty('--zoom',z);
+  window.mmLoadFont(key);
+})();
+</script>
 <style>
 /* Layout: a quiet header with the two of you, then one week as seven columns (stacks to an agenda on phones). */
 :root{
@@ -1626,37 +1644,38 @@ const FONTS={
   rounded:{label:'Rounded',d:'"Nunito",ui-rounded,system-ui,sans-serif',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
   playful:{label:'Playful',d:'"Fredoka","Nunito",ui-rounded,sans-serif',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
   elegant:{label:'Elegant',d:'"Fraunces",Georgia,serif',b:'"Lora",Georgia,serif'},
-  handwritten:{hand:1,label:'Handwritten',d:'"Caveat","Comic Sans MS",cursive',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
+  handwritten:{hand:1,label:'Handwritten',d:'"Caveat",ui-rounded,system-ui,sans-serif',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
   simple:{label:'Simple',d:'system-ui,-apple-system,"Segoe UI",sans-serif',b:'system-ui,-apple-system,"Segoe UI",sans-serif'},
   soft:{label:'Soft',d:'"Quicksand",ui-rounded,sans-serif',b:'"Quicksand",ui-rounded,sans-serif'},
   modern:{label:'Modern',d:'"Poppins",ui-sans-serif,sans-serif',b:'"Poppins",ui-sans-serif,sans-serif'},
   bubbly:{label:'Bubbly',d:'"Comfortaa",ui-rounded,sans-serif',b:'"Nunito",ui-rounded,sans-serif'},
   chunky:{label:'Chunky',d:'"Baloo 2",ui-rounded,sans-serif',b:'"Baloo 2",ui-rounded,sans-serif'},
   romantic:{label:'Romantic',d:'"Playfair Display",Georgia,serif',b:'"Lato",ui-sans-serif,sans-serif'},
-  script:{hand:1,label:'Script',d:'"Pacifico",cursive',b:'"Quicksand",ui-rounded,sans-serif'},
-  notebook:{hand:1,label:'Notebook',d:'"Patrick Hand","Comic Sans MS",cursive',b:'"Patrick Hand","Comic Sans MS",cursive'},
+  script:{hand:1,label:'Script',d:'"Pacifico",ui-rounded,system-ui,sans-serif',b:'"Quicksand",ui-rounded,sans-serif'},
+  notebook:{hand:1,label:'Notebook',d:'"Patrick Hand",ui-rounded,system-ui,sans-serif',b:'"Patrick Hand",ui-rounded,system-ui,sans-serif'},
   typewriter:{label:'Typewriter',d:'"Courier Prime","Courier New",monospace',b:'"Courier Prime","Courier New",monospace'},
   editorial:{label:'Editorial',d:'"DM Serif Display",Georgia,serif',b:'"DM Sans",ui-sans-serif,sans-serif'},
   clear:{label:'Easy to read',d:'"Lexend",ui-sans-serif,sans-serif',b:'"Lexend",ui-sans-serif,sans-serif'},
-  indie:{hand:1,label:'Doodle',d:'"Indie Flower",cursive',b:'"Indie Flower",cursive'},
-  shadows:{hand:1,label:'Pencil',d:'"Shadows Into Light",cursive',b:'"Shadows Into Light",cursive'},
-  kalam:{hand:1,label:'Felt pen',d:'"Kalam",cursive',b:'"Kalam",cursive'},
-  gaegu:{hand:1,label:'Cute',d:'"Gaegu",cursive',b:'"Gaegu",cursive'},
-  gochi:{hand:1,label:'Marker',d:'"Gochi Hand",cursive',b:'"Gochi Hand",cursive'},
-  architect:{hand:1,label:'Sketchbook',d:'"Architects Daughter",cursive',b:'"Architects Daughter",cursive'},
-  comingsoon:{hand:1,label:'Kid\'s note',d:'"Coming Soon",cursive',b:'"Coming Soon",cursive'},
-  delius:{hand:1,label:'Friendly',d:'"Delius",cursive',b:'"Delius",cursive'},
-  nanum:{hand:1,label:'Brush pen',d:'"Nanum Pen Script",cursive',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
-  reenie:{hand:1,label:'Scribble',d:'"Reenie Beanie",cursive',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
-  amatic:{hand:1,label:'Tall & skinny',d:'"Amatic SC",cursive',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
-  dancing:{hand:1,label:'Cursive',d:'"Dancing Script",cursive',b:'"Quicksand",ui-rounded,sans-serif'},
-  sacramento:{hand:1,label:'Love letter',d:'"Sacramento",cursive',b:'"Quicksand",ui-rounded,sans-serif'},
-  homemade:{hand:1,label:'Signature',d:'"Homemade Apple",cursive',b:'"Quicksand",ui-rounded,sans-serif'}};
+  indie:{hand:1,label:'Doodle',d:'"Indie Flower",ui-rounded,system-ui,sans-serif',b:'"Indie Flower",ui-rounded,system-ui,sans-serif'},
+  shadows:{hand:1,label:'Pencil',d:'"Shadows Into Light",ui-rounded,system-ui,sans-serif',b:'"Shadows Into Light",ui-rounded,system-ui,sans-serif'},
+  kalam:{hand:1,label:'Felt pen',d:'"Kalam",ui-rounded,system-ui,sans-serif',b:'"Kalam",ui-rounded,system-ui,sans-serif'},
+  gaegu:{hand:1,label:'Cute',d:'"Gaegu",ui-rounded,system-ui,sans-serif',b:'"Gaegu",ui-rounded,system-ui,sans-serif'},
+  gochi:{hand:1,label:'Marker',d:'"Gochi Hand",ui-rounded,system-ui,sans-serif',b:'"Gochi Hand",ui-rounded,system-ui,sans-serif'},
+  architect:{hand:1,label:'Sketchbook',d:'"Architects Daughter",ui-rounded,system-ui,sans-serif',b:'"Architects Daughter",ui-rounded,system-ui,sans-serif'},
+  comingsoon:{hand:1,label:'Kid\'s note',d:'"Coming Soon",ui-rounded,system-ui,sans-serif',b:'"Coming Soon",ui-rounded,system-ui,sans-serif'},
+  delius:{hand:1,label:'Friendly',d:'"Delius",ui-rounded,system-ui,sans-serif',b:'"Delius",ui-rounded,system-ui,sans-serif'},
+  nanum:{hand:1,label:'Brush pen',d:'"Nanum Pen Script",ui-rounded,system-ui,sans-serif',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
+  reenie:{hand:1,label:'Scribble',d:'"Reenie Beanie",ui-rounded,system-ui,sans-serif',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
+  amatic:{hand:1,label:'Tall & skinny',d:'"Amatic SC",ui-rounded,system-ui,sans-serif',b:'"Nunito",ui-rounded,system-ui,sans-serif'},
+  dancing:{hand:1,label:'Cursive',d:'"Dancing Script",ui-rounded,system-ui,sans-serif',b:'"Quicksand",ui-rounded,sans-serif'},
+  sacramento:{hand:1,label:'Love letter',d:'"Sacramento",ui-rounded,system-ui,sans-serif',b:'"Quicksand",ui-rounded,sans-serif'},
+  homemade:{hand:1,label:'Signature',d:'"Homemade Apple",ui-rounded,system-ui,sans-serif',b:'"Quicksand",ui-rounded,sans-serif'}};
 const ZOOM={s:.92,m:1,l:1.12};
 let look={font:'classic',size:'m'};
 try{Object.assign(look,JSON.parse(localStorage.getItem('mm-look')||'{}'))}catch{}
 function applyLook(){
   const f=FONTS[look.font]||FONTS.classic,r=document.documentElement.style;
+  if(window.mmLoadFont)window.mmLoadFont(FONTS[look.font]?look.font:'classic');
   r.setProperty('--display',f.d);r.setProperty('--body',f.b);r.setProperty('--zoom',ZOOM[look.size]||1);
   const g=$('#fontGrid');if(g){
   const opt=([k,v])=>h('button',{type:'button',class:'fontOpt','aria-pressed':String(look.font===k),onclick:()=>setLook({font:k})},

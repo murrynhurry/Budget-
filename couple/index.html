@@ -1300,11 +1300,11 @@ $('#ics').onchange=e=>{const f=e.target.files[0];if(f)importICS(f);e.target.valu
 /* --- sky follows the time of day --- */
 const SKIES=[
   {from:0,   name:'night',   g:['#070d24','#0f1d48','#1c3470','#2a4a8a'], t:'#f2f5ff', m:'#b7c3e6', sun:0,sy:30,sc:'#ffd25a',moon:1,cc:'rgba(170,185,230,.14)', fb:'#14214d',ff:'#0a1331', s:1},
-  {from:5,   name:'dawn',    g:['#1b2a5e','#5d5794','#d98b7f','#f6cf9e'], t:'#2a2148', m:'#4a3d66', sun:.95,sy:24,sc:'#ffab70',moon:.25,cc:'rgba(255,214,226,.6)', fb:'#51436f',ff:'#2c2650', s:.3},
-  {from:7,   name:'morning', g:['#7fb7ea','#a9d2f3','#d6ebfa','#f5f1e4'], t:'#0b2545', m:'#2c4a6e', sun:1,sy:7,sc:'#ffd257',moon:0,cc:'rgba(255,255,255,.88)', fb:'#86bb95',ff:'#3f805c', s:0},
-  {from:11,  name:'day',     g:['#5aa3ea','#83bdf1','#b5d8f7','#e1f0fc'], t:'#08203f', m:'#1f3d63', sun:1,sy:3,sc:'#ffd84a',moon:0,cc:'rgba(255,255,255,.92)', fb:'#7cb98c',ff:'#367a54', s:0},
-  {from:16,  name:'afternoon',g:['#6c9fd6','#9cc0e6','#d8d8d6','#f4d6a8'], t:'#0b2545', m:'#2c4a6e', sun:1,sy:9,sc:'#ffbf48',moon:0,cc:'rgba(255,250,240,.82)', fb:'#8aae83',ff:'#47734f', s:0},
-  {from:18,  name:'sunset',  g:['#2b2f6b','#7b4a8c','#d9695a','#f4a964'], t:'#3a1f2e', m:'#5c3445', sun:1,sy:22,sc:'#ff8a5c',moon:0,cc:'rgba(255,196,186,.62)', fb:'#6a4363',ff:'#36284a', s:.15},
+  {from:5,   name:'dawn',    g:['#1b2a5e','#5d5794','#d98b7f','#f6cf9e'], t:'#f7f3ff', m:'#e2d8f2', sun:.95,sy:24,sc:'#ffab70',moon:.25,cc:'rgba(255,214,226,.6)', fb:'#51436f',ff:'#2c2650', s:.3},
+  {from:7,   name:'morning', g:['#93b4f2','#b0c8f6','#d3e0fa','#f3f1f8'], t:'#0b2545', m:'#2c4a6e', sun:1,sy:7,sc:'#ffd257',moon:0,cc:'rgba(255,255,255,.88)', fb:'#86bb95',ff:'#3f805c', s:0},
+  {from:11,  name:'day',     g:['#7f9ff0','#9fb8f4','#c6d5f9','#e8eefd'], t:'#08203f', m:'#1f3d63', sun:1,sy:3,sc:'#ffd84a',moon:0,cc:'rgba(255,255,255,.92)', fb:'#7cb98c',ff:'#367a54', s:0},
+  {from:16,  name:'afternoon',g:['#8aa2e6','#aabbec','#d6d6e8','#f4dcc0'], t:'#0b2545', m:'#2c4a6e', sun:1,sy:9,sc:'#ffbf48',moon:0,cc:'rgba(255,250,240,.82)', fb:'#8aae83',ff:'#47734f', s:0},
+  {from:18,  name:'sunset',  g:['#2b2f6b','#7b4a8c','#d9695a','#f4a964'], t:'#fff6ef', m:'#f1d9cf', sun:1,sy:22,sc:'#ff8a5c',moon:0,cc:'rgba(255,196,186,.62)', fb:'#6a4363',ff:'#36284a', s:.15},
   {from:20,  name:'dusk',    g:['#0d1540','#262c69','#4a3f86','#7a5a9a'], t:'#f2f0ff', m:'#c9c3ea', sun:0,sy:30,sc:'#ff8a5c',moon:.85,cc:'rgba(205,185,235,.28)', fb:'#2d2c5e',ff:'#18183b', s:.6},
   {from:21.5,name:'night',   g:['#070d24','#0f1d48','#1c3470','#2a4a8a'], t:'#f2f5ff', m:'#b7c3e6', sun:0,sy:30,sc:'#ffd25a',moon:1,cc:'rgba(170,185,230,.14)', fb:'#14214d',ff:'#0a1331', s:1},
 ];
@@ -1313,7 +1313,7 @@ function applySky(){
   let sky=SKIES[0];for(const k of SKIES)if(hr>=k.from)sky=k;
   if(skyPref&&skyPref!=='auto')sky=SKIES.find(k=>k.name===skyPref)||sky;
   const r=document.documentElement.style;
-  r.setProperty('--grad',`linear-gradient(175deg,${sky.g[3]} 0%,${sky.g[2]} 30%,${sky.g[1]} 65%,${sky.g[0]} 100%)`);r.setProperty('--bg',sky.g[0]);
+  r.setProperty('--grad',`linear-gradient(175deg,${sky.g[0]} 0%,${sky.g[1]} 40%,${sky.g[2]} 75%,${sky.g[3]} 100%)`);
   r.setProperty('--bg',sky.g[1]);
   r.setProperty('--on-grad',sky.t);r.setProperty('--on-grad-muted',sky.m);r.setProperty('--star-o',sky.s);
   r.setProperty('--sun-o',sky.sun);r.setProperty('--sun-y',sky.sy+'vh');r.setProperty('--sun-c',sky.sc);r.setProperty('--moon-o',sky.moon);r.setProperty('--cloud-c',sky.cc);r.setProperty('--forest-b',sky.fb);r.setProperty('--forest-f',sky.ff);

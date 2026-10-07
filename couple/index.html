@@ -419,8 +419,8 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
 
   <section class="panel settings" id="settings" aria-labelledby="setH" hidden>
     <div class="tHead"><h3 id="setH">Settings</h3><button type="button" id="setClose">Done</button></div>
-    <div class="setGroup"><span class="setLbl" id="lblA">Person 1 color</span><div class="swatches" id="swA" role="group" aria-labelledby="lblA"></div></div>
-    <div class="setGroup"><span class="setLbl" id="lblB">Person 2 color</span><div class="swatches" id="swB" role="group" aria-labelledby="lblB"></div></div>
+    <div class="setGroup"><span class="setLbl" id="lblA">Mary's color</span><div class="swatches" id="swA" role="group" aria-labelledby="lblA"></div></div>
+    <div class="setGroup"><span class="setLbl" id="lblB">Matthew's color</span><div class="swatches" id="swB" role="group" aria-labelledby="lblB"></div></div>
     <div class="setGroup"><span class="setLbl" id="lblBoth">Together color</span><div class="swatches" id="swBoth" role="group" aria-labelledby="lblBoth"></div></div>
     <p class="note" id="colorNote">Colors are shared, so you both see the same ones.</p>
     <div class="setGroup"><span class="setLbl">Background</span>
@@ -529,8 +529,8 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
 
   <div class="week" id="week"></div>
   <div class="legend">
-    <span><i style="background:var(--a)"></i><span id="lgA">Partner 1</span></span>
-    <span><i style="background:var(--b)"></i><span id="lgB">Partner 2</span></span>
+    <span><i style="background:var(--a)"></i><span id="lgA">Mary</span></span>
+    <span><i style="background:var(--b)"></i><span id="lgB">Matthew</span></span>
     <span><i style="background:var(--both)"></i>Evening free for both of you (nothing after 5 pm)</span>
     <span><i style="background:var(--both-soft);outline-color:var(--both)"></i>Plans for both of you</span>
   </div>
@@ -626,7 +626,7 @@ function fmtTime(t){if(!t)return'';let[h,m]=t.split(':').map(Number);const ap=h<
 function h(tag,props={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(props)){if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='text')e.textContent=v;else e.setAttribute(k,v)}for(const c of kids)if(c!=null)e.append(c);return e}
 
 function seat(id){if(!couple)return'a';if(couple.b===id)return'b';return'a'}
-function nameOf(id){return names[id]||(id===me?'You':'Partner')}
+function nameOf(id){return names[id]||(id===me?'You':'Matthew')}
 
 function nextOcc(d,yearly,from){
   const base=new Date(d+'T12:00');if(!yearly)return base;
@@ -734,7 +734,7 @@ function fillWho(){
   const s=$('#cWho'),cur=s.value;
   s.replaceChildren(h('option',{value:'',text:'Either of us'}));
   if(me)s.append(h('option',{value:me,text:'Me'}));
-  const p=partnerId();if(p)s.append(h('option',{value:p,text:names[p]||'Partner'}));
+  const p=partnerId();if(p)s.append(h('option',{value:p,text:names[p]||'Matthew'}));
   s.value=[...s.options].some(o=>o.value===cur)?cur:'';
 }
 function whoChip(id){return id?h('span',{class:'who '+seat(id)},h('i'),nameOf(id)):h('span',{class:'who'},h('i'),'Either')}
@@ -1124,10 +1124,10 @@ async function renderPeople(){
   if(!ids.length){box.replaceChildren(h('span',{class:'chip ghost',text:db?'Add an event to claim your color':'Sign in to sync'}));fillWho();renderChores();renderNotes();return}
   let ps={};try{if(user)ps=await user.profiles(ids)}catch{}
   box.replaceChildren();
-  ids.forEach((id,i)=>{const p=ps[id]||{};const n=(p.name||'').split(' ')[0]||(id===me?'You':'Partner');names[id]=n;
+  ids.forEach((id,i)=>{const p=ps[id]||{};const n=(p.name||'').split(' ')[0]||(id===me?'You':'Matthew');names[id]=n;
     box.append(h('span',{class:'chip '+(i?'b':'a')},p.avatarUrl?h('img',{src:p.avatarUrl,alt:''}):h('i'),n+(id===me?' (you)':'')))});
-  if(ids.length<2)box.append(h('span',{class:'chip ghost',text:'Waiting for your partner'}));
-  $('#lgA').textContent=names[couple?.a]||'Partner 1';$('#lgB').textContent=names[couple?.b]||'Partner 2';
+  if(ids.length<2)box.append(h('span',{class:'chip ghost',text:'Waiting for Matthew'}));
+  $('#lgA').textContent=names[couple?.a]||'Mary';$('#lgB').textContent=names[couple?.b]||'Matthew';
   fillWho();renderChores();renderColorSettings();renderNotes();render();
 }
 
@@ -1528,7 +1528,7 @@ function applyColors(){
   renderColorSettings();
 }
 function renderColorSettings(){
-  const names_={a:couple?.a?nameOf(couple.a):'Person 1',b:couple?.b?nameOf(couple.b):'Person 2'};
+  const names_={a:couple?.a?nameOf(couple.a):'Mary',b:couple?.b?nameOf(couple.b):'Matthew'};
   $('#lblA').textContent=`${names_.a}'s color`;$('#lblB').textContent=`${names_.b}'s color`;
   const dark=isDark();
   for(const[k,id]of [['a','#swA'],['b','#swB'],['both','#swBoth']]){

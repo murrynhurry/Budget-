@@ -1288,6 +1288,7 @@ const PAGES={cal:['calPage','tabCal'],chores:['chorePage','tabChores'],date:['da
 function showPage(p){
   if(!PAGES[p])p='cal';
   for(const[k,[pg,tb]]of Object.entries(PAGES)){$('#'+pg).hidden=k!==p;$('#'+tb).setAttribute('aria-selected',String(k===p))}
+  $('#today').hidden=p!=='cal';$('#countdowns').hidden=p!=='cal';
   try{history.replaceState(null,'',p==='cal'?location.pathname+location.search:'#'+p)}catch{}
 }
 $('#tabCal').onclick=()=>showPage('cal');

@@ -1368,6 +1368,8 @@ async function syncFeed(manual){
 async function saveFeed(){
   const u=$('#feedUrl').value.trim();
   if(!u){if(prefs.icsUrl)syncFeed(true);return}
+  if(/google\.com/i.test(u)&&!/\/ical\/.+\.ics/i.test(u)){gs.status="That's Google Calendar's web link, not the calendar feed. In your calendar's settings, copy the \"Secret address in iCal format\" instead. It starts with https://calendar.google.com/calendar/ical/ and ends in basic.ics.";renderImportInfo();return}
+  if(/\/public\/basic\.ics/i.test(u)){gs.status="That's the public address, which only works if your calendar is public. Copy the \"Secret address in iCal format\" just below it instead. It has private- in the middle.";renderImportInfo();return}
   prefs={...prefs,icsUrl:u};try{await prefsRef().set(prefs)}catch{}
   $('#feedUrl').value='';renderFeed();syncFeed(true);
 }

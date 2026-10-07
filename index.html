@@ -347,6 +347,7 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .swipe-edit{position:absolute;left:0;top:0;bottom:0;width:96px;border:0;background:var(--lav);color:#fff;font:inherit;font-weight:700;cursor:pointer}
 .tx.txb{cursor:pointer}
 .csheet{z-index:35;max-height:92vh}
+.cal .d[data-act]{cursor:pointer}
 .dbox{width:34px;height:38px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
 .dbox b{font-size:.95rem}.dbox span{font-size:.55rem;font-weight:800;letter-spacing:.05em}
 .wkbars{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:end;height:110px}
@@ -918,7 +919,7 @@ function calendarHTML(){
   for(let d=1;d<=days;d++){
     const k=iso(new Date(y,m,d)); let cls=d>today?"fut":dayStatus(k);
     const lbl=d>today?"":cls==="none"?"no spending":cls==="want"?"spent on wants":"needs only";
-    h+=`<div class="d ${cls}${d===today?" today":""}" title="${k}${lbl?": "+lbl:""}">${d}</div>`;
+    h+=`<div class="d ${cls}${d===today?" today":""}" title="${k}${lbl?": "+lbl:""}"${d<=today?` data-act="dayOpen" data-v="${k}" role="button"`:""}>${d}</div>`;
   }
   return `<div class="cal">${h}</div><div class="legend"><span style="--c:var(--mint)">No spending</span><span style="--c:var(--mint-soft)">Needs only</span><span style="--c:var(--want-soft)">Spent on wants</span></div>`;
 }
@@ -1647,6 +1648,9 @@ document.addEventListener("click",e=>{
     case "delHold":S.holdings=(S.holdings||[]).filter(x=>x.id!==id);commit("Holding removed");break;
     case "spendView":spendView=b.dataset.v;render();break;
     case "spendCat":spendCat=spendCat===b.dataset.v?null:b.dataset.v;render();break;
+    case "dayOpen":catView={day:b.dataset.v};renderCat();break;
+    case "dayPrev":case "dayNext":{const nd=addDays(catView.day,a==="dayPrev"?-1:1);if(nd<=todayISO()){catView.day=nd;renderCat()}break}
+    case "dayAdd":{const d=catView.day;qaOpen();$("#qaDate").value=d;break}
     case "catOpen":catView={id:b.dataset.v,m:viewMonth,sort:"new"};renderCat();break;
     case "catClose":catView=null;renderCat();break;
     case "catPrev":case "catNext":{const[y,m]=catView.m.split("-").map(Number);catView.m=monthKey(new Date(y,m-1+(a==="catPrev"?-1:1),1));renderCat();break}
@@ -1770,8 +1774,23 @@ function qaCats(){
 const cardById=id=>(S.cards||[]).find(c=>c.id===id);
 const cardLabel=c=>c.name+(c.last4?" ••"+c.last4:"");
 let catView=null;
+function renderDay(el,bk){
+  const day=catView.day,dd=D(day),tx=S.tx.filter(t=>t.date===day).sort((a,b)=>myAmt(b)-myAmt(a));
+  const tot=sum(tx,myAmt),needs=sum(tx.filter(t=>t.type==="need"),myAmt);
+  const BC=["#E35B8F","#9B84E0","#44B38D","#E0843A","#4A90D9","#C0567A"],ccol=id=>{const n=catName(id);return BC[[...n].reduce((x,c)=>x+c.charCodeAt(0),0)%BC.length]};
+  const row=t=>{const cd=t.card&&cardById(t.card);return `<div class="txw"><button class="swipe-edit" data-act="editTx" data-id="${t.id}" tabindex="-1">Edit</button><button class="swipe-del" data-act="delTx" data-id="${t.id}" tabindex="-1">Delete</button><div class="tx txb" data-swipe="1" data-act="editTx" data-id="${t.id}"><span class="hbadge sb" style="background:${ccol(t.cat)}">${esc(catName(t.cat).slice(0,1))}</span><div class="what"><b>${esc(t.note||catName(t.cat))}</b><span class="muted small">${esc(catName(t.cat))} · <span style="color:${t.type==="want"?"var(--want)":"var(--good)"};font-weight:700">${t.type==="want"?"Want":"Need"}</span>${t.billId?" · Bill":""}${cd?" · "+esc(cardLabel(cd)):""}${t.split!=null?" · split":""}</span></div><span class="num" style="text-align:right">${fmt(myAmt(t))}${t.split!=null?`<br><span class="muted small" style="font-weight:500">of ${fmt(num(t.amount))}</span>`:""}</span><button class="x" data-act="delTx" data-id="${t.id}" aria-label="Delete">×</button></div></div>`};
+  el.innerHTML=`<div class="grab"></div>
+    <div class="qa-head"><h2>${dd.toLocaleDateString("en-CA",{weekday:"long",month:"long",day:"numeric"})}</h2><button class="x" data-act="catClose" aria-label="Close">×</button></div>
+    <div class="monthnav"><button class="btn sm" data-act="dayPrev" aria-label="Previous day">‹ Day before</button><button class="btn sm" data-act="dayNext" aria-label="Next day" ${day>=todayISO()?"disabled":""}>Day after ›</button></div>
+    ${tx.length?`<div><div class="left-big num" style="font-size:2.4rem;margin:0">${fmt(tot)}</div>
+      <div class="small"><span class="muted">${tx.length} purchase${tx.length===1?"":"s"}</span>${needs>0?` · <b style="color:var(--good)">${fmt0(needs)} needs</b>`:""}${tot-needs>0.005?` · <b style="color:var(--want)">${fmt0(tot-needs)} wants</b>`:""}</div></div>
+      <div>${tx.map(row).join("")}</div>`:`<div class="empty">No spending this day. Nice!</div>`}
+    <button class="btn pri" data-act="dayAdd" style="align-self:stretch">+ Add expense for ${dd.toLocaleDateString("en-CA",{month:"short",day:"numeric"})}</button>`;
+  el.hidden=false;bk.hidden=false;
+}
 function renderCat(){
   const el=$("#catSheet"),bk=$("#catBack");
+  if(catView&&catView.day)return renderDay(el,bk);
   const c=catView&&S.categories.find(x=>x.id===catView.id);
   if(!c){catView=null;el.hidden=true;bk.hidden=true;return}
   const k=catView.m,cur=monthKey(new Date()),[y,mo]=k.split("-").map(Number);

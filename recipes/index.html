@@ -309,6 +309,11 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .fmeta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .chipdate { position: relative; display: inline-flex; align-items: center; font-family: var(--f-mono); font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; white-space: nowrap; cursor: pointer; }
 .chipdate.empty { border-style: dashed; }
+.qstep { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: var(--card); overflow: hidden; }
+.qstep button { border: 0; background: transparent; font: inherit; font-size: 15px; font-weight: 700; color: var(--red); width: 28px; height: 24px; padding: 0; cursor: pointer; }
+.qstep button.qval { width: auto; min-width: 26px; padding: 0 4px; font-size: 12.5px; color: var(--ink); border-inline: 1px solid var(--line); white-space: nowrap; }
+.qadd { border: 1px dashed var(--line); background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 9px; cursor: pointer; white-space: nowrap; }
+.qadd:hover, .qstep button:hover { color: var(--ink); }
 .movepick { position: relative; display: inline-grid; place-items: center; font-size: 17px; }
 .movepick select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; border: 0; padding: 0; margin: 0; font-size: 16px; cursor: pointer; }
 .movepick:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -726,7 +731,7 @@ body.formview .fab { display: none; }
     const notListed = missing.filter((x) => !x.listed);
     const mark = (st) => {
       if (!st) return null;
-      if (st.kind === "have") return h("span", { class: "imark have", title: "You have " + st.item + " in the " + LOCS[st.where].label.toLowerCase() }, "✓ " + LOCS[st.where].label);
+      if (st.kind === "have") return h("span", { class: "imark have", title: "You have " + st.item + " in the " + LOCS[st.where].label.toLowerCase() }, "✓ " + LOCS[st.where].label + (st.qty ? " · " + st.qty : ""));
       if (st.kind === "staple") return h("span", { class: "imark basic", title: "You said you always have the basics" }, "✓ Basic");
       if (st.listed) return h("span", { class: "imark listed" }, "🛒 On To Buy");
       return h("button", { class: "imark add" + (st.kind === "opt" ? " opt" : ""), type: "button", "aria-label": "Add " + st.name + " to To Buy", onclick: () => addToBuy([st.name], r.title) }, "+ To Buy");
@@ -1170,7 +1175,7 @@ Rules:
     const t = new Set(toks(core(line)));
     const oh = allOnHand();
     const k = oh.findIndex((i) => { const ft = toks(i.name); return ft.length && ft.every((w) => t.has(w)); });
-    if (k >= 0) return { kind: "have", where: oh[k].loc, item: oh[k].name };
+    if (k >= 0) return { kind: "have", where: oh[k].loc, item: oh[k].name, qty: qtyLabel(oh[k]) };
     if (S.staples && STAPLES.some((st) => toks(st).every((w) => t.has(w)))) return { kind: "staple" };
     const name = itemName(line).toLowerCase();
     return { kind: /to taste|optional|to serve|for serving|for garnish|garnish/i.test(line) ? "opt" : "missing", name, listed: onToBuyList(name) };
@@ -1254,7 +1259,8 @@ Rules:
   const SOON_DAYS = { fridge: 2, freezer: 14, pantry: 14 };
   const isSoon = (it, loc) => { const n = daysLeft(it.expires); return n != null && n <= SOON_DAYS[loc]; };
   const normItem = (x) => typeof x === "string" ? { name: x, expires: "", est: false, added: Date.now(), ...(isCondiment(x) ? { cond: true } : {}) }
-    : { name: String(x.name || ""), expires: String(x.expires || ""), est: !!x.est, added: Number(x.added) || 0, ...(x.cond != null ? { cond: !!x.cond } : {}), ...(x.sec ? { sec: String(x.sec) } : {}), ...(x.pin ? { pin: true } : {}) };
+    : { name: String(x.name || ""), expires: String(x.expires || ""), est: !!x.est, added: Number(x.added) || 0, ...(x.cond != null ? { cond: !!x.cond } : {}), ...(x.sec ? { sec: String(x.sec) } : {}), ...(x.pin ? { pin: true } : {}),
+      ...(Number(x.qty) > 0 ? { qty: Number(x.qty) } : {}), ...(x.unit ? { unit: String(x.unit) } : {}) };
   // Condiments: sauces, spreads, pickles and dressings that live in the fridge door.
   const CONDIMENTS = ["ketchup", "mustard", "dijon", "mayo", "mayonnaise", "aioli", "relish", "soy sauce", "tamari", "hot sauce", "sriracha", "tabasco", "chili sauce", "chili crisp", "chili oil",
     "gochujang", "hoisin", "oyster sauce", "fish sauce", "teriyaki", "bbq sauce", "barbecue sauce", "steak sauce", "worcestershire", "salsa", "jam", "jelly", "marmalade", "preserves",
@@ -1323,17 +1329,76 @@ Rules:
       .catch(() => toast("Couldn't save that. Try again."));
   }
   const splitList = (raw) => String(raw).split(/[,;\n]+/).map((s) => s.trim().toLowerCase().replace(/\s+/g, " ")).filter((s) => s && s.length < 60);
-  function addItems(raw, loc, expires, sec) {
+  // ---------- quantities: "3 lemons", "2 cans chickpeas", "500 g ground beef", "milk x2" ----------
+  const QTY_UNITS = { g: "g", gram: "g", grams: "g", kg: "kg", ml: "ml", l: "L", litre: "L", liter: "L", litres: "L", liters: "L", lb: "lb", lbs: "lb", pound: "lb", pounds: "lb", oz: "oz",
+    can: "can", cans: "can", tin: "can", tins: "can", jar: "jar", jars: "jar", bottle: "bottle", bottles: "bottle", box: "box", boxes: "box", bag: "bag", bags: "bag", pack: "pack", packs: "pack",
+    package: "pack", packages: "pack", pkg: "pack", carton: "carton", cartons: "carton", dozen: "dozen", bunch: "bunch", bunches: "bunch", head: "head", heads: "head", loaf: "loaf", loaves: "loaf",
+    block: "block", blocks: "block", tub: "tub", tubs: "tub", bar: "bar", bars: "bar", piece: "piece", pieces: "piece", pcs: "piece" };
+  const QNUM = "(\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:[.,]\\d+)?|½|¼|¾|⅓|⅔)";
+  function numOf(t) {
+    t = String(t).trim().replace(",", "."); const F = { "½": .5, "¼": .25, "¾": .75, "⅓": 1 / 3, "⅔": 2 / 3 };
+    if (F[t] != null) return F[t];
+    let m = t.match(/^(\d+)\s+(\d+)\/(\d+)$/); if (m) return +m[1] + m[2] / m[3];
+    m = t.match(/^(\d+)\/(\d+)$/); if (m) return m[1] / m[2];
+    return parseFloat(t);
+  }
+  function parseQty(s) {
+    s = String(s).trim(); let m;
+    if ((m = s.match(new RegExp("^" + QNUM + "\\s*([a-z]+)\\.?\\s+(?:of\\s+)?(.+)$", "i"))) && QTY_UNITS[m[2].toLowerCase()]) return { name: m[3].trim(), qty: numOf(m[1]), unit: QTY_UNITS[m[2].toLowerCase()] };
+    if ((m = s.match(new RegExp("^" + QNUM + "\\s*[x×]?\\s+(.+)$", "i")))) return { name: m[2].trim(), qty: numOf(m[1]), unit: "" };
+    if ((m = s.match(new RegExp("^(.+?)\\s*(?:[x×]\\s*" + QNUM + "|\\(" + QNUM + "\\))$", "i")))) return { name: m[1].trim(), qty: numOf(m[2] || m[3]), unit: "" };
+    return { name: s, qty: null, unit: "" };
+  }
+  const PLURAL = { can: "cans", jar: "jars", bottle: "bottles", box: "boxes", bag: "bags", pack: "packs", carton: "cartons", bunch: "bunches", head: "heads", loaf: "loaves", block: "blocks", tub: "tubs", bar: "bars", piece: "pieces" };
+  const roundQ = (n) => Math.round(n * 100) / 100;
+  const qtyLabel = (it) => it.qty ? roundQ(it.qty) + (it.unit ? (/^(g|kg|ml|L|lb|oz)$/.test(it.unit) ? " " : " ") + (it.qty !== 1 && PLURAL[it.unit] ? PLURAL[it.unit] : it.unit) : "") : "";
+  const qtyStep = (it) => /^(g|ml)$/.test(it.unit || "") ? 100 : /^(kg|L|lb)$/.test(it.unit || "") ? 0.5 : 1;
+  function setQty(loc, it, qty, unit) {
+    const next = [...S[loc]]; const i = next.indexOf(it); if (i < 0) return;
+    if (qty != null && qty <= 0) { next.splice(i, 1); setList(loc, next); toast("Used up: removed " + it.name); return; }
+    const o = { ...it }; if (qty == null) { delete o.qty; delete o.unit; } else { o.qty = roundQ(qty); if (unit != null) { if (unit) o.unit = unit; else delete o.unit; } }
+    next[i] = o; setList(loc, next);
+  }
+  function askQty(loc, it) {
+    const ans = window.prompt("How much " + it.name + " do you have? For example 3, 2 cans or 500 g. Leave blank for no count.", qtyLabel(it));
+    if (ans == null) return;
+    const t = ans.trim(); if (!t) { setQty(loc, it, null); return; }
+    const m = t.match(new RegExp("^" + QNUM + "\\s*([a-z]*)\\.?$", "i"));
+    if (!m) { toast("Type a number, like 3 or 2 cans"); return; }
+    setQty(loc, it, numOf(m[1]), m[2] ? (QTY_UNITS[m[2].toLowerCase()] || m[2].toLowerCase()) : (it.unit || ""));
+  }
+  // Where a bought grocery goes: where you kept it before, else the pantry for shelf-stable things, else the fridge.
+  const PANTRY_FRESH = ["bread", "bagel", "tortilla", "onion", "potato", "sweet potato", "garlic", "banana", "avocado"];
+  function guessLoc(name) {
+    const w = S.stats.where[name]; if (LOC_KEYS.includes(w)) return w;
+    if (isCanned(name) || isSeasoning(name)) return "pantry";
+    const t = " " + toks(name).join(" ") + " ";
+    if (guessDays(name, "pantry") != null && (guessDays(name, "fridge") == null || PANTRY_FRESH.some((k) => t.includes(" " + toks(k).join(" ") + " ")))) return "pantry";
+    return "fridge";
+  }
+
+  // Adds items to a place. Returns what happened to each, so a grocery tick can be undone.
+  function addItems(raw, loc, expires, sec, opts = {}) {
     const add = splitList(raw);
-    const next = [...S[loc]]; const counts = { ...S.stats.counts }; const where = { ...S.stats.where }; let changed = false;
-    for (const a of add) {
-      if (next.some((x) => x.name === a)) continue;
+    const next = [...S[loc]]; const counts = { ...S.stats.counts }; const where = { ...S.stats.where }; let changed = false; const done = [];
+    for (const rawItem of add) {
+      const p = parseQty(rawItem); const a = p.name.toLowerCase(); if (!a) continue;
+      const k = next.findIndex((x) => x.name === a);
+      if (k >= 0) {
+        const ex = next[k];
+        if (p.qty) { const same = !ex.unit || !p.unit || ex.unit === p.unit; next[k] = { ...ex, qty: roundQ((same && ex.qty ? ex.qty : 0) + p.qty), ...(p.unit ? { unit: p.unit } : {}) }; done.push({ name: a, loc, prev: ex.qty || null, prevUnit: ex.unit || "" }); changed = true; }
+        else if (opts.bump && ex.qty) { next[k] = { ...ex, qty: roundQ(ex.qty + 1) }; done.push({ name: a, loc, prev: ex.qty, prevUnit: ex.unit || "" }); changed = true; }
+        else done.push({ name: a, loc, had: true });
+        continue;
+      }
       const g = guessDays(a, loc);
       const exp = /^\d{4}-\d{2}-\d{2}$/.test(expires || "") ? expires : "";
-      next.push({ name: a, expires: exp || (g != null ? addDays(g) : ""), est: !exp && g != null, added: Date.now(), sec: (SECS_OF[loc] || []).length > 1 ? (sec && sec !== "food" ? sec : autoSec(a, loc)) : "food" });
-      counts[a] = (counts[a] || 0) + 1; where[a] = loc; changed = true;
+      next.push({ name: a, expires: exp || (g != null ? addDays(g) : ""), est: !exp && g != null, added: Date.now(), sec: (SECS_OF[loc] || []).length > 1 ? (sec && sec !== "food" ? sec : autoSec(a, loc)) : "food",
+        ...(p.qty ? { qty: roundQ(p.qty) } : {}), ...(p.unit ? { unit: p.unit } : {}) });
+      counts[a] = (counts[a] || 0) + 1; where[a] = loc; changed = true; done.push({ name: a, loc, made: true });
     }
     if (changed) { setList(loc, next); setStats({ counts, where }); }
+    return done;
   }
   // "Buy often": ones you starred, plus anything you've added 3+ times. Each belongs to the tab it was added from.
   const whereOf = (name) => S.stats.where[name] || "fridge";
@@ -1416,6 +1481,11 @@ Rules:
       return h("div", { class: "frow" },
         h("span", { class: "fname" }, it.name, showWhere ? h("small", { class: "fwhere" }, LOCS[loc].label + ((SECS_OF[loc] || []).length > 1 && secOf(it, loc) !== "food" ? " · " + SECS[secOf(it, loc)].word : "")) : null),
         h("span", { class: "fmeta" },
+          it.qty ? h("span", { class: "qstep" },
+            h("button", { type: "button", "aria-label": "One less " + it.name, onclick: () => setQty(loc, it, it.qty - qtyStep(it)) }, "−"),
+            h("button", { type: "button", class: "qval", "aria-label": "Quantity of " + it.name + ": " + qtyLabel(it) + ". Tap to change", onclick: () => askQty(loc, it) }, qtyLabel(it)),
+            h("button", { type: "button", "aria-label": "One more " + it.name, onclick: () => setQty(loc, it, it.qty + qtyStep(it)) }, "+"))
+          : h("button", { class: "qadd", type: "button", "aria-label": "Add a quantity for " + it.name, onclick: () => askQty(loc, it) }, "+ Qty"),
           h("span", { class: "pill " + st.cls }, st.text),
           // A small tag shows the date; the real date box sits invisibly on top so tapping it opens the picker.
           h("label", { class: "chipdate" + (it.expires ? "" : " empty"), title: it.est ? "Estimated from typical shelf life. Tap to set the date on the package." : "Tap to change the date" },
@@ -1476,7 +1546,7 @@ Rules:
       h("div", { class: "fridge-in add-exp" }, input,
         h("label", { class: "expbox", for: "onhand-exp" }, h("span", null, "Expires"), h("input", { id: "onhand-exp", type: "date", "aria-label": "Expiry date (optional)" })),
         h("button", { class: "btn", type: "button", onclick: () => { addItems(document.getElementById("onhand-in").value, loc, expVal(), cur); refocus(); } }, "Add")),
-      h("p", { class: "hint", style: "margin-top: -6px" }, "Expires is optional. Leave it blank and the app estimates a date."),
+      h("p", { class: "hint", style: "margin-top: -6px" }, "Expires is optional; leave it blank and the app estimates a date. To keep count, start with a number: 3 lemons, 2 cans chickpeas, 500 g ground beef."),
       soon.length ? h("div", { class: "usesoon" }, h("strong", null, loc === "fridge" ? "Use soon: " : "Use in the next two weeks: "), soon.map((i) => i.name + " (" + statusOf(i.expires).text.toLowerCase() + ")").join(", ")) : null,
       rows,
       h("div", { class: "dbar", style: "justify-content: space-between; align-items: center;" },
@@ -1664,6 +1734,11 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
       if (!merged.has(key)) merged.set(key, { name: g.name, for: [], manual: true });
       const m = merged.get(key); m.manual = true; if (g.for && !m.for.includes(g.for)) m.for.push(g.for);
     }
+    // Ticked groceries stay on the list (crossed out) until cleared, even once they're in the kitchen.
+    for (const [n, v] of Object.entries(S.shop.checked)) {
+      const key = toks(n).join(" ") || n;
+      if (!merged.has(key)) merged.set(key, { name: n, for: v && v.for ? v.for : [], bought: true });
+    }
     for (const n of buyOften()) {
       if (onHandHas(n)) continue;
       const key = toks(n).join(" ") || n;
@@ -1706,8 +1781,9 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
         h("button", { class: "btn", type: "button", onclick: () => addGroceries(document.getElementById("shop-groceries").value) }, "Add")),
       h("div", { class: "slist" }, items.length ? items.map((it) =>
         shopRow("g-" + slug(it.name), it.name, !!S.shop.checked[it.name],
-          (e) => { const checked = { ...S.shop.checked }; if (e.target.checked) checked[it.name] = true; else delete checked[it.name]; setShop({ checked }); },
-          it.for.length ? "for " + it.for.join(", ") : it.manual ? "" : "restock · you buy this often",
+          (e) => e.target.checked ? buyGrocery(it) : unbuyGrocery(it),
+          S.shop.checked[it.name] && S.shop.checked[it.name].loc ? "✓ put in the " + LOCS[S.shop.checked[it.name].loc].label.toLowerCase() + (it.for.length ? " · for " + it.for.join(", ") : "")
+            : it.for.length ? "for " + it.for.join(", ") : it.manual ? "" : "restock · you buy this often",
           it.manual ? () => removeGrocery(it.name) : null))
         : planned.length ? h("p", { class: "hint" }, "Nothing to buy for these meals.") : null));
 
@@ -1733,7 +1809,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     };
 
     const tickedN = Object.keys(S.shop.checked).length + S.shop.household.filter((i) => i.done).length + S.shop.other.filter((i) => i.done).length;
-    const tickedGroceries = items.filter((i) => S.shop.checked[i.name]);
+    const tickedGroceries = items.filter((i) => S.shop.checked[i.name] === true); // ticked before groceries were put away automatically
     const checkedWhen = S.deals && S.deals.checkedAt ? new Date(S.deals.checkedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null;
 
     return h("div", null,
@@ -1743,8 +1819,25 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
           h("div", { class: "dbar" },
             tickedGroceries.length ? h("button", { class: "btn", type: "button", onclick: stockTicked }, "Put ticked groceries away") : null,
             tickedN ? h("button", { class: "btn ghost", type: "button", onclick: clearTicked }, "Clear ticked items") : null),
-          h("p", { class: "hint" }, "Tick things off as you shop. 🏷 marks a matching flyer deal or coupon" + (checkedWhen ? " (checked " + checkedWhen + ")." : "."))),
+          h("p", { class: "hint" }, "Tick groceries off as you shop and they go straight into your kitchen, so your recipes know you have them. Untick to take one back off. 🏷 marks a matching flyer deal or coupon" + (checkedWhen ? " (checked " + checkedWhen + ")." : "."))),
         h("div", { class: "scols" }, grocery, h("div", { class: "sside" }, listSec("household"), listSec("other")))));
+  }
+  // Ticking a grocery puts it in the kitchen right away (with its quantity, if the list had one).
+  function buyGrocery(it) {
+    const p = parseQty(it.name); const name = p.name.toLowerCase();
+    const loc = guessLoc(name);
+    const res = addItems(it.name, loc, "", undefined, { bump: true })[0] || { name, loc, had: true };
+    setShop({ checked: { ...S.shop.checked, [it.name]: { loc, name: res.name, made: !!res.made, prev: res.prev ?? null, prevUnit: res.prevUnit || "", touched: !!(res.made || res.prev != null), for: it.for || [] } } });
+    toast(res.had ? "Ticked: " + name + " was already in the " + LOCS[loc].label.toLowerCase() : "Put " + name + " in the " + LOCS[loc].label.toLowerCase());
+  }
+  function unbuyGrocery(it) {
+    const v = S.shop.checked[it.name];
+    const checked = { ...S.shop.checked }; delete checked[it.name];
+    if (v && v.loc && v.touched) {
+      const cur = S[v.loc].find((x) => x.name === v.name);
+      if (cur) { if (v.made) setList(v.loc, S[v.loc].filter((x) => x !== cur)); else setQty(v.loc, cur, v.prev, v.prevUnit); }
+    }
+    setShop({ checked });
   }
   function addGroceries(raw) {
     const names = splitList(raw); if (!names.length) return;
@@ -1763,7 +1856,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
   // Bought groceries go where they were last kept (pantry items stay pantry), defaulting to the fridge.
   function stockTicked() {
     const { items } = groceryList();
-    const ticked = items.filter((i) => S.shop.checked[i.name]);
+    const ticked = items.filter((i) => S.shop.checked[i.name] === true);
     const add = { fridge: [], freezer: [], pantry: [] };
     for (const it of ticked) add[LOC_KEYS.includes(S.stats.where[it.name]) ? S.stats.where[it.name] : "fridge"].push(it.name);
     for (const loc of LOC_KEYS) if (add[loc].length) addItems(add[loc].join(","), loc);

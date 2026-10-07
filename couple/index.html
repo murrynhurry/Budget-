@@ -84,12 +84,27 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .fontSub{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--muted);margin-top:4px}
 .shell{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
 .mainTop,.mainRest{min-width:0;display:flex;flex-direction:column;gap:18px}
-@media (min-width:1080px){
-  .shell{grid-template-columns:minmax(0,1fr) 300px;grid-template-areas:"top side" "rest side";grid-template-rows:auto 1fr}
+@media (min-width:760px){
+  .shell{grid-template-columns:minmax(0,1fr) 250px;grid-template-areas:"top side" "rest side";grid-template-rows:auto 1fr}
   .mainTop{grid-area:top}.mainRest{grid-area:rest}
   .notes{grid-area:side;position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);align-self:start;max-height:calc(100vh - 32px);overflow:auto}
 }
+@media (min-width:1080px){.shell{grid-template-columns:minmax(0,1fr) 300px}}
 .notes{gap:12px}
+.notesH{display:inline-flex;align-items:center;gap:6px}
+.notesH svg{width:18px;height:18px;color:#e2457a;flex:none}
+.notesTab,.notesBack,.notesClose{display:none}
+@media (max-width:759px){
+  .notes{position:fixed;top:0;right:0;bottom:0;width:min(86vw,340px);z-index:51;margin:0;border-radius:18px 0 0 18px;overflow:auto;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(105%);transition:transform .28s ease;background:var(--surface);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .notes.open{transform:none;box-shadow:-8px 0 30px rgba(0,0,0,.18)}
+  .notesClose{display:inline-flex;margin-left:auto}
+  .notesTab{display:flex;align-items:center;gap:6px;position:fixed;right:0;top:42%;z-index:49;writing-mode:vertical-rl;padding:14px 8px;border-radius:12px 0 0 12px;border:1px solid var(--line);border-right:0;background:var(--surface);color:var(--ink);font:600 13px var(--body);box-shadow:-2px 2px 10px rgba(0,0,0,.08)}
+  .notesTab svg{width:14px;height:14px;color:#e2457a}
+  .notesTab .badge{writing-mode:horizontal-tb}
+  .notesBack{position:fixed;inset:0;z-index:50;background:rgba(10,15,30,.35)}
+  .notesBack.on{display:block}
+}
+@media (max-width:759px) and (prefers-reduced-motion:reduce){.notes{transition:none}}
 .notes .tHead h3{font:700 18px/1.2 var(--display)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .noteForm{display:flex;flex-direction:column;gap:8px}
@@ -127,6 +142,51 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .cdTile span{font-size:12.5px;color:var(--muted)}
 .cdTile.today{box-shadow:inset 0 0 0 2px var(--both)}
 .cdTile .del{position:absolute;top:4px;right:4px}
+.skyart{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.forest{position:absolute;left:0;bottom:0;width:100%;height:clamp(110px,24vh,230px);display:block}
+.forest path{transition:fill 2s ease}
+.wrap{z-index:1}
+.sun{position:absolute;right:6vw;top:var(--sun-y,4vh);width:120px;height:120px;opacity:var(--sun-o,1);transition:top 2s ease,opacity 2s ease;filter:drop-shadow(0 0 22px var(--sun-c,#ffd84a))}
+.sun svg,.moon svg,.cloud svg{width:100%;height:100%;display:block}
+.moon{position:absolute;right:9vw;top:6vh;width:84px;height:84px;opacity:var(--moon-o,0);transition:opacity 2s ease;filter:drop-shadow(0 0 16px rgba(255,244,214,.55))}
+.cloud{position:absolute;color:var(--cloud-c,#fff);transition:color 2s ease;left:-260px}
+.c1{top:9vh;width:230px;height:97px}.c2{top:24vh;width:160px;height:67px}.c3{top:46vh;width:260px;height:109px}.c4{top:66vh;width:190px;height:80px}.c5{top:84vh;width:150px;height:63px}
+@media (prefers-reduced-motion:no-preference){
+  .cloud{animation:drift linear infinite}
+  .c1{animation-duration:150s;animation-delay:-40s}.c2{animation-duration:110s;animation-delay:-85s}.c3{animation-duration:190s;animation-delay:-120s}.c4{animation-duration:130s;animation-delay:-20s}.c5{animation-duration:170s;animation-delay:-140s}
+}
+@media (prefers-reduced-motion:reduce){.c1{left:8vw}.c2{left:55vw}.c3{left:20vw}.c4{left:68vw}.c5{left:36vw}}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(calc(100vw + 300px))}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:820px){.sun{width:84px;height:84px;right:4vw}.moon{width:64px;height:64px}.c3,.c5{display:none}.c1{width:170px;height:72px}}
+.shootbox,.fireflies,.weatherfx{position:absolute;inset:0}
+.shoot{position:absolute;width:0;height:0;animation:shoot 1.2s ease-out forwards}
+.shoot i{position:absolute;right:0;top:0;width:130px;height:2px;border-radius:2px;background:linear-gradient(90deg,rgba(255,255,255,0),#fff);transform-origin:100% 50%;transform:rotate(155deg);box-shadow:0 0 6px rgba(255,255,255,.7)}
+@keyframes shoot{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(-340px,158px)}}
+.fireflies{opacity:0;transition:opacity 3s ease}
+:root[data-sky="dusk"] .fireflies{opacity:1}
+.ff{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff6a8;box-shadow:0 0 8px 3px rgba(255,236,120,.65);animation:ffDrift var(--d,12s) ease-in-out infinite alternate,ffBlink var(--b,3s) ease-in-out infinite}
+@keyframes ffDrift{from{transform:translate(0,0)}to{transform:translate(var(--dx,30px),var(--dy,-24px))}}
+@keyframes ffBlink{0%,100%{opacity:.15}50%{opacity:1}}
+.drop{position:absolute;top:-10vh;width:1.5px;height:16px;border-radius:2px;background:rgba(200,220,255,.75);animation:fall var(--d,1s) linear infinite}
+.flake{position:absolute;top:-6vh;width:var(--s,6px);height:var(--s,6px);border-radius:50%;background:#fff;opacity:.9;animation:snow var(--d,9s) linear infinite}
+@keyframes fall{to{transform:translate(-30px,115vh)}}
+@keyframes snow{0%{transform:translate(0,0)}50%{transform:translate(18px,55vh)}100%{transform:translate(-10px,112vh)}}
+:root[data-wx="cloudy"] .sun,:root[data-wx="rain"] .sun,:root[data-wx="snow"] .sun{opacity:.12}
+:root[data-wx="cloudy"] .cloud,:root[data-wx="rain"] .cloud,:root[data-wx="snow"] .cloud{color:var(--cloud-wx,rgba(225,230,240,.95))}
+:root[data-wx="rain"] .cloud,:root[data-wx="cloudy"] .c3,:root[data-wx="cloudy"] .c5,:root[data-wx="rain"] .c3,:root[data-wx="rain"] .c5,:root[data-wx="snow"] .c3{display:block}
+:root[data-wx="rain"]{--cloud-wx:rgba(176,186,204,.95)}
+@media (prefers-reduced-motion:reduce){.ff{animation:none;opacity:.7}.drop,.flake{animation:none;display:none}}
+.birdbox{position:absolute;inset:0}
+.flock{position:absolute;left:-160px;animation:fly var(--d,22s) linear forwards}
+.flock.rtl{left:auto;right:-160px;animation-name:flyL}
+.flock.rtl .bird{transform:scaleX(-1)}
+@keyframes fly{to{transform:translate(calc(100vw + 320px),var(--dy,-30px))}}
+@keyframes flyL{to{transform:translate(calc(-100vw - 320px),var(--dy,-30px))}}
+.bird{position:absolute;width:var(--w,22px);height:12px;color:#3d4660;opacity:.75}
+:root[data-sky="sunset"] .bird,:root[data-sky="dawn"] .bird{color:#3a2a40;opacity:.85}
+.bird svg{width:100%;height:100%;display:block;overflow:visible;animation:flap var(--f,.45s) ease-in-out infinite alternate;transform-origin:50% 70%}
+@keyframes flap{from{transform:scaleY(1)}to{transform:scaleY(-.45)}}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .sw{all:unset;box-sizing:border-box;width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
 .sw:hover{transform:scale(1.08)}
@@ -293,6 +353,12 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
 @media (prefers-reduced-motion:no-preference){.ev{transition:filter .15s}.ev:hover{filter:brightness(.97)}}
 </style>
 
+<div class="skyart" aria-hidden="true">
+  <div class="fireflies" id="fireflies"></div><div class="weatherfx" id="weatherfx"></div><div class="shootbox" id="shootbox"></div><div class="birdbox" id="birdbox"></div>
+  <div class="sun"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="32" fill="var(--sun-c)"/><circle cx="60" cy="60" r="32" fill="url(#sunShine)"/><defs><radialGradient id="sunShine" cx=".38" cy=".35" r=".7"><stop offset="0" stop-color="#fffbe6" stop-opacity=".9"/><stop offset="1" stop-color="#fffbe6" stop-opacity="0"/></radialGradient></defs><circle cx="50" cy="58" r="3" fill="#5a3b22"/><circle cx="70" cy="58" r="3" fill="#5a3b22"/><path d="M53 67q7 6 14 0" fill="none" stroke="#5a3b22" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="43" cy="66" rx="5" ry="3" fill="#ff8fa3" opacity=".55"/><ellipse cx="77" cy="66" rx="5" ry="3" fill="#ff8fa3" opacity=".55"/></svg></div>
+  <div class="moon"><svg viewBox="0 0 100 100"><path d="M64 14a38 38 0 1 0 22 62A32 32 0 0 1 64 14z" fill="#fff4d6"/><circle cx="44" cy="58" r="2.6" fill="#5a4a6a"/><path d="M50 66q5 4 10 0" fill="none" stroke="#5a4a6a" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="40" cy="65" rx="4" ry="2.4" fill="#ff9fb5" opacity=".5"/></svg></div>
+  <div class="cloud c1"><svg viewBox="0 0 200 84" aria-hidden="true"><g fill="currentColor"><circle cx="58" cy="52" r="26"/><circle cx="92" cy="38" r="33"/><circle cx="132" cy="48" r="27"/><circle cx="160" cy="60" r="18"/><rect x="34" y="52" width="140" height="30" rx="15"/></g></svg></div><div class="cloud c2"><svg viewBox="0 0 200 84" aria-hidden="true"><g fill="currentColor"><circle cx="58" cy="52" r="26"/><circle cx="92" cy="38" r="33"/><circle cx="132" cy="48" r="27"/><circle cx="160" cy="60" r="18"/><rect x="34" y="52" width="140" height="30" rx="15"/></g></svg></div><div class="cloud c3"><svg viewBox="0 0 200 84" aria-hidden="true"><g fill="currentColor"><circle cx="58" cy="52" r="26"/><circle cx="92" cy="38" r="33"/><circle cx="132" cy="48" r="27"/><circle cx="160" cy="60" r="18"/><rect x="34" y="52" width="140" height="30" rx="15"/></g></svg></div><div class="cloud c4"><svg viewBox="0 0 200 84" aria-hidden="true"><g fill="currentColor"><circle cx="58" cy="52" r="26"/><circle cx="92" cy="38" r="33"/><circle cx="132" cy="48" r="27"/><circle cx="160" cy="60" r="18"/><rect x="34" y="52" width="140" height="30" rx="15"/></g></svg></div><div class="cloud c5"><svg viewBox="0 0 200 84" aria-hidden="true"><g fill="currentColor"><circle cx="58" cy="52" r="26"/><circle cx="92" cy="38" r="33"/><circle cx="132" cy="48" r="27"/><circle cx="160" cy="60" r="18"/><rect x="34" y="52" width="140" height="30" rx="15"/></g></svg></div>
+</div>
 <div class="wrap">
   <header>
     <h1 class="brand"><svg class="couple" viewBox="7 1 87 41" aria-hidden="true" focusable="false">
@@ -352,6 +418,13 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
         <button type="button" data-sky="auto" aria-pressed="true">Follow the sky</button><button type="button" data-sky="day" aria-pressed="false">Day</button><button type="button" data-sky="sunset" aria-pressed="false">Sunset</button><button type="button" data-sky="night" aria-pressed="false">Night</button>
       </div>
     </div>
+    <div class="setGroup"><span class="setLbl">Weather</span>
+      <div class="seg" role="group" aria-label="Weather" style="margin-left:0;align-self:flex-start;flex-wrap:wrap">
+        <button type="button" data-wx="auto" aria-pressed="true">Match outside</button><button type="button" data-wx="clear" aria-pressed="false">Clear</button><button type="button" data-wx="cloudy" aria-pressed="false">Cloudy</button><button type="button" data-wx="rain" aria-pressed="false">Rain</button><button type="button" data-wx="snow" aria-pressed="false">Snow</button>
+      </div>
+      <p class="note" id="wxNote">Match outside follows the real weather where you live.</p>
+      <form class="row" id="wxCityForm" style="align-items:center"><label for="wxCity" class="sr">City for the weather</label><input type="text" id="wxCity" maxlength="60" placeholder="Change city"><button type="submit" id="wxCityBtn">Use this city</button></form>
+    </div>
     <div class="setGroup"><span class="setLbl">Font</span><div class="fontGrid" id="fontGrid" role="group" aria-label="Font"></div></div>
     <div class="setGroup"><span class="setLbl">Text size</span>
       <div class="seg" role="group" aria-label="Text size" style="margin-left:0;align-self:flex-start">
@@ -360,6 +433,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     </div>
     <p class="note">Background, font and size are saved just for you, on every device you use.</p>
     <div class="setGroup"><span class="setLbl">Account</span><div class="acct" id="acctBox"></div></div>
+    <p class="note" id="appVersion">Version: Oct 7, 12:45 pm (with love notes on the side, weather, birds and fireflies)</p>
   </section>
 
   <div class="shell">
@@ -383,8 +457,10 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     <ul class="cdList" id="cdList"></ul>
   </section>
   </div>
+  <button type="button" class="notesTab" id="notesTab" aria-controls="notesBoard" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z" fill="currentColor"/></svg>Love notes<span class="badge" id="notesTabN"></span></button>
+  <div class="notesBack" id="notesBack"></div>
   <aside class="notes panel" id="notesBoard" aria-labelledby="notesH">
-    <div class="tHead"><h3 id="notesH">Love notes</h3><span class="badge" id="notesNew"></span></div>
+    <div class="tHead"><h3 id="notesH" class="notesH"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z" fill="currentColor"/></svg>Love notes</h3><span class="badge" id="notesNew"></span><button type="button" class="notesClose" id="notesClose">Close</button></div>
     <form id="noteForm" class="noteForm">
       <label for="noteText" class="sr">Write a love note</label>
       <textarea id="noteText" rows="2" maxlength="280" placeholder="Leave a little note…"></textarea>
@@ -783,7 +859,8 @@ let mcp=null,prefs={};const gs={busy:false,status:''};
 function prefsRef(){return db.doc('data/users/'+me+'/prefs')}
 function gTo(item){const dt=item.dateTime?new Date(item.dateTime):null;return dt}
 async function syncGoogle(manual){
-  if(!mcp||!db||!me||gs.busy)return;
+  if(gs.busy)return;
+  if(!mcp||!db||!me){if(manual){gs.status=!db||!me?'Sign in to Claude to sync your Google Calendar.':'Google Calendar sync is not available in this view. Open the app in Claude and try again.';renderImportInfo()}return}
   gs.busy=true;gs.status=manual?'Syncing your Google Calendar…':'';renderImportInfo();$('#gSyncBtn').disabled=true;
   try{
     const from=addDays(startOfWeek(new Date()),-14),to=addDays(from,14+120);
@@ -808,7 +885,7 @@ async function syncGoogle(manual){
         const it={title,date:ymd(s),start:hm(s),end:ymd(en)===ymd(s)?hm(en):'23:59'};
         const k=it.date+it.start+it.title;if(!seen.has(k)){seen.add(k);items.push(it)}
       }else if(e.start.date){
-        let d=new Date(e.start.date+'T12:00');const end=e.end&&e.end.date?new Date(e.end.date+'T12:00'):addDays(d,1);
+        let d=new Date(String(e.start.date).slice(0,10)+'T12:00');const end=e.end&&e.end.date?new Date(String(e.end.date).slice(0,10)+'T12:00'):addDays(d,1);
         for(let i=0;i<14&&d<end;i++,d=addDays(d,1)){const it={title,date:ymd(d),start:null,end:null};const k=it.date+'|'+it.title;if(!seen.has(k)){seen.add(k);items.push(it)}}
       }
     }
@@ -899,7 +976,7 @@ function renderNotes(){
   const sorted=notes.slice().sort((a,b)=>(b.created||'').localeCompare(a.created||'')).slice(0,40);
   const isFresh=n=>n.from!==me&&seen&&(n.created||'')>seen;
   const fresh=sorted.filter(isFresh).length;
-  $('#notesNew').textContent=fresh?fresh+' new':'';
+  $('#notesNew').textContent=fresh?fresh+' new':'';$('#notesTabN').textContent=fresh||'';
   list.replaceChildren();
   if(!sorted.length)list.append(h('li',{class:'cempty',text:db?'No notes yet. Leave the first one.':'Notes appear here once the page is synced.'}));
   for(const n of sorted){
@@ -1190,6 +1267,11 @@ $('#fAll').onchange=e=>{$('#fStart').disabled=$('#fEnd').disabled=e.target.check
 $('#addForm').addEventListener('submit',addEvent);
 $('#choreForm').addEventListener('submit',addChore);
 $('#noteForm').addEventListener('submit',postNote);
+function setNotesOpen(o){$('#notesBoard').classList.toggle('open',o);$('#notesBack').classList.toggle('on',o);$('#notesTab').setAttribute('aria-expanded',String(o));if(o)$('#noteText').focus();else $('#notesTab').focus()}
+$('#notesTab').onclick=()=>setNotesOpen(true);
+$('#notesClose').onclick=()=>setNotesOpen(false);
+$('#notesBack').onclick=()=>setNotesOpen(false);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#notesBoard').classList.contains('open'))setNotesOpen(false)});
 $('#cdForm').addEventListener('submit',addSpecial);
 $('#cdKind').onchange=e=>{$('#cdYearly').checked=e.target.value!=='trip'};
 $('#cdToggle').onclick=()=>{const f=$('#cdForm');f.hidden=!f.hidden;$('#cdToggle').setAttribute('aria-expanded',String(!f.hidden));if(!f.hidden)$('#cdTitle').focus()};
@@ -1217,14 +1299,14 @@ $('#ics').onchange=e=>{const f=e.target.files[0];if(f)importICS(f);e.target.valu
 
 /* --- sky follows the time of day --- */
 const SKIES=[
-  {from:0,   name:'night',   g:['#070d24','#0f1d48','#1c3470','#2a4a8a'], t:'#f2f5ff', m:'#b7c3e6', s:1},
-  {from:5,   name:'dawn',    g:['#1b2a5e','#5d5794','#d98b7f','#f6cf9e'], t:'#f7f3ff', m:'#e2d8f2', s:.3},
-  {from:7,   name:'morning', g:['#7fb7ea','#a9d2f3','#d6ebfa','#f5f1e4'], t:'#0b2545', m:'#2c4a6e', s:0},
-  {from:11,  name:'day',     g:['#5aa3ea','#83bdf1','#b5d8f7','#e1f0fc'], t:'#08203f', m:'#1f3d63', s:0},
-  {from:16,  name:'afternoon',g:['#6c9fd6','#9cc0e6','#d8d8d6','#f4d6a8'], t:'#0b2545', m:'#2c4a6e', s:0},
-  {from:18,  name:'sunset',  g:['#2b2f6b','#7b4a8c','#d9695a','#f4a964'], t:'#fff6ef', m:'#f1d9cf', s:.15},
-  {from:20,  name:'dusk',    g:['#0d1540','#262c69','#4a3f86','#7a5a9a'], t:'#f2f0ff', m:'#c9c3ea', s:.6},
-  {from:21.5,name:'night',   g:['#070d24','#0f1d48','#1c3470','#2a4a8a'], t:'#f2f5ff', m:'#b7c3e6', s:1},
+  {from:0,   name:'night',   g:['#070d24','#0f1d48','#1c3470','#2a4a8a'], t:'#f2f5ff', m:'#b7c3e6', sun:0,sy:30,sc:'#ffd25a',moon:1,cc:'rgba(170,185,230,.14)', fb:'#14214d',ff:'#0a1331', s:1},
+  {from:5,   name:'dawn',    g:['#1b2a5e','#5d5794','#d98b7f','#f6cf9e'], t:'#f7f3ff', m:'#e2d8f2', sun:.95,sy:24,sc:'#ffab70',moon:.25,cc:'rgba(255,214,226,.6)', fb:'#51436f',ff:'#2c2650', s:.3},
+  {from:7,   name:'morning', g:['#7fb7ea','#a9d2f3','#d6ebfa','#f5f1e4'], t:'#0b2545', m:'#2c4a6e', sun:1,sy:7,sc:'#ffd257',moon:0,cc:'rgba(255,255,255,.88)', fb:'#86bb95',ff:'#3f805c', s:0},
+  {from:11,  name:'day',     g:['#5aa3ea','#83bdf1','#b5d8f7','#e1f0fc'], t:'#08203f', m:'#1f3d63', sun:1,sy:3,sc:'#ffd84a',moon:0,cc:'rgba(255,255,255,.92)', fb:'#7cb98c',ff:'#367a54', s:0},
+  {from:16,  name:'afternoon',g:['#6c9fd6','#9cc0e6','#d8d8d6','#f4d6a8'], t:'#0b2545', m:'#2c4a6e', sun:1,sy:9,sc:'#ffbf48',moon:0,cc:'rgba(255,250,240,.82)', fb:'#8aae83',ff:'#47734f', s:0},
+  {from:18,  name:'sunset',  g:['#2b2f6b','#7b4a8c','#d9695a','#f4a964'], t:'#fff6ef', m:'#f1d9cf', sun:1,sy:22,sc:'#ff8a5c',moon:0,cc:'rgba(255,196,186,.62)', fb:'#6a4363',ff:'#36284a', s:.15},
+  {from:20,  name:'dusk',    g:['#0d1540','#262c69','#4a3f86','#7a5a9a'], t:'#f2f0ff', m:'#c9c3ea', sun:0,sy:30,sc:'#ff8a5c',moon:.85,cc:'rgba(205,185,235,.28)', fb:'#2d2c5e',ff:'#18183b', s:.6},
+  {from:21.5,name:'night',   g:['#070d24','#0f1d48','#1c3470','#2a4a8a'], t:'#f2f5ff', m:'#b7c3e6', sun:0,sy:30,sc:'#ffd25a',moon:1,cc:'rgba(170,185,230,.14)', fb:'#14214d',ff:'#0a1331', s:1},
 ];
 function applySky(){
   const n=new Date(),hr=n.getHours()+n.getMinutes()/60;
@@ -1234,9 +1316,115 @@ function applySky(){
   r.setProperty('--grad',`linear-gradient(175deg,${sky.g[0]} 0%,${sky.g[1]} 40%,${sky.g[2]} 75%,${sky.g[3]} 100%)`);
   r.setProperty('--bg',sky.g[1]);
   r.setProperty('--on-grad',sky.t);r.setProperty('--on-grad-muted',sky.m);r.setProperty('--star-o',sky.s);
+  r.setProperty('--sun-o',sky.sun);r.setProperty('--sun-y',sky.sy+'vh');r.setProperty('--sun-c',sky.sc);r.setProperty('--moon-o',sky.moon);r.setProperty('--cloud-c',sky.cc);r.setProperty('--forest-b',sky.fb);r.setProperty('--forest-f',sky.ff);
   document.documentElement.dataset.sky=sky.name;
 }
 var skyPref='auto';
+/* --- live weather (AccuWeather) --- */
+let place={locationKey:'3390458',name:'Riverdale, Alberta',lat:53.541,lon:-113.483},liveWx=null;
+const WX_RAIN=[12,13,14,15,16,17,18,26,39,40,41,42],WX_SNOW=[19,20,21,22,23,24,25,29,43,44],WX_CLOUD=[6,7,8,11,38];
+function iconToWx(c){c=+c;return WX_RAIN.includes(c)?'rain':WX_SNOW.includes(c)?'snow':WX_CLOUD.includes(c)?'cloudy':'clear'}
+function currentWx(){const sel=look.weather||'auto';return sel==='auto'?(liveWx?liveWx.wx:'clear'):sel}
+function wxNote(t){const n=$('#wxNote');if(n)n.textContent=t}
+const WMO=c=>{c=+c;return [51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99].includes(c)?'rain':[71,73,75,77,85,86].includes(c)?'snow':[3,45,48].includes(c)?'cloudy':'clear'};
+const WMO_TXT=c=>{c=+c;return c===0?'Clear':c<=2?'Partly cloudy':c===3?'Cloudy':c<=48?'Foggy':c<=67?'Rain':c<=77?'Snow':c<=82?'Showers':c<=86?'Snow showers':'Thunderstorms'};
+async function fetchWeather(force){
+  if(!mcp&&window.LOCAL_APP){
+    try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.lat??53.541}&longitude=${place.lon??-113.483}&current=weather_code,temperature_2m`);
+      const j=await r.json();const c=j&&j.current;if(!c)throw 0;
+      liveWx={wx:WMO(c.weather_code),phrase:WMO_TXT(c.weather_code),temp:Math.round(c.temperature_2m)+'°'};
+      wxNote(`Following the weather in ${place.name}: ${liveWx.phrase.toLowerCase()}, ${liveWx.temp}.`)}
+    catch{liveWx=null;wxNote('Could not get the weather just now. It will try again in a few minutes.')}
+    if((look.weather||'auto')==='auto')applyWeather(currentWx());return;
+  }
+  if(!mcp||!place.locationKey){wxNote(window.claude?'Match outside needs the AccuWeather connection in Claude.':'Open this page in Claude to match the weather outside.');return}
+  try{
+    const r=await mcp.callTool('AccuWeather','widgets-current-claude',{queryParams:{locationKey:place.locationKey,unit:'metric',lang:'en'}},{cache:force?{refresh:true,staleTime:0}:{staleTime:600000}});
+    const cc=r&&r.payload&&r.payload.currentConditions;if(!cc||cc.iconCode==null)throw{code:'no_data'};
+    liveWx={wx:iconToWx(cc.iconCode),phrase:String(cc.phrase||''),temp:String(cc.temperature||'')};
+    wxNote(`Following the weather in ${place.name}: ${liveWx.phrase.toLowerCase()}${liveWx.temp?', '+liveWx.temp:''}.`);
+  }catch(e){
+    const c=e&&e.code;liveWx=null;
+    wxNote(c==='server_not_connected'?'Add AccuWeather in claude.ai Settings → Connectors to match the weather outside.'
+      :c==='needs_reauth'?'Reconnect AccuWeather in claude.ai Settings → Connectors.'
+      :c==='not_in_manifest'||c==='approval_required'||c==='consent_required'?'Weather access was not allowed for this page. Choose Match outside again and press Allow.'
+      :'Could not get the weather just now. It will try again in a few minutes.');
+  }
+  if((look.weather||'auto')==='auto')applyWeather(currentWx());
+}
+async function changeCity(ev){
+  ev.preventDefault();const q=$('#wxCity').value.trim();if(!q)return;
+  if(!mcp&&window.LOCAL_APP){
+    $('#wxCityBtn').disabled=true;
+    try{const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&name='+encodeURIComponent(q.split(',')[0]));const j=await r.json();const g=j&&j.results&&j.results[0];
+      if(!g)wxNote(`Couldn't find "${q}". Try just the city name.`);
+      else{place={...place,name:[g.name,g.admin1].filter(Boolean).join(', '),lat:g.latitude,lon:g.longitude};$('#wxCity').value='';if(db){try{await db.doc('meta/place').set(place)}catch{}}fetchWeather(true)}}
+    catch{wxNote('Could not look up that city just now.')}
+    $('#wxCityBtn').disabled=false;return;
+  }
+  if(!mcp)return;
+  $('#wxCityBtn').disabled=true;
+  try{
+    const r=await mcp.callTool('AccuWeather','widgets-search-claude',{queryParams:{query:q}});
+    const hit=r&&r.payload&&Array.isArray(r.payload.results)&&r.payload.results[0];
+    if(!hit||!hit.locationKey){wxNote(`Couldn't find "${q}". Try the city and province, like "Calgary, Alberta".`)}
+    else{place={locationKey:String(hit.locationKey),name:String(hit.name||q)};$('#wxCity').value='';
+      if(db){try{await db.doc('meta/place').set(place)}catch{}}
+      fetchWeather(true)}
+  }catch{wxNote('Could not look up that city just now.')}
+  $('#wxCityBtn').disabled=false;
+}
+$('#wxCityForm').addEventListener('submit',changeCity);
+
+/* --- sky extras: shooting stars, fireflies, weather --- */
+const REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+(function fireflies(){const box=$('#fireflies');if(!box)return;const n=innerWidth<820?9:16;
+  for(let i=0;i<n;i++){const f=document.createElement('span');f.className='ff';
+    f.style.cssText=`left:${Math.random()*96}%;top:${40+Math.random()*55}%;--d:${8+Math.random()*10}s;--b:${2+Math.random()*3}s;--dx:${(Math.random()*80-40)|0}px;--dy:${(Math.random()*60-40)|0}px;animation-delay:${-Math.random()*10}s,${-Math.random()*3}s`;box.append(f)}})();
+function shootLoop(){
+  const wait=5000+Math.random()*9000;
+  setTimeout(()=>{
+    const sky=document.documentElement.dataset.sky,wx=document.documentElement.dataset.wx;
+    if(!REDUCED&&document.visibilityState==='visible'&&sky==='night'&&(wx==='clear'||!wx)){
+      const b=$('#shootbox'),st=document.createElement('div');st.className='shoot';
+      st.style.left=(35+Math.random()*60)+'%';st.style.top=(3+Math.random()*30)+'%';st.append(document.createElement('i'));
+      b.append(st);setTimeout(()=>st.remove(),1400);
+    }
+    shootLoop();
+  },wait);
+}
+shootLoop();
+function birdLoop(first){
+  setTimeout(()=>{
+    const sky=document.documentElement.dataset.sky,wx=document.documentElement.dataset.wx;
+    if(!REDUCED&&document.visibilityState==='visible'&&['dawn','morning','day','afternoon','sunset'].includes(sky)&&wx!=='rain'&&wx!=='snow'){
+      const box=$('#birdbox'),fl=document.createElement('div'),rtl=Math.random()<.4,n=3+Math.floor(Math.random()*4),d=16+Math.random()*12;
+      fl.className='flock'+(rtl?' rtl':'');fl.style.top=(6+Math.random()*36)+'vh';fl.style.setProperty('--d',d+'s');fl.style.setProperty('--dy',((Math.random()*80-40)|0)+'px');
+      for(let i=0;i<n;i++){const b=document.createElement('div');b.className='bird';const row=Math.ceil(i/2),side=i%2?1:-1;
+        b.style.left=(i?(-row*26):0)+'px';b.style.top=(i?side*row*14:0)+'px';b.style.setProperty('--w',(18+Math.random()*8)+'px');
+        b.innerHTML='<svg viewBox="0 0 24 10"><path d="M1 7Q6 1 12 7Q18 1 23 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        b.firstChild.style.setProperty('--f',(.35+Math.random()*.25)+'s');b.firstChild.style.animationDelay=(-Math.random())+'s';fl.append(b)}
+      box.append(fl);setTimeout(()=>fl.remove(),d*1000+500);
+    }
+    birdLoop(false);
+  },first?3000:14000+Math.random()*16000);
+}
+birdLoop(true);
+function applyWeather(w){
+  w=['clear','cloudy','rain','snow'].includes(w)?w:'clear';
+  document.documentElement.dataset.wx=w;
+  const box=$('#weatherfx');box.replaceChildren();
+  if(!REDUCED&&(w==='rain'||w==='snow')){
+    const n=w==='rain'?(innerWidth<820?50:90):(innerWidth<820?35:60);
+    for(let i=0;i<n;i++){const e=document.createElement('span');e.className=w==='rain'?'drop':'flake';
+      e.style.cssText=w==='rain'?`left:${Math.random()*105}%;--d:${.6+Math.random()*.5}s;animation-delay:${-Math.random()*2}s`
+        :`left:${Math.random()*100}%;--s:${3+Math.random()*5}px;--d:${7+Math.random()*8}s;animation-delay:${-Math.random()*14}s`;
+      box.append(e)}
+  }
+  const sel=(typeof look!=='undefined'&&look.weather)||'auto';document.querySelectorAll('[data-wx]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.wx===sel)));
+}
+document.querySelectorAll('[data-wx]').forEach(b=>b.onclick=()=>{setLook({weather:b.dataset.wx});if(b.dataset.wx==='auto')fetchWeather(false)});
+
 applySky();setInterval(applySky,5*60*1000);
 
 /* --- settings: font and size --- */
@@ -1284,7 +1472,7 @@ function applyLook(){
   g.replaceChildren(h('span',{class:'fontSub',text:'Print'}),...all.filter(([,v])=>!v.hand).map(opt),
     h('span',{class:'fontSub',text:'Handwritten'}),...all.filter(([,v])=>v.hand).map(opt));
   document.querySelectorAll('[data-size]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.size===look.size)));
-  skyPref=look.sky||'auto';applySky();
+  skyPref=look.sky||'auto';applySky();applyWeather(currentWx());
   document.querySelectorAll('[data-sky]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.sky===skyPref)));
 }
 async function setLook(ch){
@@ -1363,8 +1551,10 @@ render();
   db.collection('hobbies').onSnapshot(s=>{hobbies=s.docs.map(d=>({id:d.id,...d.data()}));renderHobbies()},onErr);
   if(me){try{const p=await prefsRef().get();prefs=p.exists?{...p.data()}:{}}catch{}
     if(prefs.look&&typeof prefs.look==='object'){look={...look,...prefs.look};applyLook();try{localStorage.setItem('mm-look',JSON.stringify(look))}catch{}}}
+  db.doc('meta/place').onSnapshot(d=>{if(d.exists){const v=d.data()||{};const np={...place,...v};if(JSON.stringify(np)!==JSON.stringify(place)){place=np;fetchWeather(false)}}},()=>{});
+  fetchWeather(false);setInterval(()=>{if(document.visibilityState==='visible')fetchWeather(false)},20*60*1000);
+  if(me&&mcp)$('#gSyncBtn').hidden=false;
   if(mcp&&me){
-    $('#gSyncBtn').hidden=false;
     if(prefs.gsync){syncGoogle(false);setInterval(()=>{if(document.visibilityState==='visible')syncGoogle(false)},15*60*1000)}
   }
   renderHobbies();
@@ -1373,4 +1563,5 @@ render();
 })();
 </script>
 
-</body></html>
+</body>
+</html>

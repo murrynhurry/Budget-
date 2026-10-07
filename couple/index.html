@@ -209,6 +209,20 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .ev.pending{border-left-style:dashed;opacity:.9}
 .ev.pending .t::after{content:" · suggested";font-weight:600}
 .mev.pending{opacity:.75}
+.dncal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;max-width:440px}
+.dncal .dch{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.dncal .dch b{font:700 16px var(--display)}
+.dncal .dch button{padding:4px 12px}
+.dncal .dw{font-size:11px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.04em}
+.dncal .dd{all:unset;box-sizing:border-box;position:relative;aspect-ratio:1;border-radius:10px;display:grid;place-items:center;font:600 15px var(--body);cursor:pointer;color:var(--ink);font-variant-numeric:tabular-nums}
+.dncal .dd:hover{background:var(--both-soft)}
+.dncal .dd:focus-visible{outline:2px solid var(--focus)}
+.dncal .dd.free::after{content:"";position:absolute;bottom:5px;width:5px;height:5px;border-radius:50%;background:var(--both)}
+.dncal .dd.today{box-shadow:inset 0 0 0 1px var(--line)}
+.dncal .dd.sel{background:var(--ink);color:var(--bg)}
+.dncal .dd.sel::after{background:var(--bg)}
+.dncal .dd[disabled]{opacity:.3;cursor:default}
+.dncal .dd.blank{visibility:hidden}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .sw{all:unset;box-sizing:border-box;width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
 .sw:hover{transform:scale(1.08)}
@@ -564,9 +578,10 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
   <section class="page" id="datePage" role="tabpanel" aria-labelledby="tabDate" hidden>
     <div class="choresHead"><h2>Date night</h2><span class="count" id="dateCount"></span></div>
   <section class="panel dn" id="dateNight" aria-labelledby="dnH">
-    <div class="tHead"><h3 id="dnH">Get ideas</h3><span class="note" id="dnNote">Pick a free evening and a mood for a few ideas.</span></div>
+    <div class="tHead"><h3 id="dnH">Get ideas</h3><span class="note" id="dnNote">Pick a day, a time and a mood for a few ideas.</span></div>
+    <div class="dncal" id="dnCal"></div>
     <div class="row">
-      <label>Evening<select id="dnPick"></select></label>
+      <label>Time<select id="dnTime"><option value="16:00">4 pm</option><option value="16:30">4:30 pm</option><option value="17:00">5 pm</option><option value="17:30">5:30 pm</option><option value="18:00">6 pm</option><option value="18:30">6:30 pm</option><option value="19:00" selected>7 pm</option><option value="19:30">7:30 pm</option><option value="20:00">8 pm</option><option value="20:30">8:30 pm</option><option value="21:00">9 pm</option><option value="21:30">9:30 pm</option><option value="22:00">10 pm</option></select></label>
       <label>Mood<select id="dnMood"><option>Anything</option><option>Cozy at home</option><option>Out on the town</option><option>Outdoors</option><option>Low budget</option><option>Something new</option></select></label>
       <button class="primary" type="button" id="dnGo">Suggest ideas</button>
     </div>
@@ -833,18 +848,31 @@ function renderToday(){
 }
 
 /* --- date night ideas --- */
-let sample=null;const dn={date:null,ideas:[],busy:false,err:'',added:{}};
+let sample=null;const dn={date:null,time:'19:00',cal:new Date(new Date().getFullYear(),new Date().getMonth(),1),ideas:[],busy:false,err:'',added:{}};
+function renderDnCal(){
+  const box=$('#dnCal');if(!box)return;
+  const evs=allEvents(),todayK=ymd(new Date()),m=dn.cal,first=new Date(m.getFullYear(),m.getMonth(),1),days=new Date(m.getFullYear(),m.getMonth()+1,0).getDate();
+  const thisMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+  const nav=(n)=>{dn.cal=new Date(m.getFullYear(),m.getMonth()+n,1);renderDnCal()};
+  const kids=[h('div',{class:'dch'},h('button',{type:'button','aria-label':'Previous month',text:'‹',disabled:m<=thisMonth?'':null,onclick:()=>nav(-1)}),h('b',{text:`${FULL_MONTHS[m.getMonth()]} ${m.getFullYear()}`}),h('button',{type:'button','aria-label':'Next month',text:'›',onclick:()=>nav(1)}))];
+  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(w=>kids.push(h('div',{class:'dw',text:w.slice(0,2)})));
+  for(let i=0;i<(first.getDay()+6)%7;i++)kids.push(h('span',{class:'dd blank'}));
+  for(let d=1;d<=days;d++){
+    const k=ymd(new Date(m.getFullYear(),m.getMonth(),d)),past=k<todayK,free=!past&&eveningFree(evs.filter(e=>e.date===k));
+    kids.push(h('button',{type:'button',class:'dd'+(free?' free':'')+(k===todayK?' today':'')+(k===dn.date?' sel':''),disabled:past?'':null,'aria-pressed':String(k===dn.date),
+      'aria-label':`${fmtDate(k)}${free?', evening free together':''}`,text:String(d),onclick:()=>{dn.date=k;if(dn.ideasFor!==k){dn.ideas=[];dn.err=''}renderDateNight()}}));
+  }
+  box.replaceChildren(...kids);
+}
 function freeEvenings(n){const evs=allEvents(),out=[],d=new Date();for(let i=0;i<35&&out.length<n;i++){const k=ymd(addDays(d,i));if(eveningFree(evs.filter(e=>e.date===k)))out.push(k)}return out}
 function renderDateNight(){
-  const pick=$('#dnPick'),cur=dn.date||pick.value,opts=freeEvenings(10);
-  if(cur&&!opts.includes(cur)&&cur>=ymd(new Date()))opts.unshift(cur);
-  pick.replaceChildren(...opts.map(k=>h('option',{value:k,text:(k===ymd(new Date())?'Tonight, ':'')+fmtDate(k)})));
-  if(cur&&opts.includes(cur))pick.value=cur;
-  const go=$('#dnGo');go.disabled=dn.busy||!opts.length||!sample;go.textContent=dn.busy?'Thinking…':dn.ideas.length?'More ideas':'Suggest ideas';
+  const todayK=ymd(new Date());if(!dn.date||dn.date<todayK)dn.date=freeEvenings(1)[0]||todayK;
+  renderDnCal();$('#dnTime').value=dn.time;
+  const opts=[dn.date];
+  const go=$('#dnGo');go.disabled=dn.busy||!sample;go.textContent=dn.busy?'Thinking…':dn.ideas.length?'More ideas':'Suggest ideas';
   const nf=freeEvenings(40).length;$('#dateCount').textContent=nf?`${nf} free evening${nf>1?'s':''} together in the next five weeks`:'';
   if(!sample)$('#dnNote').textContent=window.claude?'Date ideas are not available in this view.':'Open this page in Claude to get date ideas.';
-  else if(!opts.length)$('#dnNote').textContent='No free evenings together in the next five weeks.';
-  else $('#dnNote').textContent='Pick a free evening and a mood for a few ideas.';
+  else $('#dnNote').textContent='Pick a day, a time and a mood for a few ideas.';
   const list=$('#dnList');list.replaceChildren();
   if(dn.err)list.append(h('li',{class:'dnStatus',text:dn.err}));
   dn.ideas.forEach((idea,i)=>{
@@ -852,17 +880,17 @@ function renderDateNight(){
     list.append(h('li',{class:'idea'},
       h('span',{class:'tags',text:[idea.where==='home'?'At home':'Out',idea.cost].filter(Boolean).join(' · ')}),
       h('b',{text:idea.title}),h('p',{text:idea.detail||''}),
-      h('button',{type:'button',disabled:added||!db||!me?'':null,text:added?`Suggested to ${otherName()}`:`Suggest for ${fmtDate(dn.date)}, 7 pm`,onclick:()=>addIdea(idea,i)})));
+      h('button',{type:'button',disabled:added||!db||!me?'':null,text:added?`Suggested to ${otherName()}`:`Suggest for ${fmtDate(dn.date)}, ${fmtTime(dn.time)}`,onclick:()=>addIdea(idea,i)})));
   });
 }
-function openDateNight(k){showPage('date');dn.date=k;if(dn.ideasFor!==k){dn.ideas=[];dn.err=''}renderDateNight();try{window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}catch{}}
+function openDateNight(k){showPage('date');dn.date=k;{const d=new Date(k+'T12:00');dn.cal=new Date(d.getFullYear(),d.getMonth(),1)}if(dn.ideasFor!==k){dn.ideas=[];dn.err=''}renderDateNight();try{window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}catch{}}
 async function suggestIdeas(){
   if(!sample||dn.busy)return;
-  const date=$('#dnPick').value;if(!date)return;
+  const date=dn.date;if(!date)return;
   dn.busy=true;dn.err='';dn.date=date;renderDateNight();
   const d=new Date(date+'T12:00');
   const earlier=allEvents().filter(e=>e.date===date).map(e=>`${e.start?fmtTime(e.start)+' ':''}${e.title}`);
-  const prompt=`Suggest 4 date night ideas for a couple on ${DAYS[d.getDay()]}, ${FULL_MONTHS[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}, roughly 7 to 10 pm. Mood: ${$('#dnMood').value}. ${earlier.length?'Earlier that day they have: '+earlier.join('; ')+'. ':''}Make them specific, varied, and right for the season and day of the week, with at least one at home. Do not name real businesses. Reply with only a JSON array of 4 objects, each {"title": a short name of at most 6 words, "detail": one or two sentences on what to do, "cost": "$" or "$$" or "$$$", "where": "home" or "out"}.`;
+  const prompt=`Suggest 4 date night ideas for a couple on ${DAYS[d.getDay()]}, ${FULL_MONTHS[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}, starting around ${fmtTime(dn.time)}. Mood: ${$('#dnMood').value}. ${earlier.length?'Earlier that day they have: '+earlier.join('; ')+'. ':''}Make them specific, varied, and right for the season and day of the week, with at least one at home. Do not name real businesses. Reply with only a JSON array of 4 objects, each {"title": a short name of at most 6 words, "detail": one or two sentences on what to do, "cost": "$" or "$$" or "$$$", "where": "home" or "out"}.`;
   try{
     const r=await sample.json(prompt,{modelTier:'quick',cache:false});
     const arr=Array.isArray(r)?r:(r&&Array.isArray(r.ideas)?r.ideas:[]);
@@ -879,7 +907,7 @@ async function suggestIdeas(){
 async function addIdea(idea,i){
   if(!db||!me)return;
   try{
-    await propose({title:'Date night: '+idea.title,date:dn.date});
+    const[hh,mm]=dn.time.split(':').map(Number);await propose({title:'Date night: '+idea.title,date:dn.date,start:dn.time,end:`${String(Math.min(hh+2,23)).padStart(2,'0')}:${String(mm).padStart(2,'0')}`});
     dn.added[dn.date+'|'+i]=true;renderDateNight();
   }catch(e){banner(e.code==='invalid_argument'?'You can view this calendar but not add to it. Ask the owner to share it with you as an Editor.':'Could not add the date night. Try again.')}
 }
@@ -1126,8 +1154,8 @@ async function delSpecial(id){try{await db.doc('specials/'+id).delete()}catch{ba
 /* --- suggestions and notifications --- */
 function otherName(){const o=partnerId();return o?nameOf(o):'Matthew'}
 async function propose(d){
-  await db.collection('events').add({title:d.title,date:d.date,start:'19:00',end:'21:00',who:me,together:true,status:'pending',proposedBy:me,...(d.hobby?{hobby:d.hobby}:{}),...(d.food?{food:d.food}:{}),created:new Date().toISOString()});
-  banner(`${d.title} is on the calendar for ${fmtDate(d.date)} at 7 pm. ${otherName()} will get a notification to say yes or no.`);
+  await db.collection('events').add({title:d.title,date:d.date,start:d.start||'19:00',end:d.end||'21:00',who:me,together:true,status:'pending',proposedBy:me,...(d.hobby?{hobby:d.hobby}:{}),...(d.food?{food:d.food}:{}),created:new Date().toISOString()});
+  banner(`${d.title} is on the calendar for ${fmtDate(d.date)} at ${fmtTime(d.start||'19:00')}. ${otherName()} will get a notification to say yes or no.`);
 }
 async function respond(e,yes){
   try{await db.doc('events/'+e.id).update({status:yes?'yes':'no',respondedBy:me,respondedAt:new Date().toISOString()});openId=null}
@@ -1339,7 +1367,7 @@ $('#cdKind').onchange=e=>{$('#cdYearly').checked=e.target.value!=='trip'};
 $('#cdToggle').onclick=()=>{const f=$('#cdForm');f.hidden=!f.hidden;$('#cdToggle').setAttribute('aria-expanded',String(!f.hidden));if(!f.hidden)$('#cdTitle').focus()};
 $('#noteText').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))$('#noteForm').requestSubmit()});
 $('#dnGo').onclick=suggestIdeas;
-$('#dnPick').onchange=e=>{dn.date=e.target.value;dn.ideas=[];dn.err='';renderDateNight()};
+$('#dnTime').onchange=e=>{dn.time=e.target.value;renderDateNight()};
 const PAGES={cal:['calPage','tabCal'],chores:['chorePage','tabChores'],date:['datePage','tabDate'],hobbies:['hobbyPage','tabHobbies'],food:['foodPage','tabFood']};
 function showPage(p){
   if(!PAGES[p])p='cal';

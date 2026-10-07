@@ -449,6 +449,13 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
 
   <div class="shell">
   <div class="mainTop">
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="tabCal" aria-selected="true" aria-controls="calPage">Calendar</button>
+    <button type="button" role="tab" id="tabChores" aria-selected="false" aria-controls="chorePage">Chores <span class="badge" id="tabChoreN"></span></button>
+    <button type="button" role="tab" id="tabDate" aria-selected="false" aria-controls="datePage">Date night</button>
+    <button type="button" role="tab" id="tabHobbies" aria-selected="false" aria-controls="hobbyPage">Hobbies</button>
+    <button type="button" role="tab" id="tabFood" aria-selected="false" aria-controls="foodPage">Restaurants</button>
+  </div>
   <section class="panel today" id="today" aria-labelledby="tDate">
     <div class="tHead"><h2 id="tDate">Today</h2></div>
     <div class="tCols" id="tCols"></div>
@@ -480,13 +487,6 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     <ul class="noteList" id="noteList"><li class="cempty">Loading notes…</li></ul>
   </aside>
   <div class="mainRest">
-  <div class="tabs" role="tablist" aria-label="Sections">
-    <button type="button" role="tab" id="tabCal" aria-selected="true" aria-controls="calPage">Calendar</button>
-    <button type="button" role="tab" id="tabChores" aria-selected="false" aria-controls="chorePage">Chores <span class="badge" id="tabChoreN"></span></button>
-    <button type="button" role="tab" id="tabDate" aria-selected="false" aria-controls="datePage">Date night</button>
-    <button type="button" role="tab" id="tabHobbies" aria-selected="false" aria-controls="hobbyPage">Hobbies</button>
-    <button type="button" role="tab" id="tabFood" aria-selected="false" aria-controls="foodPage">Restaurants</button>
-  </div>
 
   <div id="banner" class="msg" hidden></div>
 

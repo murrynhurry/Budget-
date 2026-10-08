@@ -471,11 +471,6 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
 
   <section class="panel settings" id="settings" aria-labelledby="setH" hidden>
     <div class="tHead"><h3 id="setH">Settings</h3><button type="button" id="setClose">Done</button></div>
-    <div class="setGroup"><span class="setLbl">Background</span>
-      <div class="seg" role="group" aria-label="Background" style="margin-left:0;align-self:flex-start;flex-wrap:wrap" id="skySeg">
-        <button type="button" data-sky="auto" aria-pressed="true">Follow the sky</button><button type="button" data-sky="day" aria-pressed="false">Day</button><button type="button" data-sky="sunset" aria-pressed="false">Sunset</button><button type="button" data-sky="night" aria-pressed="false">Night</button>
-      </div>
-    </div>
     <div class="setGroup"><span class="setLbl">Weather</span>
       <div class="seg" role="group" aria-label="Weather" style="margin-left:0;align-self:flex-start;flex-wrap:wrap">
         <button type="button" data-wx="auto" aria-pressed="true">Match outside</button><button type="button" data-wx="clear" aria-pressed="false">Clear</button><button type="button" data-wx="cloudy" aria-pressed="false">Cloudy</button><button type="button" data-wx="rain" aria-pressed="false">Rain</button><button type="button" data-wx="snow" aria-pressed="false">Snow</button>
@@ -509,7 +504,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
         <button type="button" data-size="s" aria-pressed="false">Small</button><button type="button" data-size="m" aria-pressed="true">Normal</button><button type="button" data-size="l" aria-pressed="false">Large</button>
       </div>
     </div>
-    <p class="note">Background and text size are saved just for you, on every device you use.</p>
+    <p class="note">Text size is saved just for you, on every device you use.</p>
     <div class="setGroup"><span class="setLbl">Account</span><div class="acct" id="acctBox"></div></div>
     <p class="note" id="appVersion">Version: Oct 7, 12:45 pm (with love notes on the side, weather, birds and fireflies)</p>
   </section>
@@ -1574,7 +1569,6 @@ const SKIES=[
 function applySky(){
   const n=new Date(),hr=n.getHours()+n.getMinutes()/60;
   let sky=SKIES[0];for(const k of SKIES)if(hr>=k.from)sky=k;
-  if(skyPref&&skyPref!=='auto')sky=SKIES.find(k=>k.name===skyPref)||sky;
   const r=document.documentElement.style;
   r.setProperty('--grad',`linear-gradient(175deg,${sky.g[0]} 0%,${sky.g[1]} 40%,${sky.g[2]} 75%,${sky.g[3]} 100%)`);
   r.setProperty('--bg',sky.g[1]);
@@ -1688,7 +1682,9 @@ function applyWeather(w){
 }
 document.querySelectorAll('[data-wx]').forEach(b=>b.onclick=()=>{setLook({weather:b.dataset.wx});if(b.dataset.wx==='auto')fetchWeather(false)});
 
-applySky();setInterval(applySky,5*60*1000);
+applySky();setInterval(applySky,60*1000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')applySky()});
+window.addEventListener('pageshow',applySky);window.addEventListener('focus',applySky);
 
 /* --- settings: font and size --- */
 const FONTS={
@@ -1737,7 +1733,6 @@ function applyLook(){
     h('span',{class:'fontSub',text:'Handwritten'}),...all.filter(([,v])=>v.hand).map(opt));}
   document.querySelectorAll('[data-size]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.size===look.size)));
   skyPref=look.sky||'auto';applySky();applyWeather(currentWx());
-  document.querySelectorAll('[data-sky]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.sky===skyPref)));
 }
 async function setLook(ch){
   look={...look,...ch};applyLook();
@@ -1792,7 +1787,6 @@ async function setColor(k,key){
 }
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyColors)}catch{}
 try{new MutationObserver(applyColors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']})}catch{}
-document.querySelectorAll('[data-sky]').forEach(b=>b.onclick=()=>setLook({sky:b.dataset.sky}));
 applyColors();
 applyLook();
 

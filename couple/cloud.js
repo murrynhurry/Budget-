@@ -138,34 +138,42 @@ C.setName=async name=>{const d=await spaceData();d.members=d.members||{};d.membe
 
 /* ---------- ideas: a built-in idea box stands in for "ask Claude" in the phone app ---------- */
 const DATES=[
+ ["Brunch date","Pick a café neither of you has tried and share a sweet and a savoury dish.","$$","out","day out new"],
+ ["Farmers' market wander","Walk the market with a coffee, pick ingredients for dinner and try one new thing.","$","out","day outdoors low"],
+ ["Morning hike and pastries","Hit an easy trail early, then reward yourselves with pastries and hot drinks.","$","out","day outdoors low"],
+ ["Picnic in the park","Pack sandwiches, fruit and a blanket, and bring a card game or a book to share.","$","out","day outdoors low cozy"],
+ ["Bike ride to a café","Ride a river path to a café, sit outside and people-watch.","$","out","day outdoors low"],
+ ["Pancake breakfast in bed","Make a big stack together, add toppings and eat it slowly with the curtains open.","$","home","day cozy low"],
+ ["Thrift store challenge","$20 each to find the best outfit for the other, then show them off.","$","out","day new low"],
+ ["Zoo or conservatory visit","Wander, pick a favourite animal or plant each, and grab a snack after.","$$","out","day new out"],
  ["Candlelit fondue night","Melt cheese or chocolate, cut up bread, fruit and veggies, and eat slowly by candlelight.","$","home","cozy low"],
  ["Blanket fort movie marathon","Build a fort, pick a theme (comfort movies, a trilogy), make popcorn with toppings.","$","home","cozy low"],
- ["Cook a new cuisine together","Pick a country neither of you has cooked from, shop for it together and cook as a team.","$$","home","cozy new"],
+ ["Cook a new cuisine together","Pick a country neither of you has cooked from, shop for it together and cook as a team.","$$","home","cozy new day"],
  ["At-home spa night","Face masks, a warm bath or foot soak, and give each other a massage with a calm playlist.","$","home","cozy low"],
- ["Puzzle and tea night","Start a 500-piece puzzle with a pot of tea and a snack board; leave it out to finish later.","$","home","cozy low"],
- ["Paint each other's portraits","Cheap canvases or paper, 30 minutes each, then a big reveal. Hang the best one.","$","home","cozy new"],
- ["Homemade pizza contest","Make dough together, each build a pizza for the other, and judge with a silly scorecard.","$","home","cozy low"],
- ["Board game tournament","Best of three across different games, loser makes dessert.","$","home","cozy low"],
+ ["Puzzle and tea night","Start a 500-piece puzzle with a pot of tea and a snack board; leave it out to finish later.","$","home","cozy low day"],
+ ["Paint each other's portraits","Cheap canvases or paper, 30 minutes each, then a big reveal. Hang the best one.","$","home","cozy new day"],
+ ["Homemade pizza contest","Make dough together, each build a pizza for the other, and judge with a silly scorecard.","$","home","cozy low day"],
+ ["Board game tournament","Best of three across different games, loser makes dessert.","$","home","cozy low day"],
  ["Write letters to future us","Write letters to open on your next anniversary and seal them with the date.","$","home","cozy low"],
  ["Stargazing drive","Drive out past the city lights with blankets and hot chocolate; use a free star app to find planets.","$","out","outdoors low"],
  ["Sunset walk and food truck","Walk a trail or river path at sunset, then grab something from a food truck or stand.","$","out","outdoors low"],
  ["Night picnic in the park","Pack a thermos, snacks and fairy lights and find a quiet bench or blanket spot.","$","out","outdoors low"],
- ["Fall leaves and cider","Walk somewhere with big trees, collect the prettiest leaves, warm up with hot cider after.","$","out","outdoors low"],
- ["Skating or a winter walk","Find an outdoor rink or a lit-up path, then warm up with something hot.","$","out","outdoors low"],
- ["Try a dessert crawl","Visit two or three spots for one dessert each and rank them.","$$","out","out new"],
+ ["Fall leaves and cider","Walk somewhere with big trees, collect the prettiest leaves, warm up with hot cider after.","$","out","outdoors low day"],
+ ["Skating or a winter walk","Find an outdoor rink or a lit-up path, then warm up with something hot.","$","out","outdoors low day"],
+ ["Try a dessert crawl","Visit two or three spots for one dessert each and rank them.","$$","out","out new day"],
  ["Live music night","Find a small local show or open mic and sit near the front.","$$","out","out new"],
  ["Comedy club","Check for a stand-up or improv night, then talk about your favourite jokes over a drink.","$$","out","out new"],
- ["Bowling or mini golf","A little friendly competition; loser buys the snacks.","$$","out","out low"],
- ["Arcade date","Pool your tokens, aim for the silliest prize at the counter.","$$","out","out new"],
+ ["Bowling or mini golf","A little friendly competition; loser buys the snacks.","$$","out","out low day"],
+ ["Arcade date","Pool your tokens, aim for the silliest prize at the counter.","$$","out","out new day"],
  ["Dress-up dinner","Dress fancier than needed for a nice dinner somewhere you've both wanted to try.","$$$","out","out"],
- ["Pottery or paint class","Book a beginner class and make something together for your place.","$$$","out","new out"],
- ["Library and cozy café","Each pick a book for the other at the library, then read together in a café.","$","out","low cozy new"],
- ["Museum late night","Many museums have evening hours; pick the weirdest exhibit and make up stories.","$$","out","new out"],
- ["Grocery store challenge","$15 each to buy ingredients for a surprise snack for the other, then taste-test at home.","$","home","low new"],
- ["Learn a dance from a video","Pick a short dance tutorial and learn it together; film the final take.","$","home","new low cozy"],
- ["Photo walk","Walk a neighbourhood and each take 10 photos on a theme, then compare.","$","out","outdoors low new"],
+ ["Pottery or paint class","Book a beginner class and make something together for your place.","$$$","out","new out day"],
+ ["Library and cozy café","Each pick a book for the other at the library, then read together in a café.","$","out","low cozy new day"],
+ ["Museum late night","Many museums have evening hours; pick the weirdest exhibit and make up stories.","$$","out","new out day"],
+ ["Grocery store challenge","$15 each to buy ingredients for a surprise snack for the other, then taste-test at home.","$","home","low new day"],
+ ["Learn a dance from a video","Pick a short dance tutorial and learn it together; film the final take.","$","home","new low cozy day"],
+ ["Photo walk","Walk a neighbourhood and each take 10 photos on a theme, then compare.","$","out","outdoors low new day"],
  ["Karaoke in the living room","Lyrics videos on the TV, a hairbrush mic, and a duet to finish.","$","home","cozy low"],
- ["Plan a dream trip","Pick a place, research it together with snacks, and make a pretend itinerary.","$","home","cozy low"]];
+ ["Plan a dream trip","Pick a place, research it together with snacks, and make a pretend itinerary.","$","home","cozy low day"]];
 const HOBBIES=[
  ["Pottery","Hand-building or wheel classes; you get to keep what you make.","out"],["Bouldering","Beginner-friendly climbing; easy to rent shoes at a gym.","out"],
  ["Cooking club for two","Cook one new recipe from a cookbook each week.","home"],["Jigsaw puzzles","A big puzzle on the table to chip away at most evenings.","home"],
@@ -188,9 +196,12 @@ const sample={json:async prompt=>{
     return pick(pool.length>=4?pool:HOBBIES,4).map(([title,note,where])=>({title,note,where}));
   }
   const mood=((p.match(/Mood: ([^.]*)\./)||[,"Anything"])[1]).toLowerCase();
+  const tm=p.match(/starting around (\d+)(?::\d+)?\s*(am|pm)/i);let hr=19;if(tm){hr=+tm[1]%12+(tm[2].toLowerCase()==="pm"?12:0)}
+  const isDay=hr<17;const timeOk=d=>isDay?d[4].split(" ").includes("day"):true;
   const key=mood.includes("cozy")?"cozy":mood.includes("town")?"out":mood.includes("outdoor")?"outdoors":mood.includes("budget")?"low":mood.includes("new")?"new":"";
-  let pool=key?DATES.filter(d=>d[4].split(" ").includes(key)):DATES;if(pool.length<4)pool=DATES;
-  let out=pick(pool,4);if(!key&&!out.some(d=>d[3]==="home"))out[3]=pick(DATES.filter(d=>d[3]==="home"),1)[0];
+  const base=DATES.filter(timeOk);
+  let pool=key?base.filter(d=>d[4].split(" ").includes(key)):base;if(pool.length<4)pool=base;
+  let out=pick(pool,4);if(!key&&!out.some(d=>d[3]==="home")){const hm=base.filter(d=>d[3]==="home"&&!out.includes(d));if(hm.length)out[3]=pick(hm,1)[0]}
   return out.map(([title,detail,cost,where])=>({title,detail,cost,where}));
 }};
 

@@ -613,10 +613,10 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
   <section class="page" id="datePage" role="tabpanel" aria-labelledby="tabDate" hidden>
     <div class="choresHead"><h2>Date night</h2><span class="count" id="dateCount"></span></div>
   <section class="panel dn" id="dateNight" aria-labelledby="dnH">
-    <div class="tHead"><h3 id="dnH">Get ideas</h3><span class="note" id="dnNote">Pick a day, a time and a mood for a few ideas.</span></div>
+    <div class="tHead"><h3 id="dnH">Get ideas</h3><span class="note" id="dnNote">Pick a day, any time from morning to night, and a mood for a few ideas.</span></div>
     <div class="dncal" id="dnCal"></div>
     <div class="row">
-      <label>Time<select id="dnTime"><option value="16:00">4 pm</option><option value="16:30">4:30 pm</option><option value="17:00">5 pm</option><option value="17:30">5:30 pm</option><option value="18:00">6 pm</option><option value="18:30">6:30 pm</option><option value="19:00" selected>7 pm</option><option value="19:30">7:30 pm</option><option value="20:00">8 pm</option><option value="20:30">8:30 pm</option><option value="21:00">9 pm</option><option value="21:30">9:30 pm</option><option value="22:00">10 pm</option></select></label>
+      <label>Time<select id="dnTime"><option value="06:00">6 am</option><option value="06:30">6:30 am</option><option value="07:00">7 am</option><option value="07:30">7:30 am</option><option value="08:00">8 am</option><option value="08:30">8:30 am</option><option value="09:00">9 am</option><option value="09:30">9:30 am</option><option value="10:00">10 am</option><option value="10:30">10:30 am</option><option value="11:00">11 am</option><option value="11:30">11:30 am</option><option value="12:00">12 pm</option><option value="12:30">12:30 pm</option><option value="13:00">1 pm</option><option value="13:30">1:30 pm</option><option value="14:00">2 pm</option><option value="14:30">2:30 pm</option><option value="15:00">3 pm</option><option value="15:30">3:30 pm</option><option value="16:00">4 pm</option><option value="16:30">4:30 pm</option><option value="17:00">5 pm</option><option value="17:30">5:30 pm</option><option value="18:00">6 pm</option><option value="18:30">6:30 pm</option><option value="19:00" selected>7 pm</option><option value="19:30">7:30 pm</option><option value="20:00">8 pm</option><option value="20:30">8:30 pm</option><option value="21:00">9 pm</option><option value="21:30">9:30 pm</option><option value="22:00">10 pm</option><option value="22:30">10:30 pm</option><option value="23:00">11 pm</option><option value="23:30">11:30 pm</option></select></label>
       <label>Mood<select id="dnMood"><option>Anything</option><option>Cozy at home</option><option>Out on the town</option><option>Outdoors</option><option>Low budget</option><option>Something new</option></select></label>
       <button class="primary" type="button" id="dnGo">Suggest ideas</button>
     </div>
@@ -934,7 +934,7 @@ function renderDateNight(){
   const go=$('#dnGo');go.disabled=dn.busy||!sample;go.textContent=dn.busy?'Thinking…':dn.ideas.length?'More ideas':'Suggest ideas';
   const nf=freeEvenings(40).length;$('#dateCount').textContent=nf?`${nf} free evening${nf>1?'s':''} together in the next five weeks`:'';
   if(!sample)$('#dnNote').textContent=window.claude?'Date ideas are not available in this view.':'Open this page in Claude to get date ideas.';
-  else $('#dnNote').textContent='Pick a day, a time and a mood for a few ideas.';
+  else $('#dnNote').textContent='Pick a day, any time from morning to night, and a mood for a few ideas.';
   const list=$('#dnList');list.replaceChildren();
   if(dn.err)list.append(h('li',{class:'dnStatus',text:dn.err}));
   dn.ideas.forEach((idea,i)=>{
@@ -952,7 +952,7 @@ async function suggestIdeas(){
   dn.busy=true;dn.err='';dn.date=date;renderDateNight();
   const d=new Date(date+'T12:00');
   const earlier=allEvents().filter(e=>e.date===date).map(e=>`${e.start?fmtTime(e.start)+' ':''}${e.title}`);
-  const prompt=`Suggest 4 date night ideas for a couple on ${DAYS[d.getDay()]}, ${FULL_MONTHS[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}, starting around ${fmtTime(dn.time)}. Mood: ${$('#dnMood').value}. ${earlier.length?'Earlier that day they have: '+earlier.join('; ')+'. ':''}Make them specific, varied, and right for the season and day of the week, with at least one at home. Do not name real businesses. Reply with only a JSON array of 4 objects, each {"title": a short name of at most 6 words, "detail": one or two sentences on what to do, "cost": "$" or "$$" or "$$$", "where": "home" or "out"}.`;
+  const prompt=`Suggest 4 date ideas for a couple on ${DAYS[d.getDay()]}, ${FULL_MONTHS[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}, starting around ${fmtTime(dn.time)}. Make them suit that time of day (for example brunch or a hike in the morning, a picnic or market in the afternoon, dinner or stargazing at night). Mood: ${$('#dnMood').value}. ${earlier.length?'Earlier that day they have: '+earlier.join('; ')+'. ':''}Make them specific, varied, and right for the season and day of the week, with at least one at home. Do not name real businesses. Reply with only a JSON array of 4 objects, each {"title": a short name of at most 6 words, "detail": one or two sentences on what to do, "cost": "$" or "$$" or "$$$", "where": "home" or "out"}.`;
   try{
     const r=await sample.json(prompt,{modelTier:'quick',cache:false});
     const arr=Array.isArray(r)?r:(r&&Array.isArray(r.ideas)?r.ideas:[]);
@@ -969,7 +969,7 @@ async function suggestIdeas(){
 async function addIdea(idea,i){
   if(!db||!me)return;
   try{
-    const[hh,mm]=dn.time.split(':').map(Number);await propose({title:'Date night: '+idea.title,date:dn.date,start:dn.time,end:`${String(Math.min(hh+2,23)).padStart(2,'0')}:${String(mm).padStart(2,'0')}`});
+    const[hh,mm]=dn.time.split(':').map(Number);await propose({title:(hh<17?'Date: ':'Date night: ')+idea.title,date:dn.date,start:dn.time,end:`${String(Math.min(hh+2,23)).padStart(2,'0')}:${String(mm).padStart(2,'0')}`});
     dn.added[dn.date+'|'+i]=true;renderDateNight();
   }catch(e){banner(e.code==='invalid_argument'?'You can view this calendar but not add to it. Ask the owner to share it with you as an Editor.':'Could not add the date night. Try again.')}
 }

@@ -249,6 +249,14 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .feedList:empty{display:none}
 .hideBox{display:flex;flex-direction:column;gap:8px;margin-top:6px}
 .hideBox input{width:100%}
+.noteToast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 10px 10px 14px;border-radius:16px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 8px 28px rgba(0,0,0,.18);font-weight:600;font-size:14px}
+.noteToast svg{width:20px;height:20px;color:#e2457a;flex:none}
+.noteToast span{min-width:0}
+.noteToast button{padding:6px 12px}
+@media (prefers-reduced-motion:no-preference){.noteToast:not([hidden]){animation:toastIn .35s ease-out}.notesTab.fresh svg{animation:beat 1.2s ease-in-out infinite}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,-12px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes beat{0%,100%{transform:scale(1)}30%{transform:scale(1.35)}60%{transform:scale(.95)}}
+.notesTab.fresh{border-color:#e2457a}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .sw{all:unset;box-sizing:border-box;width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
 .sw:hover{transform:scale(1.08)}
@@ -541,6 +549,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
   </div>
   <button type="button" class="notesTab" id="notesTab" aria-controls="notesBoard" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z" fill="currentColor"/></svg>Love notes<span class="badge" id="notesTabN"></span></button>
   <div class="notesBack" id="notesBack"></div>
+  <div class="noteToast" id="noteToast" role="status" aria-live="polite" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z" fill="currentColor"/></svg><span id="noteToastText"></span><button type="button" id="noteToastRead">Read</button><button type="button" class="del" id="noteToastX" aria-label="Dismiss">×</button></div>
   <aside class="notes panel" id="notesBoard" aria-labelledby="notesH">
     <div class="tHead"><h3 id="notesH" class="notesH"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 8a4.2 4.2 0 0 1 7.5 2.5c0 5.4-7.5 10-7.5 10z" fill="currentColor"/></svg>Love notes</h3><span class="badge" id="notesNew"></span><button type="button" class="notesClose" id="notesClose">Close</button></div>
     <form id="noteForm" class="noteForm">
@@ -1084,9 +1093,10 @@ function renderNotes(){
   const list=$('#noteList');if(!list)return;
   const seen=prefs.notesSeen||'';
   const sorted=notes.slice().sort((a,b)=>(b.created||'').localeCompare(a.created||'')).slice(0,40);
-  const isFresh=n=>n.from!==me&&seen&&(n.created||'')>seen;
+  const isFresh=n=>n.from!==me&&(n.created||'')>seen;
   const fresh=sorted.filter(isFresh).length;
-  $('#notesNew').textContent=fresh?fresh+' new':'';$('#notesTabN').textContent=fresh||'';
+  $('#notesNew').textContent=fresh?fresh+' new':'';$('#notesTabN').textContent=fresh||'';$('#notesTab').classList.toggle('fresh',fresh>0);
+  showNoteToast(sorted.filter(isFresh));
   list.replaceChildren();renderNotif();
   if(!sorted.length)list.append(h('li',{class:'cempty',text:db?'No notes yet. Leave the first one.':'Notes appear here once the page is synced.'}));
   for(const n of sorted){
@@ -1120,7 +1130,7 @@ function markNotesSeen(){
   const latest=notes.filter(n=>n.from!==me).map(n=>n.created||'').sort().pop();
   if(!latest||latest<=(prefs.notesSeen||''))return;
   clearTimeout(notesSeenTimer);
-  notesSeenTimer=setTimeout(async()=>{prefs={...prefs,notesSeen:latest};try{await prefsRef().set(prefs)}catch{}},8000);
+  notesSeenTimer=setTimeout(async()=>{prefs={...prefs,notesSeen:latest};renderNotes();try{await prefsRef().set(prefs)}catch{}},4000);
 }
 
 /* --- restaurants --- */
@@ -1297,6 +1307,19 @@ async function planTodo(t){
   if(!date){banner('No free evenings together in the next five weeks.');return}
   try{await propose({title:t.title,date,todo:t.id})}catch{banner('Could not add it to the calendar.')}
 }
+
+/* --- tell each person when a new love note arrives --- */
+let toastShownFor='',toastTimer=null;
+function showNoteToast(fresh){
+  try{if(navigator.setAppBadge){const n=fresh.length+(+($('#tabNotifN')&&$('#tabNotifN').textContent)||0);n?navigator.setAppBadge(n):navigator.clearAppBadge()}}catch{}
+  if(!fresh.length){hideNoteToast();return}
+  const newest=fresh[0];if(toastShownFor===newest.id)return;
+  if($('#notesBoard').classList.contains('open'))return;
+  toastShownFor=newest.id;
+  $('#noteToastText').textContent=fresh.length===1?`${nameOf(newest.from)} left you a love note`:`${fresh.length} new love notes from ${nameOf(newest.from)}`;
+  $('#noteToast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(hideNoteToast,12000);
+}
+function hideNoteToast(){$('#noteToast').hidden=true}
 
 function renderImportInfo(){
   const mine=me&&imports[me];
@@ -1520,6 +1543,8 @@ $('#choreForm').addEventListener('submit',addChore);
 $('#noteForm').addEventListener('submit',postNote);
 function setNotesOpen(o){if(o)setTimeout(markNotesSeen,0);$('#notesBoard').classList.toggle('open',o);$('#notesBack').classList.toggle('on',o);$('#notesTab').setAttribute('aria-expanded',String(o));if(o)$('#notesClose').focus({preventScroll:true});else $('#notesTab').focus({preventScroll:true})}
 $('#notesTab').onclick=()=>setNotesOpen(true);
+$('#noteToastX').onclick=hideNoteToast;
+$('#noteToastRead').onclick=()=>{hideNoteToast();if(innerWidth<760)setNotesOpen(true);else{$('#notesBoard').scrollIntoView({block:'nearest'});setTimeout(markNotesSeen,0)}};
 $('#notesClose').onclick=()=>setNotesOpen(false);
 $('#notesBack').onclick=()=>setNotesOpen(false);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#notesBoard').classList.contains('open'))setNotesOpen(false)});

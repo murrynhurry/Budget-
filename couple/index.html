@@ -522,6 +522,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     <button type="button" role="tab" id="tabDate" aria-selected="false" aria-controls="datePage">Date night</button>
     <button type="button" role="tab" id="tabHobbies" aria-selected="false" aria-controls="hobbyPage">Hobbies</button>
     <button type="button" role="tab" id="tabFood" aria-selected="false" aria-controls="foodPage">Restaurants</button>
+    <button type="button" role="tab" id="tabTodo" aria-selected="false" aria-controls="todoPage">Our to-dos <span class="badge" id="tabTodoN"></span></button>
     <button type="button" role="tab" id="tabNotif" aria-selected="false" aria-controls="notifPage">For you <span class="badge" id="tabNotifN"></span></button>
   </div>
   <section class="panel today" id="today" aria-labelledby="tDate">
@@ -623,6 +624,20 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
       <div class="tHead"><h3 id="notifH" class="notesH"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.2L4.4 15a1 1 0 0 0 .9 1.5h13.4a1 1 0 0 0 .9-1.5L18 12.2V9a6 6 0 0 0-6-6zm-2.3 15a2.4 2.4 0 0 0 4.6 0z" fill="currentColor"/></svg>For you</h3><span class="badge" id="notifN"></span></div>
       <ul class="nlist" id="notifList"><li class="cempty">You're all caught up.</li></ul>
     </section>
+  </section>
+  <section class="page" id="todoPage" role="tabpanel" aria-labelledby="tabTodo" hidden>
+    <div class="choresHead"><h2>Our to-dos</h2><span class="count" id="todoCount"></span></div>
+    <p class="lede">Things you want to do together, big or small. Plan one onto a free evening or tick it off when it's done.</p>
+    <div class="panel">
+      <ul class="clist" id="todoList"><li class="cempty">Loading…</li></ul>
+      <details id="todoDoneBox" hidden><summary>Done together</summary><ul class="clist" id="todoDoneList"></ul></details>
+    </div>
+    <form class="panel choreAdd" id="todoForm">
+      <h3>New to-do</h3>
+      <label>To-do<input type="text" id="tdTitle" maxlength="100" placeholder="See the northern lights" required></label>
+      <label>Note<input type="text" id="tdNote" maxlength="140" placeholder="Optional"></label>
+      <button class="primary" type="submit" id="tdAdd">Add to-do</button>
+    </form>
   </section>
   <section class="page" id="foodPage" role="tabpanel" aria-labelledby="tabFood" hidden>
     <div class="choresHead"><h2>Restaurants to try</h2><span class="count" id="foodCount"></span></div>
@@ -757,7 +772,7 @@ function setView(v){
 function render(){
   const evs=allEvents();
   const today=ymd(new Date());
-  renderImportInfo();renderHides();renderNotif();renderToday();renderCountdowns();renderDateNight();renderHobbies();renderFood();
+  renderImportInfo();renderHides();renderNotif();renderTodos();renderToday();renderCountdowns();renderDateNight();renderHobbies();renderFood();
   const end=addDays(weekStart,6);
   $('#range').textContent=weekStart.getMonth()===end.getMonth()
     ?`${MONTHS[weekStart.getMonth()]} ${weekStart.getDate()}–${end.getDate()}`
@@ -907,7 +922,7 @@ function renderDnCal(){
   }
   box.replaceChildren(...kids);
 }
-function freeEvenings(n){const evs=allEvents(),out=[],d=new Date();for(let i=0;i<35&&out.length<n;i++){const k=ymd(addDays(d,i));if(eveningFree(evs.filter(e=>e.date===k)))out.push(k)}return out}
+function freeEvenings(n){const evs=allEvents(),out=[],d=new Date();for(let i=d.getHours()>=18?1:0;i<35&&out.length<n;i++){const k=ymd(addDays(d,i));if(eveningFree(evs.filter(e=>e.date===k)))out.push(k)}return out}
 function renderDateNight(){
   const todayK=ymd(new Date());if(!dn.date||dn.date<todayK)dn.date=freeEvenings(1)[0]||todayK;
   renderDnCal();$('#dnTime').value=dn.time;
@@ -1197,7 +1212,7 @@ async function delSpecial(id){try{await db.doc('specials/'+id).delete()}catch{ba
 /* --- suggestions and notifications --- */
 function otherName(){const o=partnerId();return o?nameOf(o):'Matthew'}
 async function propose(d){
-  await db.collection('events').add({title:d.title,date:d.date,start:d.start||'19:00',end:d.end||'21:00',who:me,together:true,status:'pending',proposedBy:me,...(d.hobby?{hobby:d.hobby}:{}),...(d.food?{food:d.food}:{}),created:new Date().toISOString()});
+  await db.collection('events').add({title:d.title,date:d.date,start:d.start||'19:00',end:d.end||'21:00',who:me,together:true,status:'pending',proposedBy:me,...(d.hobby?{hobby:d.hobby}:{}),...(d.food?{food:d.food}:{}),...(d.todo?{todo:d.todo}:{}),created:new Date().toISOString()});
   banner(`${d.title} is on the calendar for ${fmtDate(d.date)} at ${fmtTime(d.start||'19:00')}. ${otherName()} will get a notification to say yes or no.`);
 }
 async function respond(e,yes){
@@ -1251,6 +1266,41 @@ function renderHides(){
   (r.busy||[]).forEach(t=>add(`"${t}" shown as Busy`,'busy',t));
   (r.keys||[]).forEach(k=>{const[d,st,t]=k.split('|');add(`"${t}" on ${fmtDate(d)}${st?' at '+fmtTime(st):''}`,'keys',k)});
   $('#hideList').replaceChildren(...rows);
+}
+
+/* --- couple to-do list --- */
+let todos=[];
+function renderTodos(){
+  const list=$('#todoList');if(!list)return;
+  const open=todos.filter(t=>!t.done).sort((a,b)=>(a.created||'').localeCompare(b.created||''));
+  const done=todos.filter(t=>t.done).sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||''));
+  $('#todoCount').textContent=todos.length?`${open.length} to do, ${done.length} done together`:'';
+  $('#tabTodoN').textContent=open.length||'';
+  const can=!!(db&&me);
+  const item=t=>{
+    const planned=allEvents().filter(e=>e.todo===t.id&&e.date>=ymd(new Date())).sort((a,b)=>a.date.localeCompare(b.date))[0];
+    const meta=[t.done?`Done ${t.doneAt?fmtDate(ymd(new Date(t.doneAt))):''}`:'',planned?((planned.status==='pending'?'Suggested for ':'Planned for ')+fmtDate(planned.date)):'',t.addedBy?`added by ${t.addedBy===me?'you':nameOf(t.addedBy)}`:''].filter(Boolean).join(' · ');
+    return h('li',{class:'ci'+(t.done?' done':'')},
+      h('button',{type:'button',class:'tick'+(t.done?' on':''),'aria-label':(t.done?'Mark not done: ':'Mark done: ')+t.title,disabled:can?null:'',onclick:()=>setTodo(t.id,t.done?{done:false}:{done:true,doneAt:new Date().toISOString(),doneBy:me})}),
+      h('div',{class:'body'},h('span',{class:'ttl',text:t.title}),t.note?h('span',{class:'meta',text:t.note}):null,meta?h('span',{class:'meta',text:meta}):null),
+      !t.done?h('button',{type:'button',text:'Plan it',disabled:can?null:'',onclick:()=>planTodo(t)}):null,
+      h('button',{type:'button',class:'del','aria-label':'Delete '+t.title,title:'Delete',text:'×',onclick:()=>delTodo(t.id)}));
+  };
+  list.replaceChildren(...(open.length?open.map(item):[h('li',{class:'cempty',text:db?'Nothing on the list yet. Add something below you want to do together.':'Your list shows here once you sign in.'})]));
+  $('#todoDoneBox').hidden=!done.length;$('#todoDoneList').replaceChildren(...done.map(item));
+  $('#tdAdd').disabled=!can;
+}
+async function addTodo(ev){
+  ev.preventDefault();if(!db||!me)return;const t=$('#tdTitle').value.trim();if(!t)return;
+  try{await db.collection('todos').add({title:t.slice(0,100),note:$('#tdNote').value.trim().slice(0,140),done:false,addedBy:me,created:new Date().toISOString()});$('#tdTitle').value='';$('#tdNote').value='';$('#tdTitle').focus()}
+  catch(e){banner(e.code==='invalid_argument'?'You can view the list but not add to it.':'Could not save that. Try again.')}
+}
+async function setTodo(id,data){try{await db.doc('todos/'+id).update(data)}catch{banner('Could not update that.')}}
+async function delTodo(id){try{await db.doc('todos/'+id).delete()}catch{banner('Could not delete that.')}}
+async function planTodo(t){
+  if(!db||!me)return;const date=freeEvenings(1)[0];
+  if(!date){banner('No free evenings together in the next five weeks.');return}
+  try{await propose({title:t.title,date,todo:t.id})}catch{banner('Could not add it to the calendar.')}
 }
 
 function renderImportInfo(){
@@ -1484,7 +1534,7 @@ $('#cdToggle').onclick=()=>{const f=$('#cdForm');f.hidden=!f.hidden;$('#cdToggle
 $('#noteText').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey))$('#noteForm').requestSubmit()});
 $('#dnGo').onclick=suggestIdeas;
 $('#dnTime').onchange=e=>{dn.time=e.target.value;renderDateNight()};
-const PAGES={cal:['calPage','tabCal'],chores:['chorePage','tabChores'],date:['datePage','tabDate'],hobbies:['hobbyPage','tabHobbies'],food:['foodPage','tabFood'],notif:['notifPage','tabNotif']};
+const PAGES={cal:['calPage','tabCal'],chores:['chorePage','tabChores'],date:['datePage','tabDate'],hobbies:['hobbyPage','tabHobbies'],food:['foodPage','tabFood'],todo:['todoPage','tabTodo'],notif:['notifPage','tabNotif']};
 function showPage(p){
   if(!PAGES[p])p='cal';
   for(const[k,[pg,tb]]of Object.entries(PAGES)){$('#'+pg).hidden=k!==p;$('#'+tb).setAttribute('aria-selected',String(k===p))}
@@ -1496,6 +1546,8 @@ $('#tabChores').onclick=()=>showPage('chores');
 $('#tabDate').onclick=()=>showPage('date');
 $('#tabHobbies').onclick=()=>showPage('hobbies');
 $('#tabFood').onclick=()=>showPage('food');
+$('#tabTodo').onclick=()=>showPage('todo');
+$('#todoForm').addEventListener('submit',addTodo);
 $('#tabNotif').onclick=()=>showPage('notif');
 $('#foodForm').addEventListener('submit',addFood);
 $('#hobbyForm').addEventListener('submit',addHobby);
@@ -1761,6 +1813,7 @@ render();
   db.collection('imports').onSnapshot(s=>{imports={};s.docs.forEach(d=>imports[d.id]=d.data());render()},onErr);
   db.collection('specials').onSnapshot(s=>{specials=s.docs.map(d=>({id:d.id,...d.data()}));render()},onErr);
   db.collection('notes').onSnapshot(s=>{notes=s.docs.map(d=>({id:d.id,...d.data()}));renderNotes();markNotesSeen()},onErr);
+  db.collection('todos').onSnapshot(s=>{todos=s.docs.map(d=>({id:d.id,...d.data()}));renderTodos()},onErr);
   db.collection('restaurants').onSnapshot(s=>{foods=s.docs.map(d=>({id:d.id,...d.data()}));renderFood()},onErr);
   db.collection('hobbies').onSnapshot(s=>{hobbies=s.docs.map(d=>({id:d.id,...d.data()}));renderHobbies()},onErr);
   if(me){try{const p=await prefsRef().get();prefs=p.exists?{...p.data()}:{}}catch{}

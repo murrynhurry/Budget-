@@ -269,6 +269,7 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .chip{font:inherit;font-size:.86rem;font-weight:600;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 13px;cursor:pointer}
 .btile.loantile.open{grid-column:auto;border-color:var(--accent);background:var(--accent-soft)}.loantile{font:inherit;text-align:left;cursor:pointer;color:inherit}.lbar{height:6px;border-radius:6px;background:var(--accent-soft);overflow:hidden;margin-top:8px}.lbar i{display:block;height:100%;background:var(--accent)}
 .loandetail .row label.f{flex:1 1 40%!important}.stat4.s2{grid-template-columns:repeat(2,minmax(0,1fr))}.loandetail{margin-top:14px;border:2px solid var(--line);border-radius:16px;padding:14px;background:var(--surface)}.lpay{display:flex;justify-content:space-between;padding:7px 0;border-top:1px dashed var(--line);font-size:.9rem}
+.tiplist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}.tiplist li{background:var(--accent-soft);border-radius:14px;padding:11px 13px 11px 40px;position:relative;font-size:.92rem;line-height:1.45}.tiplist li::before{content:"✦";position:absolute;left:14px;top:10px;color:var(--gold);font-size:1rem}.tipfor{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 8px;margin-right:6px;vertical-align:1px}
 .btile.addtile{border:2px dashed var(--line);background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:96px;font:inherit;cursor:pointer}
 .chip.newchip{border-style:dashed;color:var(--muted)}
 .qanew{display:flex;gap:6px;flex-basis:100%;margin-top:4px}.qanew input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:2px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink)}
@@ -938,6 +939,50 @@ function calendarHTML(){
   return `<div class="cal">${h}</div><div class="legend"><span style="--c:var(--mint)">No spending</span><span style="--c:var(--mint-soft)">Needs only</span><span style="--c:var(--want-soft)">Spent on wants</span></div>`;
 }
 
+let tipPage=0;
+const GEN_TIPS=[
+ "Put anything over $50 on your <b>Wait list</b> first. If you still want it after 24 hours, then buy it.",
+ "Make a grocery list before you shop and stick to it. Never shop hungry.",
+ "Compare the <b>unit price</b> on shelf tags. The bigger box isn't always cheaper.",
+ "Collect <b>PC Optimum</b> or <b>Scene+</b> points on things you already buy, and use them on groceries.",
+ "Pack lunch. Bringing it from home 3 days a week can save over <b>$1,000 a year</b>.",
+ "Brew coffee at home. A $5 coffee every workday is about <b>$1,300 a year</b>.",
+ "Borrow books, audiobooks and movies free from the library with the <b>Libby</b> app.",
+ "Keep one streaming service at a time and switch each month instead of paying for all of them.",
+ "Call your phone and internet provider once a year and ask for a loyalty deal. It often works.",
+ "Set up an automatic transfer to savings on payday, so you save before you can spend.",
+ "Pay your credit card <b>in full</b> every month. Interest wipes out any rewards you earn.",
+ "Try a <b>no-spend weekend</b> once a month. Check the green days on your Spend calendar.",
+ "Buy store brands like <b>No Name</b> or <b>Kirkland</b>. They're usually the same quality for less.",
+ "Check <b>Flashfood</b> or <b>Too Good To Go</b> for cheap groceries near their best-before date.",
+ "Sell clothes and things you don't use on <b>Facebook Marketplace</b> and put the money toward a goal.",
+ "Unsubscribe from store emails and delete saved cards from shopping sites. Fewer impulse buys.",
+ "Plan cozy date nights at home. Murry &amp; Matty has date ideas that cost little or nothing.",
+ "Put windfalls like tax refunds and gifts straight onto your loans or savings.",
+ "Wait for big sales like Black Friday or Boxing Day for things you've planned to buy.",
+ "Use a no-fee bank account. Monthly bank fees add up to over $150 a year."];
+function moneyTips(){
+  const k=monthKey(new Date()), mtx=txIn(k), out=[];
+  const wants={};mtx.filter(t=>t.type==="want").forEach(t=>wants[t.cat]=(wants[t.cat]||0)+myAmt(t));
+  const top=Object.entries(wants).sort((a,b)=>b[1]-a[1])[0];
+  if(top&&top[1]>=30)out.push(`You've spent <b>${fmt0(top[1])}</b> on wants in <b>${esc(catName(top[0]))}</b> this month. Cutting that in half would save about <b>${fmt0(top[1]/2*12)}</b> a year.`);
+  const subs=(S.bills||[]).filter(b=>!b.paused&&/subscri/i.test(catName(b.cat)));
+  if(subs.length){const tot=sum(subs,b=>perMonth(b)),big=subs.slice().sort((a,b)=>perMonth(b)-perMonth(a))[0];out.push(`Your subscriptions cost <b>${fmt0(tot*12)}</b> a year. If you don't use <b>${esc(big.name)}</b> every week, cancelling it saves <b>${fmt0(perMonth(big)*12)}</b> a year.`)}
+  const over=S.categories.map(c=>{const lim=num(c.limit),sp=sum(mtx.filter(t=>t.cat===c.id),myAmt);return {c,o:lim>0?sp-lim:0}}).filter(x=>x.o>0).sort((a,b)=>b.o-a.o)[0];
+  if(over)out.push(`<b>${esc(over.c.name)}</b> is <b>${fmt0(over.o)}</b> over budget this month. Try skipping it for the rest of the week.`);
+  (S.cards||[]).forEach(c=>{const bal=num(c.bal),apr=num(c.apr);if(bal>0&&apr>0)out.push(`Carrying <b>${fmt0(bal)}</b> on <b>${esc(c.name)}</b> at ${apr}% costs about <b>${fmt(bal*apr/100/12)}</b> a month in interest. Paying it off first beats any other saving.`)});
+  if((S.debts||[]).length){const a=simulate(S.debts,num(S.extra),S.strategy,0),b=simulate(S.debts,num(S.extra)+50,S.strategy,0);if(!a.never&&!b.never&&a.months-b.months>0)out.push(`Adding <b>$50</b> a month to your loans would make you debt-free <b>${a.months-b.months} months</b> sooner${a.interest-b.interest>5?` and save <b>${fmt0(a.interest-b.interest)}</b> in interest`:""}.`)}
+  const tot=sum(mtx,myAmt),w=sum(mtx.filter(t=>t.type==="want"),myAmt);if(tot>100&&w/tot>.3)out.push(`Wants are <b>${Math.round(w/tot*100)}%</b> of your spending this month. Try to keep them under 30%.`);
+  return out;
+}
+function tipsCard(){
+  const mine=moneyTips(), day=Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/864e5);
+  const gen=GEN_TIPS.map((_,i)=>GEN_TIPS[(i+day)%GEN_TIPS.length]);
+  const all=mine.map(t=>({t,mine:1})).concat(gen.map(t=>({t}))), pages=Math.ceil(all.length/3), pg=tipPage%pages;
+  const shown=all.slice(pg*3,pg*3+3);
+  return `<section class="panel"><div class="phead"><h2>Money tips from Pach</h2><button class="btn sm" data-act="moreTips">More tips</button></div>
+    <ul class="tiplist">${shown.map(x=>`<li>${x.mine?'<span class="tipfor">For you</span>':""}${x.t}</li>`).join("")}</ul></section>`;
+}
 function viewOverview(){
   const k=monthKey(new Date()), tx=txIn(k);
   const MM=monthMath(), spent=MM.spent, income=MM.inc.perMo;
@@ -977,6 +1022,8 @@ function viewOverview(){
       <div class="tile"><h3>Not spent (wait list)</h3><span class="v good">${fmt0(S.skipped)}</span></div>
     </div>
   </section>
+
+  ${tipsCard()}
 
   ${(()=>{const u=upcoming(14);return `<section class="panel"><div class="phead"><h2>Bills coming up</h2><span class="muted small">next 2 weeks · ${fmt0(sum(u,x=>billShare(x.b)))}</span></div>
     ${u.length?`<div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0 18px">${u.slice(0,8).map(x=>`<div class="due"><div class="when">${whenLabel(x.d)}<span>${D(x.d).toLocaleDateString("en-CA",{weekday:"short"})}</span></div><div class="what"><b>${esc(x.b.name)}</b><span class="muted small">${esc(catName(x.b.cat))}</span></div><span class="num">${fmt(billShare(x.b))}</span></div>`).join("")}</div>`:`<div class="empty">No bills due in the next two weeks. Add your rent, phone and subscriptions on the Bills tab.</div>`}
@@ -1730,6 +1777,7 @@ document.addEventListener("click",e=>{
     case "goalAdd":case "goalTake":{const g=get(S.goals),inp=document.querySelector(`[data-goal-amt="${id}"]`),v=num(inp.value);if(!g||v<=0){toast("Enter an amount first");break}
       g.saved=Math.max(0,num(g.saved)+(a==="goalAdd"?v:-v));commit(a==="goalAdd"?`Yay! ${fmt(v)} added to ${g.name}`:`Took ${fmt(v)} out of ${g.name}`,a==="goalAdd");break}
     case "delGoal":S.goals=S.goals.filter(g=>g.id!==id);commit("Goal deleted");break;
+    case "moreTips":tipPage++;render();break;
     case "strat":S.strategy=b.dataset.v;commit();break;
     case "delDebt":S.debts=S.debts.filter(d=>d.id!==id);if(loanOpen===id)loanOpen=null;commit("Removed");break;
     case "loanOpen":loanOpen=loanOpen===b.dataset.v?null:b.dataset.v;render();{const el=document.querySelector(".loandetail");if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"})}break;

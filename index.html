@@ -267,6 +267,8 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .qa-amt input:focus-visible{outline:none}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{font:inherit;font-size:.86rem;font-weight:600;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 13px;cursor:pointer}
+.btile.loantile.open{grid-column:auto;border-color:var(--accent);background:var(--accent-soft)}.loantile{font:inherit;text-align:left;cursor:pointer;color:inherit}.lbar{height:6px;border-radius:6px;background:var(--accent-soft);overflow:hidden;margin-top:8px}.lbar i{display:block;height:100%;background:var(--accent)}
+.loandetail .row label.f{flex:1 1 40%!important}.stat4.s2{grid-template-columns:repeat(2,minmax(0,1fr))}.loandetail{margin-top:14px;border:2px solid var(--line);border-radius:16px;padding:14px;background:var(--surface)}.lpay{display:flex;justify-content:space-between;padding:7px 0;border-top:1px dashed var(--line);font-size:.9rem}
 .btile.addtile{border:2px dashed var(--line);background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:96px;font:inherit;cursor:pointer}
 .chip.newchip{border-style:dashed;color:var(--muted)}
 .qanew{display:flex;gap:6px;flex-basis:100%;margin-top:4px}.qanew input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:2px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink)}
@@ -738,7 +740,7 @@ async function refreshPrices(force){
   catch(e){pxBusy=false;S.pxAt=Date.now()-PX_TTL+60e3;S.pxErr="Couldn't get prices: "+String((e&&e.message)||e).slice(0,90);render();if(force)toast(S.pxErr)}
 }
 const ago=t=>{if(!t)return "not yet";const m=Math.round((Date.now()-t)/6e4);return m<1?"just now":m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":D(iso(new Date(t))).toLocaleDateString("en-CA",{month:"short",day:"numeric"})};
-let holdOpen=new Set();
+let holdOpen=new Set();let loanOpen=null;
 document.addEventListener("toggle",e=>{const d=e.target;if(d.dataset&&d.dataset.hrow){d.open?holdOpen.add(d.dataset.hrow):holdOpen.delete(d.dataset.hrow)}},true);
 function invSection(){
   const hs=liveH(), accts=S.accounts||[];
@@ -1510,44 +1512,69 @@ function viewDebt(){
   const p=plan(), base=simulate(S.debts,0,S.strategy,0);
   const owed=sum(S.debts,d=>num(d.balance)), mins=sum(S.debts,d=>num(d.min));
   const saveM=base.months-p.months, saveI=base.interest-p.interest;
-  const rows=S.debts.map(d=>{const r=p.ds.find(x=>x.id===d.id);const when=r&&r.done!==null?(r.done===0?"Paid":addMonthsLabel(r.done)):(num(d.balance)>0?"—":"Paid");
-    return `<tr><td data-l="Loan"><input data-debt="${d.id}" data-f="name" value="${esc(d.name)}" aria-label="Loan name"></td>
-    <td class="r" data-l="Balance"><input class="num" data-debt="${d.id}" data-f="balance" inputmode="decimal" value="${d.balance}" aria-label="Balance" style="width:110px;text-align:right"></td>
-    <td class="r" data-l="Rate %"><input class="num" data-debt="${d.id}" data-f="rate" inputmode="decimal" value="${d.rate}" aria-label="Interest rate" style="width:74px;text-align:right"></td>
-    <td class="r" data-l="Min / month"><input class="num" data-debt="${d.id}" data-f="min" inputmode="decimal" value="${d.min}" aria-label="Minimum payment" style="width:90px;text-align:right"></td>
-    <td class="num" data-l="Paid off">${when}</td><td><button class="x" data-act="delDebt" data-id="${d.id}" aria-label="Delete ${esc(d.name)}">×</button></td></tr>`}).join("");
+  const whenOf=d=>{const r=p.ds.find(x=>x.id===d.id);return r&&r.done!==null?(r.done===0?"Paid off":addMonthsLabel(r.done)):(num(d.balance)>0?"—":"Paid off")};
+  if(loanOpen&&!S.debts.some(d=>d.id===loanOpen))loanOpen=null;
+  const tiles=S.debts.map(d=>{const bal=num(d.balance),open=loanOpen===d.id,pct=owed>0?Math.round(bal/owed*100):0;
+    return `<button type="button" class="btile loantile${open?" open":""}" data-act="loanOpen" data-v="${d.id}" aria-expanded="${open}">
+      <div class="small" style="font-weight:700;display:flex;justify-content:space-between;gap:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.name)}</span><span aria-hidden="true">${open?"▴":"▾"}</span></div>
+      <div class="num" style="font-size:1.35rem;color:var(--ink)">${fmt0(bal)}</div>
+      <div class="muted small">${num(d.rate)}% · ${fmt0(num(d.min))}/mo</div>
+      <div class="lbar"><i style="width:${pct}%"></i></div>
+      <div class="small" style="font-weight:600;color:var(--accent);margin-top:4px">${whenOf(d)==="—"?"Add a payment":"Done "+whenOf(d)}</div></button>`}).join("");
+  let detail="";
+  if(loanOpen){const d=S.debts.find(x=>x.id===loanOpen),nm=String(d.name).trim().toLowerCase(),words=nm.split(/\s+/).filter(w=>w.length>2);
+    const pays=(S.tx||[]).filter(t=>{const n=String(t.note||"").toLowerCase();return n&&(n===nm||n.includes(nm)||nm.includes(n)||(words.length&&words.every(w=>n.includes(w))))}).sort((a,b)=>b.date.localeCompare(a.date));
+    const paidTot=sum(pays,t=>num(t.amount));
+    detail=`<div class="loandetail">
+      <div class="phead" style="margin-bottom:6px"><h3 style="margin:0;font-size:1.05rem;text-transform:none;letter-spacing:0;color:var(--ink)">${esc(d.name)}</h3><span class="muted small">${whenOf(d)==="—"?"":"Paid off "+whenOf(d)}</span></div>
+      <div class="row" style="gap:8px">
+        <label class="f">Name<input data-debt="${d.id}" data-f="name" value="${esc(d.name)}"></label>
+        <label class="f" style="flex:0 1 120px">Balance<input class="num" data-debt="${d.id}" data-f="balance" inputmode="decimal" value="${d.balance}"></label>
+        <label class="f" style="flex:0 1 90px">Rate %<input class="num" data-debt="${d.id}" data-f="rate" inputmode="decimal" value="${d.rate}"></label>
+        <label class="f" style="flex:0 1 110px">Min / month<input class="num" data-debt="${d.id}" data-f="min" inputmode="decimal" value="${d.min}"></label>
+      </div>
+      <h3 style="margin:14px 0 4px;display:flex;justify-content:space-between"><span>Payments</span><span class="num">${pays.length?fmt(paidTot)+" total":""}</span></h3>
+      ${pays.length?pays.slice(0,8).map(t=>`<div class="lpay"><span>${D(t.date).toLocaleDateString("en-CA",{month:"short",day:"numeric",year:"numeric"})}</span><b class="num">${fmt(num(t.amount))}</b></div>`).join(""):`<p class="muted small" style="margin:0">No payments found yet. Add a bill with the same name as this loan and its payments will show here.</p>`}
+      <div style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn danger sm" data-act="delDebt" data-id="${d.id}">Delete loan</button></div>
+    </div>`}
   const neverNote=p.never?`<p class="note bad">At these payments the balance never goes down. Your monthly payments don't cover the interest. Raise the extra payment or the minimums.</p>`:"";
   return `<div class="stack">
   <section class="panel">
-    <div class="phead"><h2>Your payoff plan</h2>
-      <div class="seg" role="group" aria-label="Payoff order"><button data-act="strat" data-v="avalanche" aria-pressed="${S.strategy==="avalanche"}">Highest interest first</button><button data-act="strat" data-v="snowball" aria-pressed="${S.strategy==="snowball"}">Smallest balance first</button></div>
-    </div>
-    ${S.debts.length?`
-    <div class="bigline">
-      <div><h3>Debt-free</h3><span class="v">${p.never?"Never":addMonthsLabel(p.months)}</span><span class="muted small">${p.never?"":`${Math.floor(p.months/12)} yr ${p.months%12} mo`}</span></div>
-      <div><h3>Interest you'll pay</h3><span class="v">${p.never?"—":fmt0(p.interest)}</span></div>
-      <div><h3>Paying monthly</h3><span class="v">${fmt0(mins+num(S.extra))}</span></div>
-      ${num(S.extra)>0&&!p.never&&!base.never?`<div><h3>Extra payment saves</h3><span class="v good">${saveM} mo · ${fmt0(saveI)}</span></div>`:""}
-    </div>
-    ${neverNote}
-    <div class="row-form" style="margin-bottom:12px"><label class="f" style="flex:0 1 260px">Extra toward loans each month<input id="extraPay" class="num" inputmode="decimal" value="${S.extra||""}" placeholder="0"></label>
-      <span class="muted small" style="flex:1 1 240px">Every dollar you don't spend on wants can land here. Once a loan is paid off, its payment rolls onto the next one.</span></div>
-    ${p.never?"":chartSVG(p.series,base.never?base.series.slice(0,Math.max(p.series.length*2,24)):base.series)}
-    <div class="legend"><span style="--c:var(--accent)">With your extra payment</span><span style="--c:var(--muted)">Minimums only</span></div>
-    `:`<div class="empty">Add your student loans and any other debts below to see your debt-free date.</div>`}
+    <h3>Total owed</h3>
+    <div class="left-big num" style="font-size:clamp(2.2rem,7vw,3rem)">${fmt0(owed)}</div>
+    ${S.debts.length?`<div class="stat4 s2">
+      <div><span class="muted small">Debt-free</span><b class="num">${p.never?"Never":addMonthsLabel(p.months)}</b></div>
+      <div><span class="muted small">Per month</span><b class="num">${fmt0(mins+num(S.extra))}</b></div>
+      <div><span class="muted small">Interest left</span><b class="num">${p.never?"—":fmt0(p.interest)}</b></div>
+      <div><span class="muted small">Loans</span><b class="num">${S.debts.length}</b></div>
+    </div>${neverNote}`:`<p class="muted small" style="margin:6px 0 0">Add your student loans and any other debts to see your debt-free date.</p>`}
   </section>
   <section class="panel">
-    <div class="phead"><h2>Loans and debts</h2><span class="num">${fmt0(owed)} owed</span></div>
-    ${S.debts.length?`<div class="tbl-wrap"><table class="cardtbl debttbl"><thead><tr><th>Name</th><th class="r">Balance</th><th class="r">Rate %</th><th class="r">Min / month</th><th>Paid off</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:""}
-    <form class="row" id="debtForm" style="margin-top:14px">
+    <div class="phead"><h2>Your loans</h2><span class="muted small">Tap one to see more</span></div>
+    <div class="btiles">${tiles}<button type="button" class="btile addtile" data-act="loanNew"><span style="font-size:1.6rem;line-height:1">+</span><span class="small" style="font-weight:700">Add loan</span></button></div>
+    ${detail}
+    <details class="acct-edit" id="loanAdd" style="margin-top:14px"><summary>Add a loan</summary>
+    <form class="row" id="debtForm" style="margin-top:10px">
       <label class="f">Name<input id="dName" placeholder="e.g. Canada Student Loan" required></label>
       <label class="f" style="flex:0 1 120px">Balance<input id="dBal" class="num" inputmode="decimal" required></label>
       <label class="f" style="flex:0 1 90px">Rate %<input id="dRate" class="num" inputmode="decimal" placeholder="0"></label>
       <label class="f" style="flex:0 1 110px">Min / month<input id="dMin" class="num" inputmode="decimal" required></label>
       <button class="btn pri" type="submit">Add</button>
     </form>
-    <p class="muted small" style="margin:10px 0 0">Find your balance, rate and payment in your student loan account (for Canada Student Loans that's the NSLSC portal). The federal part of Canada Student Loans is interest-free, so enter 0% for it. Check your provincial loan's rate in your account.</p>
-  </section></div>`;
+    <p class="muted small" style="margin:10px 0 0">Find your balance, rate and payment in your student loan account (for Canada Student Loans that's the NSLSC portal). The federal part of Canada Student Loans is interest-free, so enter 0% for it.</p>
+    </details>
+  </section>
+  ${S.debts.length?`<section class="panel">
+    <div class="phead"><h2>Your payoff plan</h2>
+      <div class="seg" role="group" aria-label="Payoff order"><button data-act="strat" data-v="avalanche" aria-pressed="${S.strategy==="avalanche"}">Highest interest first</button><button data-act="strat" data-v="snowball" aria-pressed="${S.strategy==="snowball"}">Smallest balance first</button></div>
+    </div>
+    ${num(S.extra)>0&&!p.never&&!base.never?`<p class="small" style="margin:0 0 10px">Your extra payment saves <b class="good">${saveM} months</b> and <b class="good">${fmt0(saveI)}</b> in interest.</p>`:""}
+    <div class="row-form" style="margin-bottom:12px"><label class="f" style="flex:0 1 260px">Extra toward loans each month<input id="extraPay" class="num" inputmode="decimal" value="${S.extra||""}" placeholder="0"></label>
+      <span class="muted small" style="flex:1 1 240px">Every dollar you don't spend on wants can land here. Once a loan is paid off, its payment rolls onto the next one.</span></div>
+    ${p.never?"":chartSVG(p.series,base.never?base.series.slice(0,Math.max(p.series.length*2,24)):base.series)}
+    <div class="legend"><span style="--c:var(--accent)">With your extra payment</span><span style="--c:var(--muted)">Minimums only</span></div>
+  </section>`:""}
+  </div>`;
 }
 
 function viewWait(){
@@ -1704,7 +1731,9 @@ document.addEventListener("click",e=>{
       g.saved=Math.max(0,num(g.saved)+(a==="goalAdd"?v:-v));commit(a==="goalAdd"?`Yay! ${fmt(v)} added to ${g.name}`:`Took ${fmt(v)} out of ${g.name}`,a==="goalAdd");break}
     case "delGoal":S.goals=S.goals.filter(g=>g.id!==id);commit("Goal deleted");break;
     case "strat":S.strategy=b.dataset.v;commit();break;
-    case "delDebt":S.debts=S.debts.filter(d=>d.id!==id);commit("Removed");break;
+    case "delDebt":S.debts=S.debts.filter(d=>d.id!==id);if(loanOpen===id)loanOpen=null;commit("Removed");break;
+    case "loanOpen":loanOpen=loanOpen===b.dataset.v?null:b.dataset.v;render();{const el=document.querySelector(".loandetail");if(el)el.scrollIntoView({behavior:"smooth",block:"nearest"})}break;
+    case "loanNew":{const d=$("#loanAdd");if(d){d.open=true;const i=$("#dName");i.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>i.focus(),250)}break}
     case "delWish":S.wish=S.wish.filter(w=>w.id!==id);commit();break;
     case "skipWish":{const w=get(S.wish);if(!w)break;const sel=document.querySelector(`[data-wish-goal="${id}"]`),gid=sel?sel.value:"";
       w.status="skipped";w.decided=Date.now();S.skipped=num(S.skipped)+num(w.price);

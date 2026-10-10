@@ -197,6 +197,9 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 :root[data-wx="rain"] .cloud,:root[data-wx="cloudy"] .c3,:root[data-wx="cloudy"] .c5,:root[data-wx="rain"] .c3,:root[data-wx="rain"] .c5,:root[data-wx="snow"] .c3{display:block}
 :root[data-wx="rain"]{--cloud-wx:rgba(176,186,204,.95)}
 /* Bottom scene: the three of you doing something different on each tab (pixel art) */
+body{display:flex;flex-direction:column}
+.wrap{width:100%}
+.camp{margin-top:auto!important}
 .camp{position:relative;z-index:1;display:none;height:clamp(180px,30vh,270px);margin:28px -16px calc(-40px - env(safe-area-inset-bottom,0px));pointer-events:none;animation:campIn 2.5s ease}
 .camp{display:block}
 .camp .campfig{display:none}

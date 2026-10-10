@@ -528,6 +528,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     </div>
     <p class="note">Text size is saved just for you, on every device you use.</p>
     <div class="setGroup"><span class="setLbl">Account</span><div class="acct" id="acctBox"></div></div>
+    <div class="setGroup" id="pushGroup" hidden><span class="setLbl">Notifications</span><p class="note" id="pushNote"></p><div class="actions"><button type="button" class="primary" id="pushBtn">Turn on notifications</button><button type="button" id="pushTest" hidden>Show a test</button></div></div>
     <p class="note" id="appVersion">Version: Oct 10, 1:10 am (fluffy Peach)</p>
   </section>
 
@@ -883,7 +884,7 @@ async function addChore(ev){
   const data={title:$('#cTitle').value.trim(),who:$('#cWho').value||null,due:$('#cDue').value||(rep?ymd(new Date()):null),repeat:rep,done:false,created:new Date().toISOString(),createdBy:me};
   if(!data.title)return;
   $('#cAdd').disabled=true;
-  try{await db.collection('chores').add(data);$('#cTitle').value='';$('#cDue').value='';$('#cRep').value='0';$('#cTitle').focus();await claimSeat()}
+  try{await db.collection('chores').add(data);if(data.who&&data.who!==me)pushPartner(`${nameOf(me)} added a chore for you`,data.title,'chores');$('#cTitle').value='';$('#cDue').value='';$('#cRep').value='0';$('#cTitle').focus();await claimSeat()}
   catch(e){banner(e.code==='invalid_argument'?'You can view chores but not add them. Ask the owner to share this with you as an Editor.':'Could not save the chore. Try again in a moment.')}
   $('#cAdd').disabled=false;
 }
@@ -1131,7 +1132,7 @@ async function postNote(ev){
   ev.preventDefault();if(!db||!me)return;
   const t=$('#noteText').value.trim();if(!t)return;
   $('#noteSend').disabled=true;
-  try{await db.collection('notes').add({text:t.slice(0,280),from:me,created:new Date().toISOString(),hearts:[]});$('#noteText').value='';await claimSeat()}
+  try{await db.collection('notes').add({text:t.slice(0,280),from:me,created:new Date().toISOString(),hearts:[]});$('#noteText').value='';pushPartner(`💌 ${nameOf(me)} left you a love note`,t.slice(0,140),'notes');await claimSeat()}
   catch(e){banner(e.code==='invalid_argument'?'You can read notes but not post. Ask the owner to share this with you as an Editor.':e.code==='quota_exceeded'?'The notes board is full. Delete a few old notes to post more.':'Could not post the note. Try again.')}
   $('#noteSend').disabled=false;
 }
@@ -1231,14 +1232,50 @@ async function addSpecial(ev){
 }
 async function delSpecial(id){try{await db.doc('specials/'+id).delete()}catch{banner('Could not delete that date.')}}
 
+/* --- phone notifications (web push) --- */
+const VAPID_PUBLIC='BEECd2ut3X4K9nx4QhhhXIzO_mTwX7jvo8KFmysvkgaFrtbuZyPvCSE4dbabbgw4itRkpbz8mBZlsU9yO7rY3dU';
+function b64u(s){s=s.replace(/-/g,'+').replace(/_/g,'/');s+='='.repeat((4-s.length%4)%4);const r=atob(s),a=new Uint8Array(r.length);for(let i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
+async function renderPush(){
+  const g=$('#pushGroup');if(!g||!window.LOCAL_APP)return;g.hidden=false;
+  const note=$('#pushNote'),btn=$('#pushBtn'),test=$('#pushTest');test.hidden=true;btn.hidden=false;
+  const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
+    note.textContent=standalone?'This phone can\'t get notifications from the app yet. Update your iPhone to iOS 16.4 or later.':'Open the app from its Home Screen icon (Safari → Share → Add to Home Screen), then turn notifications on here.';btn.hidden=true;return}
+  if(!db||!me){note.textContent='Sign in to turn on notifications.';btn.hidden=true;return}
+  if(Notification.permission==='denied'){note.textContent='Notifications are blocked for this app. Turn them on in iPhone Settings → Notifications → Murry & Matty.';btn.hidden=true;return}
+  let sub=null;try{sub=await (await navigator.serviceWorker.ready).pushManager.getSubscription()}catch{}
+  if(sub){note.textContent=`On for this phone. You'll get a notification when ${otherName()} leaves a love note, suggests a plan, answers one, or adds a chore for you.`;btn.textContent='Turn off';btn.className='';btn.onclick=pushOff;test.hidden=false}
+  else{note.textContent=`Get a notification on this phone when ${otherName()} leaves a love note, suggests a plan, answers one, or adds a chore for you.`;btn.textContent='Turn on notifications';btn.className='primary';btn.onclick=pushOn}
+}
+async function saveSubs(fn){const ref=db.doc('push/'+me);let cur={};try{cur=(await ref.get()).data()||{}}catch{}await ref.set({subs:fn(Array.isArray(cur.subs)?cur.subs:[]),updated:new Date().toISOString()})}
+async function pushOn(){
+  try{
+    const p=await Notification.requestPermission();if(p!=='granted'){renderPush();return}
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUBLIC)});
+    const j=sub.toJSON();await saveSubs(s=>[...s.filter(x=>x.endpoint!==j.endpoint),j].slice(-5));
+    banner('Notifications are on for this phone.');
+  }catch(e){banner('Could not turn on notifications: '+((e&&e.message)||e))}
+  renderPush();
+}
+async function pushOff(){
+  try{const sub=await (await navigator.serviceWorker.ready).pushManager.getSubscription();if(sub){const ep=sub.endpoint;await sub.unsubscribe();await saveSubs(s=>s.filter(x=>x.endpoint!==ep))}}catch{}
+  renderPush();
+}
+$('#pushTest')&&($('#pushTest').onclick=async()=>{try{(await navigator.serviceWorker.ready).showNotification('Murry & Matty',{body:'Notifications work on this phone 💕',icon:'icons/icon-192.png',badge:'icons/icon-192.png'})}catch(e){banner('Could not show a test notification.')}});
+function pushPartner(title,body,tag){
+  if(!window.LOCAL_APP||!window.CLOUD||!CLOUD.sb||!me)return;
+  try{CLOUD.sb.functions.invoke('notify',{body:{title,body,tag:tag||'',url:'./'+(tag&&tag!=='notes'?'#'+tag:'')}}).catch(()=>{})}catch{}
+}
 /* --- suggestions and notifications --- */
 function otherName(){const o=partnerId();return o?nameOf(o):'Matthew'}
 async function propose(d){
   await db.collection('events').add({title:d.title,date:d.date,start:d.start||'19:00',end:d.end||'21:00',who:me,together:true,status:'pending',proposedBy:me,...(d.hobby?{hobby:d.hobby}:{}),...(d.food?{food:d.food}:{}),...(d.todo?{todo:d.todo}:{}),created:new Date().toISOString()});
   banner(`${d.title} is on the calendar for ${fmtDate(d.date)} at ${fmtTime(d.start||'19:00')}. ${otherName()} will get a notification to say yes or no.`);
+  pushPartner(`${nameOf(me)} suggested a plan`,`${d.title} · ${fmtDate(d.date)} at ${fmtTime(d.start||'19:00')}. Say yes or no in the app.`,'notif');
 }
 async function respond(e,yes){
-  try{await db.doc('events/'+e.id).update({status:yes?'yes':'no',respondedBy:me,respondedAt:new Date().toISOString()});openId=null}
+  try{await db.doc('events/'+e.id).update({status:yes?'yes':'no',respondedBy:me,respondedAt:new Date().toISOString()});openId=null;pushPartner(`${nameOf(me)} said ${yes?'yes 💕':'no'}`,`${e.title||'Your plan'} · ${fmtDate(e.date)}`,'cal')}
   catch{banner('Could not send your answer. Try again.')}
 }
 function renderNotif(){
@@ -1854,7 +1891,7 @@ async function setLook(ch){
   if(db&&me){prefs={...prefs,look};try{await prefsRef().set(prefs)}catch{}}
 }
 document.querySelectorAll('[data-size]').forEach(b=>b.onclick=()=>setLook({size:b.dataset.size}));
-function toggleSettings(open){const p=$('#settings');p.hidden=!open;$('#setBtn').setAttribute('aria-expanded',String(open));if(open)p.querySelector('.fontOpt[aria-pressed="true"]')?.focus()}
+function toggleSettings(open){const p=$('#settings');p.hidden=!open;if(open)renderPush();$('#setBtn').setAttribute('aria-expanded',String(open));if(open)p.querySelector('.fontOpt[aria-pressed="true"]')?.focus()}
 $('#setBtn').onclick=()=>toggleSettings($('#settings').hidden);
 $('#setClose').onclick=()=>{toggleSettings(false);$('#setBtn').focus()};
 

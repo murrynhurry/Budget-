@@ -13,3 +13,5 @@ A second app lives in `recipes/`. Install it the same way from `recipes/` on the
 A third app lives in `couple/`: your shared calendar, chores, date night ideas, hobbies, restaurants, countdowns and love notes. Install it the same way from `couple/` on the site. It signs in with the same account and shares the same space as the budget and Recipe Box, and stores its lists in the Recipe Box table, so there is nothing extra to set up.
 
 To have a calendar refresh on its own, deploy `supabase/functions/calendar-feed` (fetches a calendar's private iCal link; free, no API key). Then in the app, open Settings → Calendar sync and paste your calendar's secret iCal address.
+
+For phone notifications, deploy `supabase/functions/notify` and add the secret `VAPID_PRIVATE_KEY` (the private key that matches `VAPID_PUBLIC` in the function and in `couple/index.html`). Then, on each phone, open the app from its Home Screen icon and go to Settings → Notifications → Turn on notifications.

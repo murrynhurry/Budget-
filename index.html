@@ -240,7 +240,7 @@ svg.chart text{fill:var(--muted);font-family:var(--f-body);font-weight:600;font-
 .fontopt .big{font-size:1.35rem;font-weight:700;line-height:1.1}
 .fontopt .nm{font-size:.78rem;color:var(--muted)}
 .fontopt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 3px 0 var(--pig-dark)}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(10px);background:var(--accent);color:var(--accent-ink);padding:10px 18px;border-radius:999px;font-weight:700;font-size:.95rem;opacity:0;transition:opacity .2s,transform .25s cubic-bezier(.3,1.5,.5,1);pointer-events:none;max-width:calc(100% - 32px);box-shadow:0 4px 0 var(--pig-dark)}
+.toast{position:fixed;z-index:60;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(10px);background:var(--accent);color:var(--accent-ink);padding:10px 18px;border-radius:999px;font-weight:700;font-size:.95rem;opacity:0;transition:opacity .2s,transform .25s cubic-bezier(.3,1.5,.5,1);pointer-events:none;max-width:calc(100% - 32px);box-shadow:0 4px 0 var(--pig-dark)}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .pop{position:fixed;pointer-events:none;z-index:20;font-size:18px;animation:float 1.1s ease-out forwards}
 .pop svg{width:18px;height:18px;display:block}
@@ -258,6 +258,21 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .qa-back{position:fixed;inset:0;background:rgba(45,20,45,.35);z-index:39}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:40;margin:0 auto;max-width:560px;background:var(--surface);border-radius:26px 26px 0 0;
   padding:10px 18px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(60,20,50,.18);display:flex;flex-direction:column;gap:12px;max-height:88vh;overflow-y:auto;animation:sheetUp .28s cubic-bezier(.2,1.2,.4,1)}
+.morebtn{display:none}
+.moregrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.moregrid button{font:inherit;font-weight:700;font-size:.85rem;color:var(--ink);background:var(--accent-soft);border:2px solid transparent;border-radius:18px;padding:14px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;position:relative}
+.moregrid button[aria-current="true"]{border-color:var(--accent)}
+.moregrid .ti{width:26px;height:26px;fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.moregrid .badge{position:absolute;top:6px;right:10px;background:var(--want);color:#fff;border-radius:10px;font-size:.66rem;padding:0 6px;line-height:17px}
+@keyframes viewInR{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
+@keyframes viewInL{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}
+@keyframes viewInF{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#view.inR{animation:viewInR .24s ease-out}#view.inL{animation:viewInL .24s ease-out}#view.inF{animation:viewInF .22s ease-out}
+.ptr{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;z-index:30;width:38px;height:38px;margin-left:-19px;border-radius:50%;background:var(--surface);box-shadow:0 3px 12px rgba(60,20,50,.18);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:800;opacity:0;transform:translateY(-60px);pointer-events:none}
+.ptr.spin span{animation:ptrspin .8s linear infinite;display:inline-block}@keyframes ptrspin{to{transform:rotate(360deg)}}
+.toast.undo{pointer-events:auto;display:flex;align-items:center;gap:12px}.toast .undob{font:inherit;font-weight:800;background:var(--surface);color:var(--accent);border:0;border-radius:999px;padding:4px 12px;cursor:pointer}
+.qa-quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:-4px}.qa-quick .chip{padding:5px 12px}
+@media (prefers-reduced-motion:reduce){#view.inR,#view.inL,#view.inF{animation:none}}
 @keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
 .grab{width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 2px}
 .qa-head{display:flex;justify-content:space-between;align-items:center}
@@ -327,6 +342,8 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .gear{display:none}
 @media (max-width:760px){
   .navset{display:none!important}
+  nav.tabs .inmore{display:none!important}
+  nav.tabs .morebtn{display:flex}
   .gear{display:flex;align-items:center;justify-content:center;position:absolute;top:-4px;right:0;z-index:26;width:40px;height:40px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;box-shadow:0 3px 0 var(--line)}
   .gear .ti{width:22px;height:22px}
   .gear.on{color:var(--accent);border-color:var(--accent)}
@@ -407,12 +424,13 @@ input,select,textarea{font-size:16px}
     <button role="tab" data-tab="overview" aria-selected="true"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></svg><span class="tl">Home</span><span class="tlong">Overview</span></button>
     <button role="tab" data-tab="spending" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9 8h6M9 11.5h6M9 15h4"/></svg><span class="tl">Spend</span><span class="tlong">Spending</span></button>
     <button role="tab" data-tab="bills" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg><span class="tl">Bills</span><span class="tlong">Bills</span></button>
-    <button role="tab" data-tab="income" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.2c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2s1.2 1.6 2.8 2 2.8.8 2.8 2-1.2 2.2-2.8 2.2c-1.3 0-2.4-.6-2.9-1.6M12 6.3v1.5M12 16.2v1.5"/></svg><span class="tl">Income</span><span class="tlong">Income</span></button>
-    <button role="tab" data-tab="shared" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19.5s-7-4.3-7-9.2A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7 2.3c0 4.9-7 9.2-7 9.2z"/></svg><span class="tl">Shared</span><span class="tlong">Shared</span></button>
+    <button role="tab" data-tab="income" aria-selected="false" class="inmore"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M14.8 9.2c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2s1.2 1.6 2.8 2 2.8.8 2.8 2-1.2 2.2-2.8 2.2c-1.3 0-2.4-.6-2.9-1.6M12 6.3v1.5M12 16.2v1.5"/></svg><span class="tl">Income</span><span class="tlong">Income</span></button>
+    <button role="tab" data-tab="shared" aria-selected="false" class="inmore"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19.5s-7-4.3-7-9.2A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7 2.3c0 4.9-7 9.2-7 9.2z"/></svg><span class="tl">Shared</span><span class="tlong">Shared</span></button>
     <button role="tab" data-tab="savings" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.4 5 5.4.6-4 3.7 1.1 5.4L12 15.5l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6z"/></svg><span class="tl">Save</span><span class="tlong">Savings</span></button>
-    <button role="tab" data-tab="debt" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.3c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.2v-4.3M21.5 9.5v5"/></svg><span class="tl">Loans</span><span class="tlong">Loan payoff</span></button>
-    <button role="tab" data-tab="cards" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg><span class="tl">Cards</span><span class="tlong">Credit cards</span></button>
-    <button role="tab" data-tab="wait" aria-selected="false"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10M7 20.5h10M8 3.5c0 4.5 4 5 4 8.5s-4 4-4 8.5M16 3.5c0 4.5-4 5-4 8.5s4 4 4 8.5"/></svg><span class="tl">Wait</span><span class="tlong">Wait list</span><span class="badge" id="waitBadge" hidden></span></button>
+    <button role="tab" data-tab="debt" aria-selected="false" class="inmore"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9.5 12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4.3c1.6 1.5 3.4 2.2 5.5 2.2s3.9-.7 5.5-2.2v-4.3M21.5 9.5v5"/></svg><span class="tl">Loans</span><span class="tlong">Loan payoff</span></button>
+    <button role="tab" data-tab="cards" aria-selected="false" class="inmore"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg><span class="tl">Cards</span><span class="tlong">Credit cards</span></button>
+    <button role="tab" data-tab="wait" aria-selected="false" class="inmore"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h10M7 20.5h10M8 3.5c0 4.5 4 5 4 8.5s-4 4-4 8.5M16 3.5c0 4.5-4 5-4 8.5s4 4 4 8.5"/></svg><span class="tl">Wait</span><span class="tlong">Wait list</span><span class="badge" id="waitBadge" hidden></span></button>
+    <button type="button" class="morebtn" data-act="moreOpen" aria-selected="false" aria-haspopup="dialog"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/></svg><span class="tl">More</span><span class="badge" id="moreBadge" hidden></span></button>
     <button role="tab" data-tab="settings" aria-selected="false" class="navset"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 0 0-2.6-1.5L14 2.6h-4l-.5 2.5A7.7 7.7 0 0 0 6.9 6.6l-2.3-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.7 7.7 0 0 0 2.6-1.5l2.3 1 2-3.4z"/></svg><span class="tl">Settings</span><span class="tlong">Settings</span></button>
   </nav>
 
@@ -429,6 +447,7 @@ input,select,textarea{font-size:16px}
   <div class="grab"></div>
   <div class="qa-head"><h2>Add an expense</h2><button class="x" data-act="qaClose" aria-label="Close">×</button></div>
   <label class="qa-amt"><span>$</span><input id="qaAmt" inputmode="decimal" placeholder="0.00" autocomplete="off" aria-label="Amount"></label>
+  <div class="qa-quick"><button type="button" class="chip" data-act="qaQuick" data-v="5">$5</button><button type="button" class="chip" data-act="qaQuick" data-v="10">$10</button><button type="button" class="chip" data-act="qaQuick" data-v="20">$20</button><button type="button" class="chip" data-act="qaQuick" data-v="50">$50</button><button type="button" class="chip" data-act="qaQuick" data-v="100">$100</button></div>
   <input id="qaNote" placeholder="What was it? (optional)" autocomplete="off" aria-label="What was it">
   <div><h3 style="margin-bottom:8px">Category</h3><div class="chips" id="qaCats"></div></div>
   <div id="qaCardWrap" hidden><h3 style="margin-bottom:8px">Paid with</h3><div class="chips" id="qaCards"></div></div>
@@ -442,6 +461,9 @@ input,select,textarea{font-size:16px}
   </div>
   <button class="btn pri qa-save" data-act="qaSave">Add expense</button>
 </section>
+<div class="qa-back" id="moreBack" data-act="moreClose" hidden style="z-index:34"></div>
+<section class="sheet" id="moreSheet" role="dialog" aria-modal="true" aria-label="More" hidden style="z-index:35"></section>
+<div class="ptr" id="ptr" aria-hidden="true"><span>↓</span></div>
 <div class="qa-back" id="catBack" data-act="catClose" hidden style="z-index:34"></div>
 <section class="sheet csheet" id="catSheet" role="dialog" aria-modal="true" aria-label="Category details" hidden></section>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -539,7 +561,7 @@ async function initStore(){
     try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
     const l=lsGet(); if(l){adopt(l);loaded=true}
     setStatus(loaded?"Saved on this phone":"Changes save on this phone");
-    render();return;
+    render();setTimeout(applyAddLink,300);return;
   }
   try{
     bootWhy="waiting for the app to connect";
@@ -576,14 +598,21 @@ async function initStore(){
           try{const sn=await dbRef.get();if(sn.exists)takeRemote(sn.data())}catch(e){}
         });
         col("sbill").onSnapshot(q=>{SH.raw={};q.docs.forEach(x=>SH.raw[x.id]=JSON.parse(JSON.stringify(x.data())));SH.bills=q.docs.map(x=>billView(x.id,x.data()));postSharedBills();refresh()},fail);
+        window.__pull=async()=>{try{const sn=await dbRef.get();if(sn.exists)takeRemote(sn.data())}catch(e){}};
         render();
       } else boot="error";
     } else { boot="error"; bootWhy="the app couldn't connect to Claude (code D)"; }
   }catch(e){dbRef=null;boot="error";bootWhy=(bootWhy||"loading")+" · "+String((e&&(e.code||e.message))||e).slice(0,80)}
   if(boot==="error"){setStatus("Couldn't load your saved data");render();return}
   setStatus(dbRef?(loaded?"Saved to your account":"Changes save to your account"):(loaded?"Saved in this browser":"Changes save in this browser"));
+  setTimeout(applyAddLink,300);
 }
 
+function applyAddLink(){try{const q=new URLSearchParams(location.search);if(!q.has("add"))return;
+  const amt=String(q.get("amt")||q.get("amount")||"").replace(/[^0-9.,-]/g,"").replace(",",".");const note=(q.get("note")||q.get("merchant")||"").trim();const card=(q.get("card")||"").toLowerCase();
+  history.replaceState(null,"",location.pathname);qaOpen();if(amt){const v=Math.abs(parseFloat(amt));$("#qaAmt").value=v?v.toFixed(2):""}if(note){$("#qaNote").value=note;const g=guessCat(note);if(g){QA.cat=g}}
+  if(card){const c=(S.cards||[]).find(x=>card.includes(String(x.name).toLowerCase())||(x.last4&&card.includes(x.last4)));if(c)QA.card=c.id}
+  qaSync()}catch(e){}}
 function commit(msg,party){render();scheduleSave();if(msg)toast(msg);if(party)celebrate()}
 function celebrate(){
   const pig=$("#pig");pig.classList.remove("cheer");void pig.offsetWidth;pig.classList.add("cheer");
@@ -614,7 +643,9 @@ function pigTalk(){
   $("#pigSays").innerHTML='<span class="dogname">Pach</span>'+msg;
   $("#pigMouth").setAttribute("d",mood==="sad"?"M55 71.5 Q60 68.5 65 71.5":mood==="meh"?"M55 69.4 Q57.5 71.8 60 71.2 Q62.5 71.8 65 69.4":"M55 69.4 Q57.5 71.8 60 71.2 Q62.5 71.8 65 69.4");{const dd=$("#dogDimple");if(dd)dd.style.display=mood==="sad"?"none":""}{const tg=$("#dogTongue");if(tg)tg.style.display=mood==="sad"?"none":""}
 }
-let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2200)}
+function offerUndo(snap){const t=$("#toast"),m=t.textContent||"Deleted";t.innerHTML=`<span>${esc(m)}</span><button class="undob" type="button">Undo</button>`;t.classList.add("on","undo");clearTimeout(toastT);
+  t.querySelector(".undob").onclick=()=>{S=JSON.parse(snap);t.classList.remove("on","undo");commit("Restored")};toastT=setTimeout(()=>t.classList.remove("on","undo"),5000)}
+let toastT;function toast(m){const t=$("#toast");t.classList.remove("undo");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),2200)}
 
 /* ---------- derived ---------- */
 const catName=id=>(S.categories.find(c=>c.id===id)||{name:"Other"}).name;
@@ -1682,9 +1713,11 @@ function render(){
   {const g=document.querySelector(".gear");if(g)g.classList.toggle("on",tab==="settings")}
   $("#sampleBanner").hidden=!S.sample;
   pigTalk();
-  document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
+  document.querySelectorAll("#tabs button[data-tab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
+  {const mb=document.querySelector("#tabs .morebtn");if(mb)mb.setAttribute("aria-selected",MORE_TABS.some(x=>x[0]===tab))}
   const ready=S.wish.filter(w=>w.status==="waiting"&&w.added+WAIT_HOURS*3600e3<=Date.now()).length;
   const wb=$("#waitBadge"); wb.hidden=!ready; wb.textContent=ready;
+  {const m=$("#moreBadge");if(m){m.hidden=!ready;m.textContent=ready}}
   const ae=document.activeElement, focusId=ae&&ae.id;
   let focusSel=null;
   if(ae&&ae.dataset){if(ae.dataset.hold)focusSel=`[data-hold="${ae.dataset.hold}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.card)focusSel=`[data-card="${ae.dataset.card}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.src)focusSel=`[data-src="${ae.dataset.src}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.acct)focusSel=`[data-acct="${ae.dataset.acct}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.bill)focusSel=`[data-bill="${ae.dataset.bill}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.debt)focusSel=`[data-debt="${ae.dataset.debt}"][data-f="${ae.dataset.f}"]`;else if(ae.dataset.catName)focusSel=`[data-cat-name="${ae.dataset.catName}"]`;else if(ae.dataset.catLimit)focusSel=`[data-cat-limit="${ae.dataset.catLimit}"]`;}
@@ -1700,12 +1733,27 @@ function render(){
 }
 
 /* ---------- events ---------- */
-$("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]");if(!b)return;tab=b.dataset.tab;confirmReset=false;render();window.scrollTo({top:0})});
+const MAIN_TABS=["overview","spending","bills","savings"],MORE_TABS=[["income","Income"],["shared","Shared"],["debt","Loans"],["cards","Cards"],["wait","Wait list"],["settings","Settings"]];
+let lastTab=tab;
+function goTab(t){if(t===tab){window.scrollTo({top:0,behavior:"smooth"});return}const a=MAIN_TABS.indexOf(tab),b=MAIN_TABS.indexOf(t);tab=t;confirmReset=false;render();
+  const v=$("#view");v.classList.remove("inR","inL","inF");void v.offsetWidth;v.classList.add(a>=0&&b>=0?(b>a?"inR":"inL"):"inF");window.scrollTo({top:0})}
+function moreOpen(){const ready=Number($("#waitBadge").textContent)||0,ic=t=>{const b=document.querySelector(`#tabs [data-tab="${t}"] .ti`);return b?b.outerHTML:""};
+  $("#moreSheet").innerHTML=`<div class="grab"></div><div class="qa-head"><h2>More</h2><button class="x" data-act="moreClose" aria-label="Close">×</button></div>
+  <div class="moregrid">${MORE_TABS.map(([t,l])=>`<button type="button" data-act="moreGo" data-v="${t}" aria-current="${tab===t}">${t==="settings"?`<svg class="ti" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg>`:ic(t)}<span>${l}</span>${t==="wait"&&ready?`<span class="badge">${ready}</span>`:""}</button>`).join("")}</div>`;
+  $("#moreBack").hidden=false;$("#moreSheet").hidden=false}
+function moreClose(){$("#moreSheet").hidden=true;$("#moreBack").hidden=true}
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]");if(!b)return;goTab(b.dataset.tab)});
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b)return;
   const a=b.dataset.act,id=b.dataset.id;
   const get=(arr)=>arr.find(x=>x.id===id);
+  let undoSnap=null;
+  if(/^del/.test(a)){const shDel=a==="delSettle"||(a==="delBill"&&((S.bills||[]).find(x=>x.id===id)||{sh:1}).sh)||(a==="delTx"&&((S.tx.find(x=>x.id===id)||{split:1}).split!=null))||(a==="delCat"&&(S.categories.find(x=>x.id===id)||{}).shared);if(!shDel)undoSnap=JSON.stringify(S)}
   switch(a){
+    case "moreOpen":moreOpen();break;
+    case "moreClose":moreClose();break;
+    case "moreGo":moreClose();goTab(b.dataset.v);break;
+    case "qaQuick":$("#qaAmt").value=b.dataset.v;break;
     case "startFresh":S=blankState();tab="settings";commit("Examples cleared. Start with your take-home pay.");break;
     case "resetAsk":confirmReset=true;render();break;
     case "resetNo":confirmReset=false;render();break;
@@ -1716,7 +1764,7 @@ document.addEventListener("click",e=>{
     case "editTx":{if(Date.now()-lastSwipe<500)break;if(e.target.closest(".tx.swiped")){e.target.closest(".tx").classList.remove("swiped");break}const t=S.tx.find(x=>x.id===id);if(t)qaOpen(t);break}
     case "qaClose":qaClose();break;
     case "qaSave":qaSave();break;
-    case "qaCat":QA.cat=b.dataset.v;qaSync();break;
+    case "qaCat":QA.cat=b.dataset.v;QA.picked=true;qaSync();break;
     case "qaNewCat":QA.newing=true;qaSync();setTimeout(()=>{const i=$("#qaNewName");i&&i.focus()},30);break;
     case "qaNewSave":qaNewSave();break;
     case "catNew":{const d=$("#catEdit");if(d){d.open=true;const i=$("#catName");i.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>i.focus(),250)}break}
@@ -1792,12 +1840,14 @@ document.addEventListener("click",e=>{
       if(cat)S.tx.push({id:uid(),date:todayISO(),cat:cat.id,amount:num(w.price),type:"want",note:w.name});
       commit("Logged as a want under "+(cat?cat.name:"spending"));break}
   }
+  if(undoSnap&&JSON.stringify(S)!==undoSnap)offerUndo(undoSnap);
 });
 document.addEventListener("submit",e=>{
   e.preventDefault();skipKeep=true;setTimeout(()=>{skipKeep=false},0);const f=e.target;
   if(f.id==="txForm"){const amt=num($("#txAmt").value);if(amt<=0){toast("Enter an amount");return}
     const tx={id:uid(),date:$("#txDate").value||todayISO(),cat:$("#txCat").value,amount:amt,type:txType,note:$("#txNote").value.trim()};
     if(isShared(tx.cat)){tx.split=Math.min(100,Math.max(0,num($("#txSplit").value||S.split)));tx.paidBy=paidBy}
+    rememberMerch(tx.note,tx.cat);
     if(tx.split!=null)shAddTx(tx);else S.tx.push(tx);
     const d=$("#txDate").value; if(d)viewMonth=d.slice(0,7); commit(txType==="want"?"Logged. That's a want.":"Logged");$("#txAmt").focus();}
   if(f.id==="billForm"){const a=num($("#bAmt").value),due=$("#bDue").value;if(a<=0||!due){toast("Enter an amount and due date");return}
@@ -1945,19 +1995,25 @@ function qaSync(){
 }
 function qaOpen(t){
   if(boot!=="ready")return;
-  QA.edit=t?t.id:null;QA.newing=false;QA.card=t?(t.card||""):(cardById(S.lastCard)?S.lastCard:"");QA.cat=t?t.cat:null;QA.type=t?t.type||"need":"need";QA.paid=t&&t.paidBy==="partner"?"partner":"me";
+  QA.edit=t?t.id:null;QA.newing=false;QA.picked=!!t;QA.card=t?(t.card||""):(cardById(S.lastCard)?S.lastCard:"");QA.cat=t?t.cat:null;QA.type=t?t.type||"need":"need";QA.paid=t&&t.paidBy==="partner"?"partner":"me";
   $("#qaAmt").value=t?num(t.amount):"";$("#qaNote").value=t?t.note||"":"";$("#qaDate").value=t?t.date:todayISO();
   $("#qa h2").textContent=t?"Edit expense":"Add an expense";$("#qa .qa-save").textContent=t?"Save changes":"Add expense";
   qaSync();$("#qaBack").hidden=false;$("#qa").hidden=false;
   setTimeout(()=>{try{$("#qaAmt").focus()}catch(e){}},60);
 }
 function qaClose(){$("#qa").hidden=true;$("#qaBack").hidden=true}
+const merchKey=n=>String(n||"").toLowerCase().replace(/[^a-z\s&']/g," ").replace(/\s+/g," ").trim().split(" ").slice(0,3).join(" ");
+function rememberMerch(note,cat){const k=merchKey(note);if(k.length<2||!cat)return;S.merch=S.merch||{};S.merch[k]=cat}
+function guessCat(note){const k=merchKey(note);if(k.length<2)return null;const m=S.merch||{};if(m[k]&&S.categories.some(c=>c.id===m[k]))return m[k];
+  const first=k.split(" ")[0];if(first.length>=3){const hit=Object.keys(m).find(x=>x.split(" ")[0]===first&&S.categories.some(c=>c.id===m[x]));if(hit)return m[hit]}
+  const t=S.tx.slice().reverse().find(x=>merchKey(x.note)===k);return t&&S.categories.some(c=>c.id===t.cat)?t.cat:null}
 function qaSave(){
   const amt=num($("#qaAmt").value);
   if(amt<=0){toast("Enter an amount");$("#qaAmt").focus();return}
   if(!QA.cat){toast("Pick a category");return}
   const tx={id:uid(),date:$("#qaDate").value||todayISO(),cat:QA.cat,amount:amt,type:QA.type,note:$("#qaNote").value.trim(),card:QA.card||""};
   if((S.cards||[]).length)S.lastCard=tx.card;
+  rememberMerch(tx.note,tx.cat);
   if(QA.edit){const old=S.tx.find(x=>x.id===QA.edit);QA.edit=null;if(!old){qaClose();return}
     const wasSh=old.split!=null,nowSh=isShared(tx.cat);delete tx.id;
     if(nowSh){tx.split=wasSh?old.split:num(S.split);tx.paidBy=QA.paid}
@@ -1970,6 +2026,33 @@ function qaSave(){
   qaClose();commit(QA.type==="want"?"Added. That's a want.":"Added "+fmt(amt));
 }
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="qaNewName"){e.preventDefault();qaNewSave();return}if(e.key==="Escape"&&!$("#qa").hidden)qaClose();if(e.key==="Enter"&&!$("#qa").hidden&&e.target.id!=="qaNote"&&(e.target.id==="qaAmt")){e.preventDefault();qaSave()}});
+/* ---------- note -> category guess ---------- */
+document.addEventListener("input",e=>{
+  if(e.target.id==="qaNote"&&!QA.picked){const g=guessCat(e.target.value);if(g&&g!==QA.cat){QA.cat=g;qaSync()}}
+  if(e.target.id==="txNote"){const g=guessCat(e.target.value),sel=$("#txCat");if(g&&sel&&!sel.dataset.picked)sel.value=g}
+});
+document.addEventListener("change",e=>{if(e.target.id==="txCat")e.target.dataset.picked="1"});
+/* ---------- swipe between tabs + pull to refresh ---------- */
+let pg=null;
+const noSwipeZone=el=>!!(el.closest&&el.closest("[data-swipe],input,select,textarea,.sheet,.bstrip,.chips,.tbl-wrap,.seg,nav.tabs,svg.chart,.cal,.wkbars,details[open] .hedit"));
+document.addEventListener("touchstart",e=>{
+  if(e.touches.length!==1||!$("#qa").hidden||!$("#moreSheet").hidden||!$("#catSheet").hidden){pg=null;return}
+  const t=e.touches[0];pg={x:t.clientX,y:t.clientY,top:window.scrollY<=0,zone:noSwipeZone(e.target),dir:null,pull:0};
+},{passive:true});
+document.addEventListener("touchmove",e=>{
+  if(!pg)return;const t=e.touches[0],dx=t.clientX-pg.x,dy=t.clientY-pg.y;
+  if(!pg.dir){if(Math.abs(dx)<10&&Math.abs(dy)<10)return;pg.dir=Math.abs(dx)>Math.abs(dy)*1.4?"h":"v"}
+  if(pg.dir==="v"&&pg.top&&dy>0&&window.scrollY<=0){pg.pull=Math.min(110,dy*.55);const p=$("#ptr");p.style.opacity=Math.min(1,pg.pull/70);p.style.transform=`translateY(${pg.pull-50}px) rotate(${pg.pull*3}deg)`;p.querySelector("span").textContent=pg.pull>=70?"↻":"↓"}
+},{passive:true});
+document.addEventListener("touchend",e=>{
+  if(!pg)return;const t=e.changedTouches[0],dx=t.clientX-pg.x,dy=t.clientY-pg.y,p=$("#ptr");
+  if(pg.pull){if(pg.pull>=70){p.classList.add("spin");p.querySelector("span").textContent="↻";p.style.transform="translateY(10px)";
+      Promise.resolve(window.__pull?window.__pull():null).then(()=>new Promise(r=>setTimeout(r,500))).then(()=>{p.classList.remove("spin");p.style.opacity=0;p.style.transform="";toast("Up to date")})}
+    else{p.style.opacity=0;p.style.transform=""}}
+  else if(pg.dir==="h"&&!pg.zone&&Math.abs(dx)>70&&Math.abs(dy)<50&&Date.now()-lastSwipe>400){const i=MAIN_TABS.indexOf(tab);
+    if(i>=0){const j=i+(dx<0?1:-1);if(j>=0&&j<MAIN_TABS.length)goTab(MAIN_TABS[j])}}
+  pg=null;
+},{passive:true});
 /* ---------- swipe left to delete ---------- */
 let sw=null,lastSwipe=0;
 document.addEventListener("touchstart",e=>{

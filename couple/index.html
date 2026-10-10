@@ -405,6 +405,15 @@ button.free:hover{text-decoration:underline}
 .count{font-size:13px;color:var(--on-grad-muted);font-weight:600}
 .clist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .ci{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--line)}
+.ci.editing{flex-wrap:wrap;align-items:flex-end;gap:8px}
+.ceditF{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;flex:1 1 100%}
+.ceditF label{flex:1 1 130px;min-width:0}
+.ceditF label.wide{flex:1 1 100%}
+.ceditF input,.ceditF select{width:100%}
+.ceditF .actions{flex:1 1 100%}
+.cedit{all:unset;cursor:pointer;color:var(--muted);padding:2px 6px;border-radius:6px;font-size:13px;font-weight:600}
+.cedit:hover{color:var(--ink);background:var(--line)}
+.cedit:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .ci:first-child{border-top:0}
 .tick{all:unset;box-sizing:border-box;width:24px;height:24px;border-radius:50%;border:2px solid var(--muted);flex:none;cursor:pointer;display:grid;place-items:center}
 .tick:hover{border-color:var(--both);background:var(--both-soft)}
@@ -529,7 +538,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     <p class="note">Text size is saved just for you, on every device you use.</p>
     <div class="setGroup"><span class="setLbl">Account</span><div class="acct" id="acctBox"></div></div>
     <div class="setGroup" id="pushGroup" hidden><span class="setLbl">Notifications</span><p class="note" id="pushNote"></p><div class="actions"><button type="button" class="primary" id="pushBtn">Turn on notifications</button><button type="button" id="pushTest" hidden>Show a test</button></div></div>
-    <p class="note" id="appVersion">Version: Oct 10, 10:30 am (plans for both of you)</p>
+    <p class="note" id="appVersion">Version: Oct 10, 10:30 am (edit chores)</p>
   </section>
 
   <div class="shell">
@@ -853,7 +862,21 @@ function fillWho(){
   s.value=[...s.options].some(o=>o.value===cur)?cur:'';
 }
 function whoChip(id){return id?h('span',{class:'who '+seat(id)},h('i'),nameOf(id)):h('span',{class:'who'},h('i'),'Either')}
+let editChoreId=null;
+function choreEditItem(c){
+  const t=h('input',{type:'text',maxlength:'80',value:c.title||'','aria-label':'Chore'});
+  const w=h('select',{'aria-label':'Who'},h('option',{value:'',text:'Either of us'}));
+  if(me)w.append(h('option',{value:me,text:'Me'}));const p=partnerId();if(p)w.append(h('option',{value:p,text:nameOf(p)||'Matthew'}));w.value=c.who||'';
+  const d=h('input',{type:'date',value:c.due||'','aria-label':'Due'});
+  const r=h('select',{'aria-label':'Repeats'},...[['0','Never'],['7','Every week'],['14','Every 2 weeks'],['30','Every month']].map(([v,l])=>h('option',{value:v,text:l})));r.value=String(c.repeat||0);
+  const save=async ev=>{ev.preventDefault();const title=t.value.trim();if(!title)return;
+    try{await db.doc('chores/'+c.id).update({title,who:w.value||null,due:d.value||null,repeat:+r.value});editChoreId=null;renderChores()}catch{banner('Could not save that chore.')}};
+  return h('li',{class:'ci editing'},h('form',{class:'ceditF',onsubmit:save},
+    h('label',{class:'wide'},'Chore',t),h('label',{},'Who',w),h('label',{},'Due',d),h('label',{},'Repeats',r),
+    h('div',{class:'actions'},h('button',{type:'submit',class:'primary',text:'Save'}),h('button',{type:'button',text:'Cancel',onclick:()=>{editChoreId=null;renderChores()}}))));
+}
 function choreItem(c,today){
+  if(editChoreId===c.id)return choreEditItem(c);
   const over=!c.done&&c.due&&c.due<today;
   let meta=[];
   if(c.done)meta.push(`Done by ${nameOf(c.doneBy)}${c.doneAt?', '+fmtDate(ymd(new Date(c.doneAt))):''}`);
@@ -866,6 +889,7 @@ function choreItem(c,today){
     h('button',{type:'button',class:'tick'+(c.done?' on':''),'aria-label':(c.done?'Mark not done: ':'Mark done: ')+c.title,onclick:()=>toggleChore(c)}),
     h('div',{class:'body'},h('span',{class:'ttl',text:c.title}),meta.length?h('span',{class:'meta'+(over?' over':''),text:meta.join(' · ')}):null),
     whoChip(c.who),
+    db&&me?h('button',{type:'button',class:'cedit','aria-label':'Edit chore: '+c.title,text:'Edit',onclick:()=>{editChoreId=c.id;renderChores();const i=document.querySelector('.ceditF input');i&&i.focus()}}):null,
     h('button',{type:'button',class:'del','aria-label':'Delete chore: '+c.title,title:'Delete',onclick:()=>delChore(c.id),text:'×'}));
 }
 function renderChores(){

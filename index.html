@@ -259,6 +259,14 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:40;margin:0 auto;max-width:560px;background:var(--surface);border-radius:26px 26px 0 0;
   padding:10px 18px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(60,20,50,.18);display:flex;flex-direction:column;gap:12px;max-height:88vh;overflow-y:auto;animation:sheetUp .28s cubic-bezier(.2,1.2,.4,1)}
 .morebtn{display:none}
+.homehero .hbar{height:12px;border-radius:9px;background:var(--accent-soft);overflow:hidden;margin:14px 0 6px}.homehero .hbar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--pig),var(--accent))}
+.ledgerd{margin-top:12px}.ledgerd>summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:.88rem;list-style:none}.ledgerd>summary::-webkit-details-marker{display:none}.ledgerd>summary::after{content:" ▾"}.ledgerd[open]>summary::after{content:" ▴"}
+.qtiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.qt{font:inherit;color:var(--ink);border:0;border-radius:16px;padding:10px 10px 11px;text-align:left;display:flex;flex-direction:column;gap:3px;cursor:pointer;min-width:0}
+.qt span{font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qt b{font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.linkbtn{font:inherit;font-weight:700;font-size:.85rem;color:var(--accent);background:none;border:0;cursor:pointer;padding:4px 0}
+.hbud{font:inherit;color:inherit;display:block;width:100%;text-align:left;background:none;border:0;padding:8px 0;cursor:pointer}.hbn{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:.93rem}.hbn b{font-weight:600}.hbn .bad{color:var(--bad)}
+.hcard{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:2px dotted var(--line)}.hcard:first-of-type{border-top:0}.hcard>div{display:flex;flex-direction:column}
 .moregrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .moregrid button{font:inherit;font-weight:700;font-size:.85rem;color:var(--ink);background:var(--accent-soft);border:2px solid transparent;border-radius:18px;padding:14px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;position:relative}
 .moregrid button[aria-current="true"]{border-color:var(--accent)}
@@ -1009,9 +1017,9 @@ function moneyTips(){
 function tipsCard(){
   const mine=moneyTips(), day=Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/864e5);
   const gen=GEN_TIPS.map((_,i)=>GEN_TIPS[(i+day)%GEN_TIPS.length]);
-  const all=mine.map(t=>({t,mine:1})).concat(gen.map(t=>({t}))), pages=Math.ceil(all.length/3), pg=tipPage%pages;
-  const shown=all.slice(pg*3,pg*3+3);
-  return `<section class="panel"><div class="phead"><h2>Money tips from Pach</h2><button class="btn sm" data-act="moreTips">More tips</button></div>
+  const all=mine.map(t=>({t,mine:1})).concat(gen.map(t=>({t}))), pg=tipPage%all.length;
+  const shown=[all[pg]];
+  return `<section class="panel"><div class="phead"><h2>Tip from Pach</h2><button class="linkbtn" data-act="moreTips">Next tip ›</button></div>
     <ul class="tiplist">${shown.map(x=>`<li>${x.mine?'<span class="tipfor">For you</span>':""}${x.t}</li>`).join("")}</ul></section>`;
 }
 function viewOverview(){
@@ -1026,13 +1034,20 @@ function viewOverview(){
   const p=plan(), st=streak();
   const unassigned=income-budgeted-debtPay-sum(S.accounts||[],a=>a.cpaused?0:perMonth({amount:a.camount,freq:a.cfreq}));
   const now=new Date(), daysLeft=new Date(now.getFullYear(),now.getMonth()+1,0).getDate()-now.getDate()+1;
+  const sb=sharedBalance(), cs=S.cards||[];
+  const avail=left+spent, usedPct=avail>0?Math.min(100,Math.round(spent/avail*100)):100;
+  const qt=(lab,val,cls,go,bg)=>`<button type="button" class="qt" data-act="goTab" data-v="${go}" style="background:var(${bg})"><span>${lab}</span><b class="num ${cls}">${val}</b></button>`;
+  const brows=S.categories.map(c=>{const sp=sum(tx.filter(t=>t.cat===c.id),myAmt),lim=num(c.limit);return {c,sp,lim,r:lim>0?sp/lim:(sp>0?2:0)}}).filter(x=>x.lim>0||x.sp>0).sort((a,b)=>b.r-a.r);
+  const u=upcoming(14);
   return `
   <div class="stack">
-  <section class="hero">
-    <div class="panel">
-      <h3>Left this ${esc(monthLabel(k).split(" ")[0])}</h3>
-      <div class="left-big num${left<0?" neg":""}" style="font-family:var(--f-display)">${fmt0(left)}</div>
-      <div class="muted small">${left>0?`About ${fmt0(left/daysLeft)} a day for the ${daysLeft} day${daysLeft>1?"s":""} left`:(left<0?"You've spent more than you earned this month":"Nothing left to spend")}</div>
+  <section class="panel homehero">
+    <h3>Left this ${esc(monthLabel(k).split(" ")[0])}</h3>
+    <div class="left-big num${left<0?" neg":""}" style="font-family:var(--f-display)">${fmt0(left)}</div>
+    <div class="muted small">${left>0?`About <b style="color:var(--ink)">${fmt0(left/daysLeft)} a day</b> for the ${daysLeft} day${daysLeft>1?"s":""} left`:(left<0?"You've spent more than you earned this month":"Nothing left to spend")}</div>
+    <div class="hbar"><i style="width:${usedPct}%"></i></div>
+    <div class="muted small" style="display:flex;justify-content:space-between"><span>${fmt0(spent)} spent</span><span>${fmt0(needs)} needs · ${fmt0(wants)} wants</span></div>
+    <details class="ledgerd"><summary>See the math</summary>
       <div class="ledger">
         ${MM.inc.tracked?`<span>Income received</span><span class="num">${fmt(MM.inc.got)}</span>${MM.inc.coming>0?`<span>Income still coming</span><span class="num">+${fmt(MM.inc.coming)}</span>`:""}`:`<span>Monthly income</span><span class="num">${fmt(income)}</span>`}
         <span>Spent so far</span><span class="num">−${fmt(spent)}</span>
@@ -1041,31 +1056,36 @@ function viewOverview(){
         ${MM.saved+MM.saveDue>0?`<span>Savings contributions</span><span class="num">−${fmt(MM.saved+MM.saveDue)}</span>`:""}
         <span class="tot">Left</span><span class="num tot">${fmt(left)}</span>
       </div>
-      ${unassigned<0?`<p class="note bad" style="margin:12px 0 0">Your category budgets plus loan payments are ${fmt0(-unassigned)} more than your income. Trim a category on the Spending tab.</p>`:
+      ${unassigned<0?`<p class="note bad" style="margin:12px 0 0">Your category budgets plus loan payments are ${fmt0(-unassigned)} more than your income. Trim a category on the Spend tab.</p>`:
         (income>0&&unassigned>0?`<p class="note" style="margin:12px 0 0">${fmt0(unassigned)} a month isn't assigned to anything. Give it a job: a savings goal or extra on your loans.</p>`:"")}
-    </div>
-    <div class="tiles">
-      <div class="tile"><h3>No-wants streak</h3><span class="v">${st} day${st===1?"":"s"}</span></div>
-      <div class="tile"><h3>Saved</h3><span class="v good">${fmt0(saved)}</span></div>
-      <div class="tile"><h3>Still owed</h3><span class="v">${fmt0(owed)}</span></div>
-      <div class="tile"><h3>Debt-free by</h3><span class="v">${!S.debts.length?"—":p.never?"Never at this rate":addMonthsLabel(p.months)}</span></div>
-      ${(()=>{const b=sharedBalance();return `<div class="tile"><h3>Shared balance</h3><span class="v">${Math.abs(b)<0.01?"All square":b>0?esc(pName())+" owes "+fmt0(b):"You owe "+fmt0(-b)}</span></div>`})()}
-      <div class="tile"><h3>Not spent (wait list)</h3><span class="v good">${fmt0(S.skipped)}</span></div>
-    </div>
+    </details>
   </section>
+
+  <div class="qtiles">
+    ${qt("Streak",st+" day"+(st===1?"":"s"),"","spending","--lav-soft")}
+    ${qt("Saved",fmt0(saved),"good","savings","--mint-soft")}
+    ${qt("Still owed",fmt0(owed),"","debt","--accent-soft")}
+    ${qt("Debt-free",!S.debts.length?"—":p.never?"Never":addMonthsLabel(p.months),"","debt","--want-soft")}
+    ${qt("Shared",Math.abs(sb)<0.01?"All square":sb>0?esc(pName())+" owes "+fmt0(sb):"You owe "+fmt0(-sb),"","shared","--mint-soft")}
+    ${qt("Not spent",fmt0(S.skipped),"good","wait","--lav-soft")}
+  </div>
 
   ${tipsCard()}
 
-  ${(()=>{const u=upcoming(14);return `<section class="panel"><div class="phead"><h2>Bills coming up</h2><span class="muted small">next 2 weeks · ${fmt0(sum(u,x=>billShare(x.b)))}</span></div>
-    ${u.length?`<div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:0 18px">${u.slice(0,8).map(x=>`<div class="due"><div class="when">${whenLabel(x.d)}<span>${D(x.d).toLocaleDateString("en-CA",{weekday:"short"})}</span></div><div class="what"><b>${esc(x.b.name)}</b><span class="muted small">${esc(catName(x.b.cat))}</span></div><span class="num">${fmt(billShare(x.b))}</span></div>`).join("")}</div>`:`<div class="empty">No bills due in the next two weeks. Add your rent, phone and subscriptions on the Bills tab.</div>`}
-  </section>`})()}
-
-  ${cardSummary()}
+  <section class="panel">
+    <div class="phead"><h2>Coming up</h2><button class="linkbtn" data-act="goTab" data-v="bills">All bills ›</button></div>
+    ${u.length?u.slice(0,3).map(x=>`<div class="due"><div class="when">${whenLabel(x.d)}<span>${D(x.d).toLocaleDateString("en-CA",{weekday:"short"})}</span></div><div class="what"><b>${esc(x.b.name)}</b><span class="muted small">${esc(catName(x.b.cat))}</span></div><span class="num">${fmt(billShare(x.b))}</span></div>`).join("")+(u.length>3?`<p class="muted small" style="margin:8px 0 0">+${u.length-3} more in the next 2 weeks · ${fmt0(sum(u,x=>billShare(x.b)))} total</p>`:""):`<div class="empty" style="padding:10px">No bills in the next two weeks.</div>`}
+  </section>
 
   <section class="panel">
-    <div class="phead"><h2>Category budgets</h2><span class="muted small">${esc(monthLabel(k))}</span></div>
-    <div class="cats">${catList(k)}</div>
+    <div class="phead"><h2>Budgets</h2><button class="linkbtn" data-act="goTab" data-v="spending">See all ›</button></div>
+    ${brows.length?brows.slice(0,5).map(({c,sp,lim})=>`<button type="button" class="hbud" data-act="catOpen" data-v="${c.id}"><span class="hbn"><b>${esc(c.name)}</b><span class="num ${lim&&sp>lim?"bad":""}">${fmt0(sp)}${lim?` <span class="muted">/ ${fmt0(lim)}</span>`:""}</span></span>${barHTML(sp,lim)}</button>`).join(""):`<div class="empty" style="padding:10px">Set category limits on the Spend tab.</div>`}
   </section>
+
+  ${cs.length?`<section class="panel">
+    <div class="phead"><h2>Credit cards</h2><button class="linkbtn" data-act="goTab" data-v="cards">Manage ›</button></div>
+    ${cs.map(c=>`<div class="hcard"><div><b>${esc(c.name)}${c.last4?" ••"+esc(c.last4):""}</b><span class="muted small">${cUtil(c)}% used${c.due?" · due "+whenLabel(c.due):""}</span></div><b class="num">${fmt(num(c.bal))}</b></div>`).join("")}
+  </section>`:""}
 
   </div>`;
 }
@@ -1751,6 +1771,7 @@ document.addEventListener("click",e=>{
   if(/^del/.test(a)){const shDel=a==="delSettle"||(a==="delBill"&&((S.bills||[]).find(x=>x.id===id)||{sh:1}).sh)||(a==="delTx"&&((S.tx.find(x=>x.id===id)||{split:1}).split!=null))||(a==="delCat"&&(S.categories.find(x=>x.id===id)||{}).shared);if(!shDel)undoSnap=JSON.stringify(S)}
   switch(a){
     case "moreOpen":moreOpen();break;
+    case "goTab":goTab(b.dataset.v);break;
     case "moreClose":moreClose();break;
     case "moreGo":moreClose();goTab(b.dataset.v);break;
     case "qaQuick":$("#qaAmt").value=b.dataset.v;break;

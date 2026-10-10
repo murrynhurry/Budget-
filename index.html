@@ -267,6 +267,9 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .qa-amt input:focus-visible{outline:none}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{font:inherit;font-size:.86rem;font-weight:600;border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 13px;cursor:pointer}
+.btile.addtile{border:2px dashed var(--line);background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:96px;font:inherit;cursor:pointer}
+.chip.newchip{border-style:dashed;color:var(--muted)}
+.qanew{display:flex;gap:6px;flex-basis:100%;margin-top:4px}.qanew input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:2px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink)}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .chip.shared::after{content:" · split";font-size:.72rem;opacity:.75}
 .qa-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -347,8 +350,6 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .swipe-edit{position:absolute;left:0;top:0;bottom:0;width:96px;border:0;background:var(--lav);color:#fff;font:inherit;font-weight:700;cursor:pointer}
 .tx.txb{cursor:pointer}
 .csheet{z-index:35;max-height:92vh}
-.mmlink{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:5px 12px;border-radius:999px;background:linear-gradient(135deg,#2b5fd9,#d6457f);color:#fff;font-weight:700;font-size:.82rem;text-decoration:none;box-shadow:0 3px 0 var(--line)}
-.mmlink svg{width:13px;height:13px}
 .cal .d[data-act]{cursor:pointer}
 .dbox{width:34px;height:38px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
 .dbox b{font-size:.95rem}.dbox span{font-size:.55rem;font-weight:800;letter-spacing:.05em}
@@ -382,7 +383,6 @@ input,select,textarea{font-size:16px}
       <button class="gear" data-act="goSettings" aria-label="Settings"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3 1a7.7 7.7 0 0 0-2.6-1.5L14 2.6h-4l-.5 2.5A7.7 7.7 0 0 0 6.9 6.6l-2.3-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-1a7.7 7.7 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.7 7.7 0 0 0 2.6-1.5l2.3 1 2-3.4z"/></svg></button>
       <h1><span class="h1txt">Budget Tracker 2026</span><span class="h1spark" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 0 C11 7 13 9 20 10 C13 11 11 13 10 20 C9 13 7 11 0 10 C7 9 9 7 10 0Z" fill="currentColor"/></svg></span></h1>
       <span class="status" id="status">Loading your saved data…</span>
-      <a class="mmlink" href="https://claude.ai/artifact/UiMspQkJtrQ1TLi9enTFjp" target="_blank" rel="noopener"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17 C3 12 1 9 1 6 A4.5 4.5 0 0 1 10 4 A4.5 4.5 0 0 1 19 6 C19 9 17 12 10 17Z" fill="currentColor"/></svg>Murry &amp; Matty</a>
     </div>
     <div class="pigbox">
       <svg class="pig" id="pig" viewBox="0 0 120 112" role="img" aria-label="Pach the dog">         <ellipse cx="60" cy="110" rx="27" ry="2" fill="var(--line)"/>         <path d="M31 66 Q26 84 30 97 Q34 105 40 104 Q46 107.5 52 104.5 Q60 108.5 68 104.5 Q74 107.5 80 104 Q86 105 90 97 Q94 84 89 66 Z" fill="var(--fur)"/>         <path d="M30.5 88 Q30 95 32.5 99.5 Q35.5 105 40 104 Q46 107.5 52 104.5 Q60 108.5 68 104.5 Q74 107.5 80 104 Q84.5 105 87.5 99.5 Q90 95 89.5 88" fill="none" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>         <g fill="none" stroke="var(--fur-edge)" stroke-width="1.2" stroke-linecap="round"><path d="M60 96 L60 104"/></g>         <g fill="var(--fur)" stroke="var(--fur-edge)" stroke-width="1.5">           <ellipse cx="49" cy="105.5" rx="9" ry="5.6"/><ellipse cx="71" cy="105.5" rx="9" ry="5.6"/>         </g>         <g fill="none" stroke="var(--fur-edge)" stroke-width="1.1" stroke-linecap="round">           <path d="M46.4 108.2 v-2.6"/><path d="M51.6 108.2 v-2.6"/><path d="M68.4 108.2 v-2.6"/><path d="M73.6 108.2 v-2.6"/>         </g>         <g transform="rotate(-9 60 54)">           <g fill="var(--fur)" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linejoin="round">             <path d="M42 26 Q22 34 18 58 Q15 78 21 92 Q24.5 97 29 93 Q32.5 97.5 36.5 92.5 Q40.5 95.5 43 89 Q44 70 46 50 Z"/>             <path d="M78 26 Q98 34 102 58 Q105 78 99 92 Q95.5 97 91 93 Q87.5 97.5 83.5 92.5 Q79.5 95.5 77 89 Q76 70 74 50 Z"/>           </g>           <ellipse cx="60" cy="53" rx="30.5" ry="30" fill="var(--fur)"/>           <path d="M59.2 27.4 Q53 29.5 48.5 34.5" fill="none" stroke="var(--fur-edge)" stroke-width="1.3" stroke-linecap="round"/><path d="M60.8 27.4 Q67 29.5 71.5 34.5" fill="none" stroke="var(--fur-edge)" stroke-width="1.3" stroke-linecap="round"/><path d="M40 31 Q48 24 57.5 24.6 Q60 27.6 62.5 24.6 Q72 24 80 31" fill="none" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linecap="round"/>           <path d="M36 58 Q34 80 45 87.5 Q49 92.5 53.5 89.5 Q57 94 60 90.5 Q63 94 66.5 89.5 Q71 92.5 75 87.5 Q86 80 84 58 Z" fill="var(--fur)"/>           <path d="M35.5 60 Q35 80 45 87.5 Q49 92.5 53.5 89.5 Q57 94 60 90.5 Q63 94 66.5 89.5 Q71 92.5 75 87.5 Q85 80 84.5 60" fill="none" stroke="var(--fur-edge)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>           <g fill="none" stroke="var(--fur-edge)" stroke-width="1.3" stroke-linecap="round">                          <path d="M24 58 Q22 72 25 86"/><path d="M96 58 Q98 72 95 86"/>           </g>           <ellipse cx="43" cy="52" rx="10.6" ry="10" fill="var(--rim)"/>           <ellipse cx="77" cy="52" rx="10.6" ry="10" fill="var(--rim)"/>           <g class="pig-eyes">             <circle cx="43" cy="52" r="8.3" fill="var(--eye)"/><circle cx="77" cy="52" r="8.3" fill="var(--eye)"/>             <ellipse cx="46.2" cy="48.4" rx="3.1" ry="2.8" fill="#fff"/><ellipse cx="80.2" cy="48.4" rx="3.1" ry="2.8" fill="#fff"/><circle cx="48.2" cy="52.6" r="1" fill="#fff"/><circle cx="82.2" cy="52.6" r="1" fill="#fff"/>             <circle cx="40.2" cy="56" r="1.4" fill="#fff" opacity=".9"/><circle cx="74.2" cy="56" r="1.4" fill="#fff" opacity=".9"/>           </g>           <ellipse cx="39.5" cy="66" rx="7" ry="4" fill="var(--accent)" opacity=".32"/><ellipse cx="80.5" cy="66" rx="7" ry="4" fill="var(--accent)" opacity=".32"/>           <g transform="translate(60 61.4) scale(0.72) translate(-60 -61.4)"><path d="M53.8 61 Q54.2 56.2 60 56.2 Q65.8 56.2 66.2 61 Q65.8 66.2 60 66.6 Q54.2 66.2 53.8 61 Z" fill="var(--nose)"/>           <ellipse cx="57.2" cy="62.4" rx="1.5" ry="1.15" fill="var(--eye)" opacity=".75"/>           <ellipse cx="62.8" cy="62.4" rx="1.5" ry="1.15" fill="var(--eye)" opacity=".75"/>           <g fill="var(--eye)" opacity=".4"><circle cx="56.5" cy="58.8" r=".7"/><circle cx="63.6" cy="58.4" r=".6"/><circle cx="60.3" cy="60.2" r=".55"/><circle cx="64.6" cy="60.8" r=".6"/></g>           <ellipse cx="58" cy="57.9" rx="2" ry=".9" fill="#fff" opacity=".45"/>           </g>           <g id="dogTongue"><path d="M57.8 71.1 Q57.6 74.8 59.8 74.9 Q62 74.8 61.8 71.2 Z" fill="#F48FB1" stroke="#E2728F" stroke-width=".9" stroke-linejoin="round"/></g>           <path id="pigMouth" d="M55 69.4 Q57.5 71.8 60 71.2 Q62.5 71.8 65 69.4" fill="none" stroke="var(--eye)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>         </g>         <path d="M8 26 l1.6 4 4 1.6 -4 1.6 -1.6 4 -1.6 -4 -4 -1.6 4 -1.6z" fill="var(--gold)"/>         <path d="M108 50 l1.2 3 3 1.2 -3 1.2 -1.2 3 -1.2 -3 -3 -1.2 3 -1.2z" fill="var(--gold)" opacity=".85"/>         <path d="M100 98 l1 2.4 2.4 1 -2.4 1 -1 2.4 -1 -2.4 -2.4 -1 2.4 -1z" fill="var(--accent)" opacity=".7"/>       </svg>
@@ -1117,7 +1117,7 @@ function viewSpending(){
     <form class="row" id="txForm">
       <label class="f" style="flex:0 1 120px">Amount<input id="txAmt" class="num" inputmode="decimal" placeholder="0.00" required></label>
       <label class="f">What was it?<input id="txNote" placeholder="e.g. Groceries at Save-On"></label>
-      <label class="f">Category<select id="txCat">${S.categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label>
+      <label class="f">Category<select id="txCat">${S.categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")}<option value="__new">+ New category…</option></select></label>
       <label class="f" style="flex:0 1 150px">Date<input id="txDate" type="date" value="${todayISO()}"></label>
       <div class="seg" role="group" aria-label="Need or want"><button type="button" data-act="txType" data-v="need" aria-pressed="true">Need</button><button type="button" data-act="txType" data-v="want" aria-pressed="false">Want</button></div>
       <button class="btn pri" type="submit">Add</button>
@@ -1150,8 +1150,8 @@ function viewSpending(){
         <div><span class="muted small">Days with wants</span><b class="num" style="color:var(--want)">${ds.filter(x=>x==="want").length}</b></div>
         <div><span class="muted small">No-wants streak</span><b class="num">${st} day${st===1?"":"s"}</b></div>
       </div>${calendarHTML()}</section>`})():spendView==="budgets"?`<section class="panel">
-      <div class="btiles">${lrows||`<div class="empty">No limits set yet.</div>`}</div>
-      <details class="acct-edit" style="margin-top:16px"><summary>Edit categories &amp; limits</summary>
+      <div class="btiles">${lrows}<button type="button" class="btile addtile" data-act="catNew"><span style="font-size:1.6rem;line-height:1">+</span><span class="small" style="font-weight:700">Add category</span></button></div>
+      <details class="acct-edit" id="catEdit" style="margin-top:16px"><summary>Edit categories &amp; limits</summary>
       <div style="margin-top:10px">
       ${S.categories.map(c=>`<div class="catedit"><input data-cat-name="${c.id}" value="${esc(c.name)}" aria-label="Category name"><input class="num" data-cat-limit="${c.id}" inputmode="decimal" value="${c.limit||""}" placeholder="Limit" aria-label="Monthly limit for ${esc(c.name)}">${c.shared?`<span class="pill share">Shared</span>`:`<span></span>`}<button class="x" data-act="delCat" data-id="${c.id}" aria-label="Delete ${esc(c.name)}">×</button></div>`).join("")}
       <form class="row" id="catForm" style="margin-top:8px"><label class="f">New category<input id="catName" placeholder="e.g. Gym" required></label><label class="f" style="flex:0 1 110px">Limit<input id="catLimit" class="num" inputmode="decimal" placeholder="0"></label><label class="chk" style="padding-bottom:10px"><input type="checkbox" id="catShared">Split with partner</label><button class="btn" type="submit">Add</button></form>
@@ -1618,6 +1618,9 @@ document.addEventListener("click",e=>{
     case "qaClose":qaClose();break;
     case "qaSave":qaSave();break;
     case "qaCat":QA.cat=b.dataset.v;qaSync();break;
+    case "qaNewCat":QA.newing=true;qaSync();setTimeout(()=>{const i=$("#qaNewName");i&&i.focus()},30);break;
+    case "qaNewSave":qaNewSave();break;
+    case "catNew":{const d=$("#catEdit");if(d){d.open=true;const i=$("#catName");i.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>i.focus(),250)}break}
     case "qaCard":QA.card=b.dataset.v;qaSync();break;
     case "qaType":QA.type=b.dataset.v;qaSync();break;
     case "qaPaid":QA.paid=b.dataset.v;qaSync();break;
@@ -1747,6 +1750,7 @@ document.addEventListener("input",e=>{
   if(changed){scheduleSave();clearTimeout(inputT);inputT=setTimeout(render,600)}
 });
 document.addEventListener("change",e=>{
+  if(e.target.id==="txCat"&&e.target.value==="__new"){const n=prompt("New category name");const id=newCat(n);const keep={amt:$("#txAmt").value,note:$("#txNote").value,date:$("#txDate").value};if(id){render();$("#txAmt").value=keep.amt;$("#txNote").value=keep.note;$("#txDate").value=keep.date;$("#txCat").value=id;toast("Category added")}else e.target.selectedIndex=0;return}
   const t=e.target;
   if(t.id==="txCat")syncSplitRow();
   if(t.dataset&&t.dataset.srcSel){const x=(S.incomes||[]).find(q=>q.id===t.dataset.srcSel);if(x){x[t.dataset.f]=t.value;commit()}}
@@ -1769,6 +1773,10 @@ render();
 })();
 /* ---------- quick add sheet ---------- */
 const QA={cat:null,type:"need",paid:"me"};
+function newCat(name){name=(name||"").trim().slice(0,40);if(!name)return null;
+  const ex=S.categories.find(c=>c.name.trim().toLowerCase()===name.toLowerCase());if(ex)return ex.id;
+  const c={id:uid(),name,limit:0,shared:false};const i=S.categories.findIndex(x=>x.shared);i<0?S.categories.push(c):S.categories.splice(i,0,c);scheduleSave();return c.id}
+function qaNewSave(){const i=$("#qaNewName");const id=newCat(i&&i.value);if(!id){toast("Type a name");return}QA.cat=id;QA.newing=false;qaSync();render();toast("Category added")}
 function qaCats(){
   const since=addDays(todayISO(),-60),cnt={};
   S.tx.forEach(t=>{if(t.date>=since)cnt[t.cat]=(cnt[t.cat]||0)+1});
@@ -1827,7 +1835,7 @@ function renderCat(){
 function qaSync(){
   {const cs=S.cards||[];$("#qaCardWrap").hidden=!cs.length;
    $("#qaCards").innerHTML=[{id:"",name:"Debit / cash"}].concat(cs).map(c=>`<button type="button" class="chip" data-act="qaCard" data-v="${c.id}" aria-pressed="${(QA.card||"")===c.id}">${esc(c.id?cardLabel(c):c.name)}</button>`).join("")}
-  $("#qaCats").innerHTML=qaCats().map(c=>`<button type="button" class="chip${c.shared?" shared":""}" data-act="qaCat" data-v="${c.id}" aria-pressed="${c.id===QA.cat}">${esc(c.name)}</button>`).join("");
+  $("#qaCats").innerHTML=qaCats().map(c=>`<button type="button" class="chip${c.shared?" shared":""}" data-act="qaCat" data-v="${c.id}" aria-pressed="${c.id===QA.cat}">${esc(c.name)}</button>`).join("")+(QA.newing?`<span class="qanew"><input id="qaNewName" placeholder="New category name" maxlength="40" aria-label="New category name"><button type="button" class="chip" data-act="qaNewSave" aria-pressed="true">Add</button></span>`:`<button type="button" class="chip newchip" data-act="qaNewCat">+ New</button>`);
   document.querySelectorAll('[data-act="qaType"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===QA.type));
   document.querySelectorAll('[data-act="qaPaid"]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===QA.paid));
   $("#qaPartnerBtn").textContent=pName()+" paid";
@@ -1835,7 +1843,7 @@ function qaSync(){
 }
 function qaOpen(t){
   if(boot!=="ready")return;
-  QA.edit=t?t.id:null;QA.card=t?(t.card||""):(cardById(S.lastCard)?S.lastCard:"");QA.cat=t?t.cat:null;QA.type=t?t.type||"need":"need";QA.paid=t&&t.paidBy==="partner"?"partner":"me";
+  QA.edit=t?t.id:null;QA.newing=false;QA.card=t?(t.card||""):(cardById(S.lastCard)?S.lastCard:"");QA.cat=t?t.cat:null;QA.type=t?t.type||"need":"need";QA.paid=t&&t.paidBy==="partner"?"partner":"me";
   $("#qaAmt").value=t?num(t.amount):"";$("#qaNote").value=t?t.note||"":"";$("#qaDate").value=t?t.date:todayISO();
   $("#qa h2").textContent=t?"Edit expense":"Add an expense";$("#qa .qa-save").textContent=t?"Save changes":"Add expense";
   qaSync();$("#qaBack").hidden=false;$("#qa").hidden=false;
@@ -1859,7 +1867,7 @@ function qaSave(){
   if(tx.split!=null)shAddTx(tx);else S.tx.push(tx);
   qaClose();commit(QA.type==="want"?"Added. That's a want.":"Added "+fmt(amt));
 }
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#qa").hidden)qaClose();if(e.key==="Enter"&&!$("#qa").hidden&&e.target.id!=="qaNote"&&(e.target.id==="qaAmt")){e.preventDefault();qaSave()}});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="qaNewName"){e.preventDefault();qaNewSave();return}if(e.key==="Escape"&&!$("#qa").hidden)qaClose();if(e.key==="Enter"&&!$("#qa").hidden&&e.target.id!=="qaNote"&&(e.target.id==="qaAmt")){e.preventDefault();qaSave()}});
 /* ---------- swipe left to delete ---------- */
 let sw=null,lastSwipe=0;
 document.addEventListener("touchstart",e=>{

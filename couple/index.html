@@ -529,7 +529,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     <p class="note">Text size is saved just for you, on every device you use.</p>
     <div class="setGroup"><span class="setLbl">Account</span><div class="acct" id="acctBox"></div></div>
     <div class="setGroup" id="pushGroup" hidden><span class="setLbl">Notifications</span><p class="note" id="pushNote"></p><div class="actions"><button type="button" class="primary" id="pushBtn">Turn on notifications</button><button type="button" id="pushTest" hidden>Show a test</button></div></div>
-    <p class="note" id="appVersion">Version: Oct 9, 11:35 pm (pixel moon, clearer faces)</p>
+    <p class="note" id="appVersion">Version: Oct 10, 10:30 am (plans for both of you)</p>
   </section>
 
   <div class="shell">
@@ -599,6 +599,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
       <label>Starts<input type="time" id="fStart" value="18:00"></label>
       <label>Ends<input type="time" id="fEnd" value="19:00"></label>
       <label class="inline"><input type="checkbox" id="fAll"> All day</label>
+      <label>Who<select id="fWho"><option value="me">Me</option><option value="partner">Matthew</option><option value="both">Both of us</option></select></label>
     </div>
     <div class="actions">
       <button class="primary" type="submit" id="fSave">Save</button>
@@ -749,7 +750,7 @@ function allEvents(){
   }
   for(const[who,doc]of Object.entries(imports)){const r=calRules[who]||{};
     for(const[i,e]of (doc.events||[]).entries()){const v=ruleFor(r,e);if(v==='hide')continue;
-      list.push({...e,title:v==='busy'&&who!==me?'Busy':e.title,origTitle:e.title,busy:v==='busy',who,src:'ics',id:'ics-'+who+'-'+i})}}
+      list.push({...e,title:v==='busy'&&who!==me?'Busy':e.title,origTitle:e.title,busy:v==='busy',who,src:'ics',id:'ics-'+who+'-'+i,...((r.both||[]).includes(ruleKey(e))?{together:true}:{})})}}
   return list;
 }
 
@@ -822,6 +823,8 @@ function render(){
           h('button',{type:'button',text:'Hide all like this',title:'Hide every event with this name',onclick:ev=>{ev.stopPropagation();addRule('titles',(e.origTitle||e.title).toLowerCase())}}),
           e.busy?h('button',{type:'button',text:'Show the name',onclick:ev=>{ev.stopPropagation();removeRule('busy',(e.origTitle||'').toLowerCase())}})
             :h('button',{type:'button',text:'Show as Busy',title:'Matthew sees Busy instead of the name',onclick:ev=>{ev.stopPropagation();addRule('busy',(e.origTitle||e.title).toLowerCase())}}));
+        if(e.src==='manual'&&db&&me&&e.status!=='pending')x.append(h('button',{type:'button',text:e.together?'Just '+nameOf(e.who||me):'Both of us',title:e.together?'Show this as one person\'s plan':'Show this in the together colour',onclick:ev=>{ev.stopPropagation();setTogether(e,!e.together)}}));
+        if(e.src==='ics'&&e.who===me&&db)x.append(h('button',{type:'button',text:e.together?'Just me':'Both of us',onclick:ev=>{ev.stopPropagation();const k=ruleKey(e);e.together?removeRule('both',k):addRule('both',k)}}));
         if(e.src==='manual'&&db)x.append(h('button',{type:'button',text:'Delete',onclick:ev=>{ev.stopPropagation();delEvent(e.id)}}));
         btn.append(x);
       }
@@ -1314,7 +1317,7 @@ function ruleFor(r,e){
 }
 async function saveRules(r){calRules={...calRules,[me]:r};render();try{await db.doc('calrules/'+me).set(r)}catch{banner('Could not save that. Try again.')}}
 function addRule(kind,val){if(!db||!me||!val)return;const r={...(calRules[me]||{})};r[kind]=[...new Set([...(r[kind]||[]),val])].slice(-300);openId=null;saveRules(r);
-  banner(kind==='busy'?'Matthew will see Busy instead of the name.':'Hidden. You can show it again in Settings → Calendar sync.')}
+  banner(kind==='busy'?'Matthew will see Busy instead of the name.':kind==='both'?'Now shown as a plan for both of you.':'Hidden. You can show it again in Settings → Calendar sync.')}
 function removeRule(kind,val){if(!db||!me)return;const r={...(calRules[me]||{})};r[kind]=(r[kind]||[]).filter(x=>x!==val);saveRules(r)}
 function renderHides(){
   const box=$('#hideBox');if(!box)return;const mine=me&&imports[me];box.hidden=!db||!me||!mine;if(box.hidden)return;
@@ -1519,13 +1522,15 @@ async function addEvent(ev){
   ev.preventDefault();
   if(!db||!me)return;
   const all=$('#fAll').checked;
-  const data={title:$('#fTitle').value.trim(),date:$('#fDate').value,start:all?null:$('#fStart').value||null,end:all?null:$('#fEnd').value||null,who:me,created:new Date().toISOString()};
+  const wsel=$('#fWho')?$('#fWho').value:'me',pid=partnerId();
+  const data={title:$('#fTitle').value.trim(),date:$('#fDate').value,start:all?null:$('#fStart').value||null,end:all?null:$('#fEnd').value||null,who:wsel==='partner'&&pid?pid:me,...(wsel==='both'?{together:true}:{}),created:new Date().toISOString()};
   if(!data.title||!data.date)return;
   $('#fSave').disabled=true;
   try{await db.collection('events').add(data);$('#addForm').hidden=true;$('#fTitle').value='';const dd=new Date(data.date+'T12:00');weekStart=startOfWeek(dd);monthStart=new Date(dd.getFullYear(),dd.getMonth(),1);render();await claimSeat()}
   catch(e){banner(e.code==='invalid_argument'?'You can view this calendar but not add to it. Ask the owner to share it with you as an Editor.':'Could not save the event. Try again in a moment.')}
   $('#fSave').disabled=false;
 }
+async function setTogether(e,on){try{await db.doc('events/'+e.id).update({together:!!on})}catch{banner('Could not change that plan.')}}
 async function delEvent(id){try{await db.doc('events/'+id).delete();openId=null}catch{banner('Could not delete that event.')}}
 
 /* --- .ics import --- */
@@ -1652,6 +1657,7 @@ $('#todayBtn').onclick=()=>{const t=new Date();weekStart=startOfWeek(t);monthSta
 function openAdd(pre={}){
   if($('#addToggle').disabled)return;
   showPage('cal');const f=$('#addForm');f.hidden=false;
+  if($('#fWho')){const o=$('#fWho').options[1];o.textContent=otherName();if(!pre.again)$('#fWho').value=pre.who||'me'}
   $('#fDate').value=pre.date||$('#fDate').value||ymd(new Date());
   if(pre.title!==undefined)$('#fTitle').value=String(pre.title||'').replace(/^Busy$/,'');
   const all=pre.title!==undefined&&!pre.start;

@@ -454,6 +454,26 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
   h1{font-size:26px}
 }
 @media (prefers-reduced-motion:no-preference){.ev{transition:filter .15s}.ev:hover{filter:brightness(.97)}}
+
+/* Treat jar: finishing a chore or to-do drops a coin in */
+.jar{flex-direction:row;align-items:center;gap:16px;flex-wrap:wrap}
+.jarArt{position:relative;width:80px;height:96px;flex:none}
+.jarArt svg{width:100%;height:100%;display:block}
+.jarInfo{flex:1 1 210px;min-width:0;display:flex;flex-direction:column;gap:4px}
+.jarInfo h3{margin:0;font:700 18px/1.2 var(--display)}
+.jarNum{margin:0;font:700 22px/1.2 var(--display);font-variant-numeric:tabular-nums}
+.jarNum small{font:600 13px var(--body);color:var(--muted);margin-left:4px}
+.jarInfo .note{margin:0}
+.jarInfo .full{color:var(--both);font-weight:700}
+.jarInfo button.primary{align-self:flex-start;margin-top:4px}
+.jarEdit{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-top:6px}
+.jarEdit input{width:auto;flex:1 1 150px}
+.coinDrop{position:absolute;left:50%;top:0;width:16px;height:16px;margin-left:-8px;pointer-events:none;opacity:0}
+@media (prefers-reduced-motion:no-preference){.coinDrop.go{animation:coinDrop 1s cubic-bezier(.5,0,.9,.6) forwards}.jarArt.bump svg{animation:jarBump .35s ease-out}}
+@keyframes coinDrop{0%{opacity:0;transform:translateY(-40px) rotateY(0)}15%{opacity:1}80%{opacity:1;transform:translateY(46px) rotateY(540deg)}100%{opacity:0;transform:translateY(52px) rotateY(720deg)}}
+@keyframes jarBump{0%{transform:scale(1)}40%{transform:scale(1.06,.95)}100%{transform:scale(1)}}
+.coinToast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 8px 24px rgba(0,0,0,.18);font-weight:700;font-size:14px;white-space:nowrap}
+.coinToast svg{width:18px;height:18px}
 </style>
 
 <div class="skyart" aria-hidden="true">
@@ -508,7 +528,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     </div>
     <p class="note">Text size is saved just for you, on every device you use.</p>
     <div class="setGroup"><span class="setLbl">Account</span><div class="acct" id="acctBox"></div></div>
-    <p class="note" id="appVersion">Version: Oct 9, 11:35 pm (pixel moon, clearer faces)</p>
+    <p class="note" id="appVersion">Version: Oct 9, 11:50 pm (treat jar)</p>
   </section>
 
   <div class="shell">
@@ -625,6 +645,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
   </section>
   <section class="page" id="todoPage" role="tabpanel" aria-labelledby="tabTodo" hidden>
     <div class="choresHead"><h2>Our to-dos</h2><span class="count" id="todoCount"></span></div>
+    <section class="panel jar" data-jar aria-label="Treat jar"></section>
     <p class="lede">Things you want to do together, big or small. Plan one onto a free evening or tick it off when it's done.</p>
     <div class="panel">
       <ul class="clist" id="todoList"><li class="cempty">Loading…</li></ul>
@@ -671,6 +692,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
   </section>
   <section class="chores page" id="chorePage" role="tabpanel" aria-labelledby="tabChores" hidden>
     <div class="choresHead"><h2 id="choresH">Chores</h2><span class="count" id="choreCount"></span></div>
+    <section class="panel jar" data-jar aria-label="Treat jar"></section>
     <div class="panel">
       <ul class="clist" id="choreList"><li class="cempty">Loading chores…</li></ul>
       <details id="doneBox" hidden><summary>Done recently</summary><ul class="clist" id="doneList"></ul></details>
@@ -869,9 +891,9 @@ async function toggleChore(c){
   if(!db||!me)return;
   const now=new Date().toISOString(),ref=db.doc('chores/'+c.id);
   try{
-    if(c.done)await ref.update({done:false});
-    else if(c.repeat)await ref.update({due:nextDue(c.due,c.repeat),lastDoneBy:me,lastDoneAt:now});
-    else await ref.update({done:true,doneBy:me,doneAt:now});
+    if(c.done){await ref.update({done:false});unaward('chore',c.id)}
+    else if(c.repeat){await ref.update({due:nextDue(c.due,c.repeat),lastDoneBy:me,lastDoneAt:now});award('chore',c.id,c.title,true)}
+    else{await ref.update({done:true,doneBy:me,doneAt:now});award('chore',c.id,c.title)}
   }catch{banner('Could not update that chore.')}
 }
 async function delChore(id){try{await db.doc('chores/'+id).delete()}catch{banner('Could not delete that chore.')}}
@@ -1281,7 +1303,7 @@ function renderTodos(){
     const planned=allEvents().filter(e=>e.todo===t.id&&e.date>=ymd(new Date())).sort((a,b)=>a.date.localeCompare(b.date))[0];
     const meta=[t.done?`Done ${t.doneAt?fmtDate(ymd(new Date(t.doneAt))):''}`:'',planned?((planned.status==='pending'?'Suggested for ':'Planned for ')+fmtDate(planned.date)):'',t.addedBy?`added by ${t.addedBy===me?'you':nameOf(t.addedBy)}`:''].filter(Boolean).join(' · ');
     return h('li',{class:'ci'+(t.done?' done':'')},
-      h('button',{type:'button',class:'tick'+(t.done?' on':''),'aria-label':(t.done?'Mark not done: ':'Mark done: ')+t.title,disabled:can?null:'',onclick:()=>setTodo(t.id,t.done?{done:false}:{done:true,doneAt:new Date().toISOString(),doneBy:me})}),
+      h('button',{type:'button',class:'tick'+(t.done?' on':''),'aria-label':(t.done?'Mark not done: ':'Mark done: ')+t.title,disabled:can?null:'',onclick:()=>toggleTodo(t)}),
       h('div',{class:'body'},h('span',{class:'ttl',text:t.title}),t.note?h('span',{class:'meta',text:t.note}):null,meta?h('span',{class:'meta',text:meta}):null),
       !t.done?h('button',{type:'button',text:'Plan it',disabled:can?null:'',onclick:()=>planTodo(t)}):null,
       h('button',{type:'button',class:'del','aria-label':'Delete '+t.title,title:'Delete',text:'×',onclick:()=>delTodo(t.id)}));
@@ -1296,6 +1318,77 @@ async function addTodo(ev){
   catch(e){banner(e.code==='invalid_argument'?'You can view the list but not add to it.':'Could not save that. Try again.')}
 }
 async function setTodo(id,data){try{await db.doc('todos/'+id).update(data)}catch{banner('Could not update that.')}}
+/* --- treat jar: every chore or to-do you finish adds a coin --- */
+let coins=[],jar={goal:20,treat:'Ice cream date',since:''};
+const COIN_SVG='<svg viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true"><path d="M2 0h4v1h1v1h1v4h-1v1h-1v1h-4v-1h-1v-1h-1v-4h1v-1h1z" fill="#1d1726"/><path d="M2 1h4v1h1v4h-1v1h-4v-1h-1v-4h1z" fill="#ffd84a"/><path d="M3 2h2v1h1v2h-1v1h-2z" fill="#e8a92c"/><rect x="2" y="2" width="1" height="2" fill="#fff6c2"/></svg>';
+function jarCoins(){return coins.filter(c=>!jar.since||(c.at||'')>=jar.since)}
+function jarSvg(n,goal){
+  const r=[],R=(x,y,w,hh,c)=>r.push(`<rect x="${x}" y="${y}" width="${w}" height="${hh}" fill="${c}"/>`),O='#1d1726';
+  // lid
+  R(4,0,12,1,O);R(3,1,1,3,O);R(16,1,1,3,O);R(4,1,12,1,'#f7b6c8');R(4,2,12,2,'#e48aa8');R(4,4,12,1,O);
+  // neck and glass body with an outline
+  R(4,5,1,1,O);R(15,5,1,1,O);R(5,5,10,1,'rgba(220,235,255,.45)');
+  R(2,6,2,1,O);R(16,6,2,1,O);R(1,7,1,15,O);R(18,7,1,15,O);R(2,22,16,1,O);R(1,22,1,0,O);
+  R(2,7,16,15,'rgba(220,235,255,.38)');
+  // coins, filling from the bottom
+  const lv=Math.round(15*Math.min(n/Math.max(goal,1),1));
+  for(let k=0;k<lv;k++){const y=21-k;for(let x=2;x<18;x++){const m=(x+(k%2)*2)%4;R(x,y,1,1,m===0?'#e8a92c':m===1?'#fff3b0':'#ffd84a')}}
+  if(lv>0&&lv<15)R(2,21-lv+1,16,1,'rgba(0,0,0,.08)');
+  // shine on the glass
+  R(3,8,1,5,'rgba(255,255,255,.75)');R(3,14,1,1,'rgba(255,255,255,.75)');
+  return `<svg viewBox="0 0 20 23" shape-rendering="crispEdges" aria-hidden="true">${r.join('')}</svg>`;
+}
+function renderJar(){
+  const boxes=document.querySelectorAll('[data-jar]');if(!boxes.length)return;
+  const list=jarCoins(),n=list.length,goal=Math.max(1,+jar.goal||20),full=n>=goal,treat=jar.treat||'a treat';
+  let ids=[couple?.a,couple?.b].filter(Boolean);if(!ids.length&&me)ids=[me];
+  const per=ids.map(id=>`${nameOf(id)} ${list.filter(c=>c.by===id).length}`).join(' · ');
+  const can=!!(db&&me);
+  boxes.forEach(box=>{
+    const ae=document.activeElement;if(box.contains(ae)&&/INPUT|SELECT/.test(ae.tagName))return;
+    const wasOpen=!!box.querySelector('details[open]');
+    const art=h('div',{class:'jarArt'});art.innerHTML=jarSvg(n,goal)+`<span class="coinDrop">${COIN_SVG}</span>`;
+    const treatIn=h('input',{type:'text',maxlength:'40',value:treat,'aria-label':'Treat'});
+    const goalIn=h('select',{'aria-label':'Coins needed'},...[5,10,15,20,25,30,40,50].map(v=>h('option',{value:String(v),text:v+' coins',selected:v===goal?'':null})));
+    box.replaceChildren(art,h('div',{class:'jarInfo'},
+      h('h3',{text:'Treat jar'}),
+      h('p',{class:'jarNum'},String(Math.min(n,goal)),h('small',{text:`of ${goal} coins`})),
+      h('p',{class:'note'+(full?' full':''),text:full?`The jar is full! Time for: ${treat}`:`${goal-n} more coin${goal-n===1?'':'s'} until: ${treat}`}),
+      h('p',{class:'note',text:`Every chore or to-do you finish adds a coin.${per&&n?' '+per+'.':''}`}),
+      full?h('button',{type:'button',class:'primary',text:`Cash in for ${treat}`,disabled:can?null:'',onclick:cashIn}):null,
+      h('details',{open:wasOpen?'':null},h('summary',{text:'Change the treat'}),
+        h('form',{class:'jarEdit',onsubmit:async e=>{e.preventDefault();if(!can)return;const t=treatIn.value.trim()||'a treat';try{await db.doc('meta/jar').set({...jar,treat:t,goal:+goalIn.value})}catch{banner('Could not save the treat.')}}},
+          treatIn,goalIn,h('button',{type:'submit',text:'Save'})))));
+  });
+}
+function coinCelebrate(){
+  document.querySelectorAll('[data-jar]').forEach(box=>{if(box.closest('[hidden]'))return;
+    const art=box.querySelector('.jarArt'),c=box.querySelector('.coinDrop');if(!c)return;
+    c.classList.remove('go');void c.offsetWidth;c.classList.add('go');
+    setTimeout(()=>{art.classList.remove('bump');void art.offsetWidth;art.classList.add('bump')},800)});
+  let t=$('#coinToast');if(!t){t=h('div',{class:'coinToast',id:'coinToast',role:'status'});document.body.append(t)}
+  t.innerHTML=COIN_SVG+'<span>+1 coin in the treat jar</span>';t.hidden=false;
+  clearTimeout(coinCelebrate.t);coinCelebrate.t=setTimeout(()=>{t.hidden=true},2200);
+}
+async function award(kind,id,title,repeat){
+  if(!db||!me)return;const cid=kind+'_'+id+(repeat?'_'+Date.now():'');
+  const c={by:me,kind,ref:id,title:String(title||'').slice(0,100),at:new Date().toISOString()};
+  coins=[...coins.filter(x=>x.id!==cid),{id:cid,...c}];renderJar();coinCelebrate();
+  try{await db.doc('coins/'+cid).set(c)}catch{}
+}
+async function unaward(kind,id){
+  if(!db)return;const cid=kind+'_'+id;coins=coins.filter(x=>x.id!==cid);renderJar();
+  try{await db.doc('coins/'+cid).delete()}catch{}
+}
+async function cashIn(){
+  if(!db||!me)return;const goal=Math.max(1,+jar.goal||20),now=new Date().toISOString();
+  try{await db.doc('meta/jar').set({...jar,since:now,last:{treat:jar.treat||'a treat',at:now,by:me,coins:goal}});banner(`Enjoy your ${jar.treat||'treat'}! The jar is empty and ready to fill again.`)}
+  catch{banner('Could not cash in. Try again.')}
+}
+async function toggleTodo(t){
+  if(t.done){await setTodo(t.id,{done:false});unaward('todo',t.id)}
+  else{await setTodo(t.id,{done:true,doneAt:new Date().toISOString(),doneBy:me});award('todo',t.id,t.title)}
+}
 async function delTodo(id){try{await db.doc('todos/'+id).delete()}catch{banner('Could not delete that.')}}
 async function planTodo(t){
   if(!db||!me)return;const date=freeEvenings(1)[0];
@@ -1829,6 +1922,8 @@ render();
   db.collection('specials').onSnapshot(s=>{specials=s.docs.map(d=>({id:d.id,...d.data()}));render()},onErr);
   db.collection('notes').onSnapshot(s=>{notes=s.docs.map(d=>({id:d.id,...d.data()}));renderNotes();markNotesSeen()},onErr);
   db.collection('todos').onSnapshot(s=>{todos=s.docs.map(d=>({id:d.id,...d.data()}));renderTodos()},onErr);
+  db.collection('coins').onSnapshot(s=>{coins=s.docs.map(d=>({id:d.id,...d.data()}));renderJar()},onErr);
+  db.doc('meta/jar').onSnapshot(d=>{if(d.exists)jar={...jar,...d.data()};renderJar()},()=>{});
   db.collection('restaurants').onSnapshot(s=>{foods=s.docs.map(d=>({id:d.id,...d.data()}));renderFood()},onErr);
   db.collection('hobbies').onSnapshot(s=>{hobbies=s.docs.map(d=>({id:d.id,...d.data()}));renderHobbies()},onErr);
   if(me){try{const p=await prefsRef().get();prefs=p.exists?{...p.data()}:{}}catch{}

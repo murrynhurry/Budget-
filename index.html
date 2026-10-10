@@ -649,7 +649,7 @@ function postDueBills(){ /* log every bill whose due date has arrived since we l
     if(b.sh)return;
     const from=b.checked||addDays(t,-1);
     if(!b.paused)occurrences(b,from,t).forEach(d=>{
-      const tx={id:uid(),date:d,cat:b.cat,amount:num(b.amount),type:b.type||"need",note:b.name,billId:b.id};
+      const tx={id:uid(),date:d,cat:b.cat,amount:num(b.amount),type:b.type||"need",note:b.name,billId:b.id,card:(b.card&&(S.cards||[]).some(c=>c.id===b.card))?b.card:""};
       if(isShared(b.cat)){tx.split=num(S.split);tx.paidBy=b.paidBy||"me"}
       S.tx.push(tx);n++;
     });
@@ -1177,6 +1177,7 @@ function viewBills(){
   const bills=(S.bills||[]).slice().sort((a,b)=>(nextDue(a)||"9").localeCompare(nextDue(b)||"9"));
   const active=bills.filter(b=>!b.paused), monthly=sum(active,b=>perMonth(b)*(isShared(b.cat)?num(S.split)/100:1));
   const due=dueRestOfMonth(), nx=upcoming(60)[0];
+  const cs=S.cards||[], copts=sel=>[`<option value="">Debit / cash</option>`].concat(cs.map(c=>`<option value="${c.id}" ${c.id===sel?"selected":""}>${esc(cardLabel(c))}</option>`)).join("");
   const opts=sel=>S.categories.map(c=>`<option value="${c.id}" ${c.id===sel?"selected":""}>${esc(c.name)}${c.shared?" (split)":""}</option>`).join("");
   const BC=["#E35B8F","#9B84E0","#44B38D","#E0843A","#4A90D9","#C0567A"], bcol=t=>BC[[...String(t)].reduce((x,c)=>x+c.charCodeAt(0),0)%BC.length];
   const dueTxt=n=>{if(!n)return "";const d=Math.round((D(n)-D(todayISO()))/864e5);return d===0?"Due today":d===1?"Due tomorrow":d<=7?"Due in "+d+" days":"Due "+whenLabel(n)};
@@ -1190,6 +1191,7 @@ function viewBills(){
       <label class="f">Amount<input class="num" data-bill="${b.id}" data-f="amount" inputmode="decimal" value="${b.amount}"></label>
       <label class="f">How often<select data-bill-sel="${b.id}" data-f="freq">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}" ${k===b.freq?"selected":""}>${v}</option>`).join("")}</select></label>
       <label class="f">Category<select data-bill-sel="${b.id}" data-f="cat">${opts(b.cat)}</select></label>
+      ${cs.length?`<label class="f">Paid with<select data-bill-sel="${b.id}" data-f="card">${copts(b.card||"")}</select></label>`:""}
       <div style="flex-basis:100%;display:flex;justify-content:flex-end;gap:8px"><button class="btn sm" data-act="pauseBill" data-id="${b.id}">${b.paused?"Resume":"Pause"}</button><button class="btn danger sm" data-act="delBill" data-id="${b.id}">Delete</button></div>
     </div></details>`};
   const n=new Date(), defDue=iso(new Date(n.getFullYear(),n.getMonth()+1,1)), today=todayISO();
@@ -1203,7 +1205,7 @@ function viewBills(){
   const crow=b=>{const os=occ(b),last=os[os.length-1],paid=os.length&&os.every(d=>d<=today),show=os.find(d=>d>today)||last||nextDue(b),sh=isShared(b.cat);
     return `<details class="hrow${b.paused?" paused":""}" data-hrow="${b.id}" ${holdOpen.has(b.id)?"open":""}>
     <summary><span class="bday${paid?" paid":""}">${b.paused?"Paused":show?dlab(show):"—"}</span>
-      <span class="hname"><b style="font-size:.95rem;font-weight:600">${esc(b.name)}</b>${b.freq!=="monthly"||sh?`<span class="muted small">${FREQ[b.freq]||""}${sh?" · split":""}</span>`:""}</span>
+      <span class="hname"><b style="font-size:.95rem;font-weight:600">${esc(b.name)}</b>${(()=>{const cd=b.card&&cardById(b.card),bits=[b.freq!=="monthly"?FREQ[b.freq]:"",sh?"split":"",cd?esc(cardLabel(cd)):""].filter(Boolean);return bits.length?`<span class="muted small">${bits.join(" · ")}</span>`:""})()}</span>
       <span class="hval"><b class="num">${fmt(billShare(b))}${paid?'<span class="bok">✓</span>':""}</b></span></summary>
     ${brow(b).split("</summary>")[1]}`};
   const gcats=[...new Set(bills.map(b=>b.cat))].map(c=>{const list=bills.filter(b=>b.cat===c).sort((x,y)=>{const a=occ(x)[0]||nextDue(x)||"9",z=occ(y)[0]||nextDue(y)||"9";return a.localeCompare(z)});return {c,list,tot:sum(list.filter(b=>!b.paused),b=>perMonth(b)*(isShared(b.cat)?num(S.split)/100:1))}}).sort((x,y)=>y.list.length-x.list.length||y.tot-x.tot);
@@ -1228,6 +1230,7 @@ function viewBills(){
       <label class="f" style="flex:0 1 150px">How often<select id="bFreq">${Object.entries(FREQ).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></label>
       <label class="f" style="flex:0 1 160px">Next due date<input id="bDue" type="date" value="${defDue}" required></label>
       <label class="f">Category<select id="bCat">${opts("")}</select></label>
+      ${cs.length?`<label class="f" style="flex:0 1 180px">Paid with<select id="bCard">${copts(cardById(S.lastCard)?S.lastCard:"")}</select></label>`:""}
       <label class="f" style="flex:0 1 110px">Type<select id="bType"><option value="need">Need</option><option value="want">Want</option></select></label>
       <label class="f" style="flex:0 1 150px" id="bPaidWrap" ${isShared((S.categories[0]||{}).id)?"":"hidden"}>Who pays it?<select id="bPaid"><option value="me">I pay it</option><option value="partner">${esc(pName())} pays it</option></select></label>
       <label class="chk" style="flex-basis:100%"><input type="checkbox" id="bPast" checked>If it already came out this month, add it to this month's spending</label>
@@ -1722,7 +1725,7 @@ document.addEventListener("submit",e=>{
     const d=$("#txDate").value; if(d)viewMonth=d.slice(0,7); commit(txType==="want"?"Logged. That's a want.":"Logged");$("#txAmt").focus();}
   if(f.id==="billForm"){const a=num($("#bAmt").value),due=$("#bDue").value;if(a<=0||!due){toast("Enter an amount and due date");return}
     const cat=$("#bCat").value,t=todayISO(),n=new Date();
-    const b={id:uid(),name:$("#bName").value.trim(),amount:a,cat,freq:$("#bFreq").value,anchor:$("#bPast").checked?backAnchor(due,$("#bFreq").value):due,type:$("#bType").value,paidBy:$("#bPaid").value||"me",paused:false,
+    const b={id:uid(),name:$("#bName").value.trim(),amount:a,cat,freq:$("#bFreq").value,anchor:$("#bPast").checked?backAnchor(due,$("#bFreq").value):due,type:$("#bType").value,paidBy:$("#bPaid").value||"me",paused:false,card:($("#bCard")||{}).value||"",
       checked:$("#bPast").checked?iso(new Date(n.getFullYear(),n.getMonth(),0)):t};
     if(b.anchor<=t&&!$("#bPast").checked)b.checked=t;
     if(isShared(cat)){shAddBill(b);commit("Shared bill added. You'll both see it.");return}

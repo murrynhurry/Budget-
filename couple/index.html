@@ -538,7 +538,7 @@ details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)
     <p class="note">Text size is saved just for you, on every device you use.</p>
     <div class="setGroup"><span class="setLbl">Account</span><div class="acct" id="acctBox"></div></div>
     <div class="setGroup" id="pushGroup" hidden><span class="setLbl">Notifications</span><p class="note" id="pushNote"></p><div class="actions"><button type="button" class="primary" id="pushBtn">Turn on notifications</button><button type="button" id="pushTest" hidden>Show a test</button></div></div>
-    <p class="note" id="appVersion">Version: Oct 10, 10:30 am (edit chores)</p>
+    <p class="note" id="appVersion">Version: Oct 10, 10:35 am (Mary is always pink)</p>
   </section>
 
   <div class="shell">
@@ -739,7 +739,11 @@ function startOfWeek(d){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate(
 function fmtTime(t){if(!t)return'';let[h,m]=t.split(':').map(Number);const ap=h<12?'am':'pm';h=h%12||12;return h+(m?':'+pad(m):'')+ap}
 function h(tag,props={},...kids){const e=document.createElement(tag);for(const[k,v]of Object.entries(props)){if(v==null||v===false)continue;if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='text')e.textContent=v;else e.setAttribute(k,v)}for(const c of kids)if(c!=null)e.append(c);return e}
 
-function seat(id){if(!couple)return'a';if(couple.b===id)return'b';return'a'}
+/* Mary is always pink and Matthew always blue, whoever joined first */
+const IS_MARY=/^(mary|murry|marie)/i,IS_MATT=/^(matt|matthew|matty)/i;
+function seat(id){const n=names[id]||'';if(IS_MARY.test(n))return'a';if(IS_MATT.test(n))return'b';
+  const o=couple&&(couple.a===id?couple.b:couple.a),on=(o&&names[o])||'';if(IS_MARY.test(on))return'b';if(IS_MATT.test(on))return'a';
+  if(!couple)return'a';return couple.b===id?'b':'a'}
 function nameOf(id){return names[id]||(id===me?'You':'Matthew')}
 
 function nextOcc(d,yearly,from){
@@ -932,13 +936,13 @@ function renderToday(){
   const evs=allEvents().filter(e=>e.date===today).sort(byTime);
   const d=new Date();
   $('#tDate').textContent=`Today · ${DAYS[d.getDay()]} ${FULL_MONTHS[d.getMonth()]} ${d.getDate()}`;
-  let ids=[couple?.a,couple?.b].filter(Boolean);if(!ids.length&&me)ids=[me];
+  let ids=[couple?.a,couple?.b].filter(Boolean).sort((x,y)=>seat(x).localeCompare(seat(y)));if(!ids.length&&me)ids=[me];
   const cols=$('#tCols');cols.replaceChildren();
   const item=e=>h('div',{class:'tItem'+(e.together?' both':'')},h('span',{class:'tm',text:e.start?fmtTime(e.start)+(e.end?'–'+fmtTime(e.end):''):'All day'}),h('span',{class:'tt',text:e.title||'(No title)'}));
   if(!ids.length){const c=h('div',{class:'tCol'});evs.forEach(e=>c.append(item(e)));if(!evs.length)c.append(h('div',{class:'tNone',text:'Nothing scheduled today.'}));cols.append(c)}
   for(const id of ids){
     const mine=evs.filter(e=>e.who===id||e.together);
-    const c=h('div',{class:'tCol '+seat(id)},h('h4',{},h('i'),nameOf(id)+(id===me&&nameOf(id)!=='You'?' (you)':'')));
+    const c=h('div',{class:'tCol '+seat(id)},h('h4',{},h('i'),nameOf(id)));
     mine.forEach(e=>c.append(item(e)));
     if(!mine.length)c.append(h('div',{class:'tNone',text:'Nothing scheduled'}));
     cols.append(c);
@@ -1491,10 +1495,11 @@ async function renderPeople(){
   if(!ids.length){box.replaceChildren(h('span',{class:'chip ghost',text:db?'Add an event to claim your color':'Sign in to sync'}));fillWho();renderChores();renderNotes();return}
   let ps={};try{if(user)ps=await user.profiles(ids)}catch{}
   box.replaceChildren();
-  ids.forEach((id,i)=>{const p=ps[id]||{};const n=(p.name||'').split(' ')[0]||(id===me?'You':'Matthew');names[id]=n;
-    box.append(h('span',{class:'chip '+(i?'b':'a')},p.avatarUrl?h('img',{src:p.avatarUrl,alt:''}):h('i'),n+(id===me?' (you)':'')))});
+  ids.forEach(id=>{const p=ps[id]||{};names[id]=(p.name||'').split(' ')[0]||(id===me?'You':'Matthew')});
+  ids.slice().sort((x,y)=>seat(x).localeCompare(seat(y))).forEach(id=>{const p=ps[id]||{};
+    box.append(h('span',{class:'chip '+seat(id)},p.avatarUrl?h('img',{src:p.avatarUrl,alt:''}):h('i'),names[id]))});
   if(ids.length<2)box.append(h('span',{class:'chip ghost',text:'Waiting for Matthew'}));
-  $('#lgA').textContent=names[couple?.a]||'Mary';$('#lgB').textContent=names[couple?.b]||'Matthew';
+  {const aId=ids.find(x=>seat(x)==='a'),bId=ids.find(x=>seat(x)==='b');$('#lgA').textContent=(aId&&names[aId])||'Mary';$('#lgB').textContent=(bId&&names[bId])||'Matthew'}
   fillWho();renderChores();renderColorSettings();renderNotes();render();
 }
 

@@ -1,5 +1,5 @@
 // Keeps Murry & Matty working offline. Bump VERSION to push an update.
-const VERSION="couple-v46";
+const VERSION="couple-v47";
 const CORE=["./","index.html","cloud.js","manifest.webmanifest","icons/apple-touch-icon.png","icons/icon-192.png","icons/icon-512.png","icons/icon-maskable.png"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(VERSION).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith("couple-")&&k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

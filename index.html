@@ -337,6 +337,15 @@ nav.tabs button{display:inline-flex;align-items:center;gap:6px;position:relative
 .acct-edit summary{cursor:pointer;color:var(--accent);font-weight:700}
 .acct-edit .row-form label.f{flex:1 1 120px}
 .inv-top{padding:4px 0 14px;border-bottom:2px dotted var(--line);margin-bottom:6px}
+.bstat3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:6px 0 4px}.bstat3>div{background:var(--accent-soft);border-radius:14px;padding:9px 11px;min-width:0}.bstat3 b{display:block;font-size:1.08rem;white-space:nowrap}
+.bstrip{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:2px;margin:14px 0 4px}.bstrip i{height:24px;border-radius:5px;background:var(--sunk,#FBEEF3)}.bstrip i.p{background:var(--mint-soft)}.bstrip i.p.b{background:var(--mint)}.bstrip i.u{background:var(--accent)}.bstrip i.t{outline:2px solid var(--ink);outline-offset:0}
+.blegend{display:flex;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--muted)}.blegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 4px 0 8px;vertical-align:0}
+.bcat{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px 14px 4px}.bcat>h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:1rem;text-transform:none;letter-spacing:0;color:var(--ink)}
+.bcat .dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:8px}
+.bcat .hrow{border-bottom:0;border-top:2px dotted var(--line)}.bcat .hrow>summary{grid-template-columns:auto minmax(0,1fr) auto;padding:9px 0;gap:10px}
+.bday{font-size:.74rem;font-weight:700;background:var(--accent-soft);color:var(--accent);border-radius:9px;padding:3px 8px;white-space:nowrap}.bday.paid{background:var(--mint-soft);color:var(--good)}
+.bok{color:var(--good);font-weight:800;margin-left:4px}
+details.addbill>summary{list-style:none;cursor:pointer;text-align:center;width:100%}details.addbill>summary::-webkit-details-marker{display:none}details.addbill[open]>summary{margin-bottom:12px}
 .hgroup{margin-top:14px}.hghead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding-bottom:4px}
 .hrow{border-bottom:2px dotted var(--line)}
 .hrow>summary{list-style:none;display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;cursor:pointer}
@@ -1183,23 +1192,36 @@ function viewBills(){
       <label class="f">Category<select data-bill-sel="${b.id}" data-f="cat">${opts(b.cat)}</select></label>
       <div style="flex-basis:100%;display:flex;justify-content:flex-end;gap:8px"><button class="btn sm" data-act="pauseBill" data-id="${b.id}">${b.paused?"Resume":"Pause"}</button><button class="btn danger sm" data-act="delBill" data-id="${b.id}">Delete</button></div>
     </div></details>`};
-  const gcats=[...new Set(bills.map(b=>b.cat))];
-  const rows=gcats.map(c=>{const list=bills.filter(b=>b.cat===c);const tot=sum(list.filter(b=>!b.paused),b=>perMonth(b)*(isShared(b.cat)?num(S.split)/100:1));
-    return `<div class="hgroup"><div class="hghead"><h3>${esc(catName(c))}</h3><span class="small num">${fmt(tot)} / month</span></div>${list.map(brow).join("")}</div>`}).join("");
-  const n=new Date(), defDue=iso(new Date(n.getFullYear(),n.getMonth()+1,1));
+  const n=new Date(), defDue=iso(new Date(n.getFullYear(),n.getMonth()+1,1)), today=todayISO();
+  const mFrom=addDays(iso(new Date(n.getFullYear(),n.getMonth(),1)),-1), mTo=iso(new Date(n.getFullYear(),n.getMonth()+1,0)), nDays=new Date(n.getFullYear(),n.getMonth()+1,0).getDate();
+  const occ=b=>b.paused?[]:occurrences(b,mFrom,mTo);
+  const paidAmt=sum(active,b=>occ(b).filter(d=>d<=today).length*billShare(b));
+  const dayMap={};active.forEach(b=>occ(b).forEach(d=>{dayMap[d]=dayMap[d]||[];dayMap[d].push(b)}));
+  const mon=n.toLocaleDateString("en-CA",{month:"short"});
+  const strip=[...Array(nDays)].map((_,i)=>{const d=iso(new Date(n.getFullYear(),n.getMonth(),i+1)),has=dayMap[d];return `<i class="${has?(d<=today?"p b":"u"):""}${d===today?" t":""}" title="${has?esc(has.map(x=>x.name).join(", ")):""}"></i>`}).join("");
+  const dlab=d=>D(d).toLocaleDateString("en-CA",{month:"short",day:"numeric"});
+  const crow=b=>{const os=occ(b),last=os[os.length-1],paid=os.length&&os.every(d=>d<=today),show=os.find(d=>d>today)||last||nextDue(b),sh=isShared(b.cat);
+    return `<details class="hrow${b.paused?" paused":""}" data-hrow="${b.id}" ${holdOpen.has(b.id)?"open":""}>
+    <summary><span class="bday${paid?" paid":""}">${b.paused?"Paused":show?dlab(show):"—"}</span>
+      <span class="hname"><b style="font-size:.95rem;font-weight:600">${esc(b.name)}</b>${b.freq!=="monthly"||sh?`<span class="muted small">${FREQ[b.freq]||""}${sh?" · split":""}</span>`:""}</span>
+      <span class="hval"><b class="num">${fmt(billShare(b))}${paid?'<span class="bok">✓</span>':""}</b></span></summary>
+    ${brow(b).split("</summary>")[1]}`};
+  const gcats=[...new Set(bills.map(b=>b.cat))].map(c=>{const list=bills.filter(b=>b.cat===c).sort((x,y)=>{const a=occ(x)[0]||nextDue(x)||"9",z=occ(y)[0]||nextDue(y)||"9";return a.localeCompare(z)});return {c,list,tot:sum(list.filter(b=>!b.paused),b=>perMonth(b)*(isShared(b.cat)?num(S.split)/100:1))}}).sort((x,y)=>y.list.length-x.list.length||y.tot-x.tot);
+  const rows=gcats.map(({c,list,tot})=>`<div class="bcat"><h3><span><span class="dot" style="background:${bcol(catName(c))}"></span>${esc(catName(c))} <span class="muted small" style="font-weight:500">· ${list.length}</span></span><span class="num">${fmt(tot)}</span></h3>${list.map(crow).join("")}</div>`).join("");
   return `<div class="stack">
   <section class="panel">
-    <div class="phead"><h2>Recurring bills</h2></div>
-    <div class="bigline">
-      <div><h3>Bills per month</h3><span class="v">${fmt0(monthly)}</span><span class="muted small">your share, on average</span></div>
-      <div><h3>Still due this month</h3><span class="v">${fmt0(due)}</span></div>
-      <div><h3>Next up</h3><span class="v">${nx?esc(nx.b.name):"—"}</span><span class="muted small">${nx?whenLabel(nx.d)+" · "+fmt(billShare(nx.b)):""}</span></div>
+    <div class="phead"><h2>Recurring bills</h2><span class="muted small">${esc(monthLabel(monthKey(n)))}</span></div>
+    <div class="bstat3">
+      <div><span class="muted small">Monthly</span><b class="num">${fmt(monthly)}</b></div>
+      <div><span class="muted small">Paid</span><b class="num" style="color:var(--good)">${fmt(paidAmt)}</b></div>
+      <div><span class="muted small">Still due</span><b class="num" style="color:var(--accent)">${fmt(due)}</b></div>
     </div>
-    <p class="note" style="margin:0 0 14px">Each bill is added to your spending on its due date, so it counts toward its category budget. Bills that haven't come out yet are already taken off your "left this month" number.</p>
-    ${bills.length?rows:`<div class="empty">No bills yet. Add rent, phone, insurance, subscriptions and anything else that comes out regularly.</div>`}
+    <div class="bstrip" style="--n:${nDays}">${strip}</div>
+    <div class="blegend"><span>${mon} 1</span><span><i style="background:var(--mint)"></i>paid<i style="background:var(--accent)"></i>coming</span><span>${mon} ${nDays}</span></div>
+    ${nx?`<p class="muted small" style="margin:10px 0 0">Next up: <b style="color:var(--ink)">${esc(nx.b.name)}</b> · ${whenLabel(nx.d)} · ${fmt(billShare(nx.b))}</p>`:""}
   </section>
-  <section class="panel">
-    <div class="phead"><h2>Add a bill</h2></div>
+  ${bills.length?rows:`<section class="panel"><div class="empty">No bills yet. Add rent, phone, insurance, subscriptions and anything else that comes out regularly.</div></section>`}
+  <details class="panel addbill"><summary class="btn pri">+ Add a bill</summary>
     <form class="row" id="billForm">
       <label class="f">Name<input id="bName" placeholder="e.g. Rent, Netflix, car insurance" required></label>
       <label class="f" style="flex:0 1 110px">Amount<input id="bAmt" class="num" inputmode="decimal" placeholder="0.00" required></label>
@@ -1211,8 +1233,8 @@ function viewBills(){
       <label class="chk" style="flex-basis:100%"><input type="checkbox" id="bPast" checked>If it already came out this month, add it to this month's spending</label>
       <button class="btn pri" type="submit">Add bill</button>
     </form>
-    <p class="muted small" style="margin:10px 0 0">Pick a shared category (like Shared bills) for anything you split with ${esc(pName())}. Only your share counts toward your budget.</p>
-  </section></div>`;
+    <p class="muted small" style="margin:10px 0 0">Bills are added to your spending on their due date. Pick a shared category for anything you split with ${esc(pName())}; only your share counts.</p>
+  </details></div>`;
 }
 
 let incMonth=monthKey(new Date());

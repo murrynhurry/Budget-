@@ -270,12 +270,17 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .slist { display: flex; flex-direction: column; border-top: 1px solid var(--rule); }
 .srow { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 32px; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--rule); }
 .srow input { accent-color: var(--red); width: 18px; height: 18px; }
+.srow.withmove { grid-template-columns: 22px minmax(0, 1fr) auto 32px 32px; }
+.aisles { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+.aislehead { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.aislehead .tcount { margin-left: auto; }
+.aisle.alldone .aislehead { opacity: .6; }
 .sname { display: flex; flex-direction: column; min-width: 0; cursor: pointer; }
 .sname span { font-weight: 600; overflow-wrap: anywhere; }
 .sname small { font-size: 12px; color: var(--muted); }
 .srow.done .sname span { text-decoration: line-through; color: var(--muted); }
 .coupon { font-size: 12px; font-weight: 600; background: var(--ok-soft); color: var(--ok); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
-@media (max-width: 520px) { .srow { grid-template-columns: 22px minmax(0, 1fr) 32px; } .srow .coupon { grid-column: 2; grid-row: 2; justify-self: start; } }
+@media (max-width: 520px) { .srow { grid-template-columns: 22px minmax(0, 1fr) 32px; } .srow.withmove { grid-template-columns: 22px minmax(0, 1fr) 32px 32px; } .srow .coupon { grid-column: 2; grid-row: 2; justify-self: start; } }
 .tag.plan { background: var(--ok-soft); color: var(--ok); font-weight: 600; }
 .add-exp { align-items: stretch; }
 .expbox { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 0 8px; font-size: 13px; color: var(--muted); }
@@ -508,7 +513,7 @@ body.formview .fab { display: none; }
     scale: {}, checked: new Set(), stepsDone: new Set(),
     draft: null, importState: { busy: false, msg: "", err: false }, db: null, sample: null, sampleImages: false,
     noStore: false, wake: null,
-    shop: { groceries: [], household: [], other: [], checked: {} }, myCoupons: [], couponFilter: "all", couponGroup: "store", fridge: [], freezer: [], pantry: [], tab: "fridge", stats: { counts: {}, pinned: [], where: {} }, deals: null, staples: true, ideas: [], ideaState: { busy: false, msg: "", err: false }, savedIdeas: new Set(),
+    shop: { groceries: [], household: [], other: [], checked: {} }, myCoupons: [], couponFilter: "all", couponGroup: "store", fridge: [], freezer: [], pantry: [], tab: "fridge", stats: { counts: {}, pinned: [], where: {}, aisle: {} }, deals: null, staples: true, ideas: [], ideaState: { busy: false, msg: "", err: false }, savedIdeas: new Set(),
   };
   const app = document.getElementById("app");
 
@@ -1325,7 +1330,7 @@ Rules:
   function setStats(patch) {
     Object.assign(S.stats, patch); render();
     if (S.db && !S.noStore) statsWrite = statsWrite
-      .then(() => S.db.doc("fridge/stats").set({ counts: S.stats.counts, pinned: S.stats.pinned, where: S.stats.where, updatedAt: Date.now() }))
+      .then(() => S.db.doc("fridge/stats").set({ counts: S.stats.counts, pinned: S.stats.pinned, where: S.stats.where, aisle: S.stats.aisle || {}, updatedAt: Date.now() }))
       .catch(() => toast("Couldn't save that. Try again."));
   }
   const splitList = (raw) => String(raw).split(/[,;\n]+/).map((s) => s.trim().toLowerCase().replace(/\s+/g, " ")).filter((s) => s && s.length < 60);
@@ -1756,13 +1761,68 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     return h("span", { class: "coupon", title: [d.deal, d.validUntil ? "until " + fmtDate(String(d.validUntil)) : ""].filter(Boolean).join(", ") },
       "🏷 " + [d.store, d.price].filter(Boolean).join(" ") + (d.validUntil ? " · until " + fmtDate(String(d.validUntil)) : ""));
   }
-  function shopRow(id, name, done, onToggle, sub, onRemove) {
-    return h("div", { class: "srow" + (done ? " done" : "") },
+  function shopRow(id, name, done, onToggle, sub, onRemove, move) {
+    return h("div", { class: "srow" + (done ? " done" : "") + (move ? " withmove" : "") },
       h("input", { type: "checkbox", id, checked: done, onchange: onToggle }),
       h("label", { for: id, class: "sname" }, h("span", null, name), sub ? h("small", null, sub) : null),
       dealBadge(name),
+      move || null,
       onRemove ? h("button", { class: "iconbtn", type: "button", "aria-label": "Remove " + name, title: "Remove", onclick: onRemove }, "×") : h("span"));
   }
+  // ---------- store sections for the grocery list, in the order you walk a store ----------
+  const AISLES = [
+    { key: "produce", label: "Produce", icon: "🥬", words: ["apple", "banana", "orange", "lemon", "lime", "grape", "berry", "berries", "strawberry", "blueberry", "raspberry", "blackberry", "avocado", "tomato", "cherry tomato",
+      "potato", "sweet potato", "yam", "onion", "red onion", "green onion", "scallion", "shallot", "garlic", "ginger", "carrot", "celery", "cucumber", "lettuce", "romaine", "spinach", "kale", "cabbage", "broccoli",
+      "cauliflower", "pepper", "bell pepper", "red pepper", "jalapeno", "zucchini", "squash", "pumpkin", "mushroom", "corn", "cilantro", "parsley", "basil", "mint", "dill", "thyme", "rosemary", "fresh herbs",
+      "pear", "peach", "plum", "nectarine", "mango", "pineapple", "melon", "cantaloupe", "watermelon", "cherry", "kiwi", "bean sprout", "bok choy", "salad", "salad mix", "arugula", "leek", "asparagus",
+      "green bean", "snap pea", "beet", "radish", "fruit", "vegetable", "veggie", "tofu", "herbs", "lemongrass", "chives", "eggplant", "brussels sprout"] },
+    { key: "bakery", label: "Bakery", icon: "🍞", words: ["bread", "loaf", "bagel", "bun", "buns", "roll", "rolls", "tortilla", "pita", "naan", "croissant", "muffin", "english muffin", "baguette", "wrap", "wraps", "sourdough", "cake", "pie"] },
+    { key: "meat", label: "Meat & Seafood", icon: "🥩", words: ["chicken", "chicken breast", "chicken thigh", "beef", "ground beef", "steak", "pork", "pork chop", "ground pork", "turkey", "ground turkey", "lamb", "bacon",
+      "sausage", "ham", "hot dog", "salami", "pepperoni", "prosciutto", "deli meat", "fish", "salmon", "tuna", "shrimp", "prawn", "cod", "tilapia", "halibut", "crab", "scallop", "mussel", "meatball", "rib", "ribs",
+      "brisket", "chorizo", "roast", "wings", "drumstick", "seafood", "meat"] },
+    { key: "dairy", label: "Dairy & Eggs", icon: "🥛", words: ["milk", "egg", "eggs", "butter", "cheese", "cheddar", "mozzarella", "parmesan", "feta", "brie", "cream", "sour cream", "cream cheese", "yogurt", "yoghurt",
+      "half and half", "whipping cream", "heavy cream", "cottage cheese", "oat milk", "almond milk", "soy milk", "margarine", "ricotta", "kefir"] },
+    { key: "frozen", label: "Frozen", icon: "🧊", words: ["frozen", "ice cream", "popsicle", "frozen pizza", "fries", "nugget", "nuggets", "dumpling", "dumplings", "perogy", "perogies", "pierogi", "waffles", "ice"] },
+    { key: "pantry", label: "Pantry & Canned", icon: "🥫", words: ["rice", "pasta", "spaghetti", "penne", "macaroni", "noodle", "noodles", "ramen", "udon", "flour", "sugar", "brown sugar", "oat", "oats", "oatmeal", "cereal", "granola",
+      "quinoa", "couscous", "lentil", "dried beans", "peanut butter", "nutella", "yeast", "cornstarch", "chocolate chip", "cocoa", "breadcrumb", "panko", "jam", "honey", "baking"] },
+    { key: "sauces", label: "Condiments & Sauces", icon: "🫙", words: [] },
+    { key: "spices", label: "Spices & Seasonings", icon: "🧂", words: [] },
+    { key: "snacks", label: "Snacks", icon: "🍪", words: ["chips", "chip", "crisps", "cookie", "cookies", "candy", "chocolate", "popcorn", "pretzel", "pretzels", "nuts", "almonds", "cashews", "peanuts", "trail mix",
+      "granola bar", "crackers", "cracker", "gummies", "seaweed snack"] },
+    { key: "drinks", label: "Drinks", icon: "🧃", words: ["coffee", "tea", "juice", "orange juice", "soda", "pop", "water", "sparkling water", "beer", "wine", "kombucha", "coke", "sprite", "gatorade", "lemonade"] },
+    { key: "other", label: "Other", icon: "🛒", words: [] },
+  ];
+  const AISLE = Object.fromEntries(AISLES.map((a) => [a.key, a]));
+  let aisleIndex = null;
+  function aisleOf(rawName) {
+    const name = parseQty(rawName).name.toLowerCase();
+    const o = S.stats.aisle && (S.stats.aisle[name] || S.stats.aisle[rawName]); if (o && AISLE[o]) return o;
+    if (!aisleIndex) {
+      aisleIndex = [];
+      for (const a of AISLES) for (const w of a.words) aisleIndex.push([toks(w).join(" "), a.key]);
+      for (const w of CANNED) aisleIndex.push([toks(w).join(" "), "pantry"]);
+      for (const w of CONDIMENTS) aisleIndex.push([toks(w).join(" "), "sauces"]);
+      for (const w of SEASONINGS) aisleIndex.push([toks(w).join(" "), "spices"]);
+    }
+    const t = " " + toks(name).join(" ") + " ";
+    if (/ (canned|tinned|can|tin|jarred) /.test(t)) return "pantry";
+    if (/ frozen /.test(t)) return "frozen";
+    if (/ (dried|ground) /.test(t) && !/ ground (beef|pork|turkey|chicken|lamb|meat) /.test(t) && SEASONINGS.some((w) => t.includes(" " + toks(w).join(" ") + " "))) return "spices";
+    let best = null; // the longest matching phrase wins, so "black pepper" beats "pepper" and "canned tomatoes" beats "tomato"
+    for (const [k, a] of aisleIndex) if (k && t.includes(" " + k + " ") && (!best || k.length > best[0].length)) best = [k, a];
+    return best ? best[1] : "other";
+  }
+  function setAisle(rawName, key) {
+    const name = parseQty(rawName).name.toLowerCase();
+    setStats({ aisle: { ...(S.stats.aisle || {}), [name]: key } });
+    toast("Moved " + name + " to " + AISLE[key].label);
+  }
+  const aislePick = (name, cur) => h("label", { class: "iconbtn movepick", title: "Change section" },
+    h("span", { "aria-hidden": "true" }, "⇄"),
+    h("select", { "aria-label": "Move " + name + " to another section", onchange: (e) => { if (AISLE[e.target.value]) setAisle(name, e.target.value); } },
+      h("option", { value: "", selected: true, disabled: true }, "Move to…"),
+      ...AISLES.filter((a) => a.key !== cur).map((a) => h("option", { value: a.key }, a.icon + " " + a.label))));
+
   function viewShop() {
     const { byMeal, items } = groceryList();
     const planned = byMeal.map((b) => b.r);
@@ -1779,13 +1839,21 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
       h("div", { class: "fridge-in" },
         h("input", { id: "shop-groceries", placeholder: "Add groceries, e.g. bananas, bread, yogurt", "aria-label": "Add groceries", onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addGroceries(e.target.value); } } }),
         h("button", { class: "btn", type: "button", onclick: () => addGroceries(document.getElementById("shop-groceries").value) }, "Add")),
-      h("div", { class: "slist" }, items.length ? items.map((it) =>
-        shopRow("g-" + slug(it.name), it.name, !!S.shop.checked[it.name],
-          (e) => e.target.checked ? buyGrocery(it) : unbuyGrocery(it),
-          S.shop.checked[it.name] && S.shop.checked[it.name].loc ? "✓ put in the " + LOCS[S.shop.checked[it.name].loc].label.toLowerCase() + (it.for.length ? " · for " + it.for.join(", ") : "")
-            : it.for.length ? "for " + it.for.join(", ") : it.manual ? "" : "restock · you buy this often",
-          it.manual ? () => removeGrocery(it.name) : null))
-        : planned.length ? h("p", { class: "hint" }, "Nothing to buy for these meals.") : null));
+      items.length ? h("div", { class: "aisles" }, AISLES.map((a) => {
+        const inA = items.filter((it) => aisleOf(it.name) === a.key)
+          .sort((x, y) => (!!S.shop.checked[x.name] - !!S.shop.checked[y.name]) || x.name.localeCompare(y.name));
+        if (!inA.length) return null;
+        const left = inA.filter((it) => !S.shop.checked[it.name]).length;
+        return h("section", { class: "aisle" + (left ? "" : " alldone") },
+          h("h4", { class: "aislehead" }, h("span", { "aria-hidden": "true" }, a.icon), a.label, h("span", { class: "tcount" }, left ? String(left) : "✓")),
+          h("div", { class: "slist" }, inA.map((it) =>
+            shopRow("g-" + slug(it.name), it.name, !!S.shop.checked[it.name],
+              (e) => e.target.checked ? buyGrocery(it) : unbuyGrocery(it),
+              S.shop.checked[it.name] && S.shop.checked[it.name].loc ? "✓ put in the " + LOCS[S.shop.checked[it.name].loc].label.toLowerCase() + (it.for.length ? " · for " + it.for.join(", ") : "")
+                : it.for.length ? "for " + it.for.join(", ") : it.manual ? "" : "restock · you buy this often",
+              it.manual ? () => removeGrocery(it.name) : null,
+              aislePick(it.name, a.key)))));
+      })) : planned.length ? h("p", { class: "hint" }, "Nothing to buy for these meals.") : null);
 
     const listSec = (key) => {
       const L = SHOP_LISTS[key]; const list = S.shop[key];
@@ -2359,7 +2427,7 @@ Reply with ONLY a JSON object: {"ideas": [{"title": string, "why": one short sen
     db.doc("fridge/stats").onSnapshot((snap) => {
       if (!snap.exists || snap.metadata.hasPendingWrites) return;
       const d = snap.data() || {};
-      const next = { counts: d.counts && typeof d.counts === "object" ? { ...d.counts } : {}, pinned: Array.isArray(d.pinned) ? d.pinned.map(String) : [], where: d.where && typeof d.where === "object" ? { ...d.where } : {} };
+      const next = { counts: d.counts && typeof d.counts === "object" ? { ...d.counts } : {}, pinned: Array.isArray(d.pinned) ? d.pinned.map(String) : [], where: d.where && typeof d.where === "object" ? { ...d.where } : {}, aisle: d.aisle && typeof d.aisle === "object" ? { ...d.aisle } : {} };
       if (JSON.stringify(next) === JSON.stringify(S.stats)) return;
       S.stats = next; rerenderFridge();
     }, () => {});

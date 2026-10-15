@@ -700,7 +700,7 @@ function postDueBills(){ /* log every bill whose due date has arrived since we l
     if(!b.paused)occurrences(b,from,t).forEach(d=>{
       const tx={id:uid(),date:d,cat:b.cat,amount:num(b.amount),type:b.type||"need",note:b.name,billId:b.id,card:(b.card&&(S.cards||[]).some(c=>c.id===b.card))?b.card:""};
       if(isShared(b.cat)){tx.split=num(S.split);tx.paidBy=b.paidBy||"me"}
-      S.tx.push(tx);n++;
+      cardCharge(tx,1);S.tx.push(tx);n++;
     });
     b.checked=t;
   });
@@ -760,6 +760,9 @@ const cAuto=c=>c.ap==="on"?"On · "+(c.apType==="custom"?fmt(num(c.apAmt)):AP_T[
 function cardStatus(c){if(!(num(c.stmt)>0))return c.lastPaid?["need","Paid"]:["paused","Nothing due"];if(!c.due)return null;
   const d=Math.round((D(c.due)-D(todayISO()))/864e5);return d<0?["over","Overdue"]:d<=7?["near","Due soon"]:d<=14?["share","Upcoming"]:["paused","Later"]}
 const cardPill=c=>{const s=cardStatus(c);return s?`<span class="pill ${s[0]}">${s[1]}</span>`:""};
+/* a purchase put on a credit card adds to that card's balance; deleting or editing it takes it back off */
+function cardCharge(t,sign){if(!t||!t.card)return;if(sign<0&&!t.cc)return;const c=(S.cards||[]).find(x=>x.id===t.card);if(!c)return;
+  if(t.split!=null&&t.paidBy==="partner")return;c.bal=Math.round((num(c.bal)+sign*num(t.amount))*100)/100;if(sign>0)t.cc=1}
 function payCard(c,a,date,note){c.hist=c.hist||[];c.hist.push({id:uid(),date,amount:a,due:c.due||"",note:note||""});
   c.bal=Math.max(0,num(c.bal)-a);c.stmt=0;c.lastPaid=date;if(c.due)c.due=addMonth(c.due);if(c.stmtDate)c.stmtDate=addMonth(c.stmtDate)}
 function postDueCards(){const t=todayISO();(S.cards||[]).forEach(c=>{if(c.ap!=="on"||!c.due||c.due>t||!(num(c.stmt)>0))return;
@@ -841,7 +844,7 @@ const fmtK=v=>v>=1000?"$"+(v/1000).toFixed(v>=10000?0:1).replace(/\.0$/,"")+"k":
 const SH={on:false,db:null,uid:null,meta:null,metaRef:null,tx:[],settle:[],bills:[],raw:{},canWrite:true,posted:new Set()};
 const DEFAULT_SHARED={"sh-groceries":{name:"Shared groceries",order:1},"sh-bills":{name:"Shared bills",order:2},"sh-home":{name:"Household & furniture",order:3}};
 const otherId=()=>{const m=(SH.meta&&SH.meta.members)||{};return Object.keys(m).find(k=>k!==SH.uid)||null};
-function txView(id,d){const mine=d.by===SH.uid;return {id,date:d.date,cat:d.cat,amount:num(d.amount),type:d.type||"need",note:d.note||"",card:mine?d.byCard||"":"",
+function txView(id,d){const mine=d.by===SH.uid;return {id,date:d.date,cat:d.cat,amount:num(d.amount),type:d.type||"need",note:d.note||"",card:mine?d.byCard||"":"",cc:mine&&d.byCC?1:0,
   split:mine?num(d.byShare):100-num(d.byShare),paidBy:(mine?!!d.byPaid:!d.byPaid)?"me":"partner",billId:d.billId||undefined,sh:true}}
 function setView(id,d){const mine=d.by===SH.uid;return {id,date:d.date,amount:num(d.amount),dir:(mine?!!d.byPaid:!d.byPaid)?"toPartner":"fromPartner",sh:true}}
 function billView(id,d){const mine=d.by===SH.uid;return {id,name:d.name,amount:num(d.amount),cat:d.cat,freq:d.freq,anchor:d.anchor,type:d.type||"need",
@@ -865,7 +868,7 @@ async function shTry(fn){try{await fn()}catch(e){SH.canWrite=false;toast("Couldn
 const col=n=>SH.db.collection(n);
 function shAddTx(v){
   if(!SH.on){S.tx.push(Object.assign({id:uid()},v));return}
-  const d={date:v.date,cat:v.cat,amount:num(v.amount),type:v.type||"need",note:v.note||"",byCard:v.card||"",by:SH.uid,byShare:num(v.split),byPaid:v.paidBy!=="partner",created:Date.now()};
+  const d={date:v.date,cat:v.cat,amount:num(v.amount),type:v.type||"need",note:v.note||"",byCard:v.card||"",byCC:v.cc?1:0,by:SH.uid,byShare:num(v.split),byPaid:v.paidBy!=="partner",created:Date.now()};
   shTry(()=>col("stx").doc(uid()).set(d));
 }
 function shDelTx(id){if(!SH.on){S.tx=S.tx.filter(t=>t.id!==id);return}SH.tx=SH.tx.filter(t=>t.id!==id);shTry(()=>col("stx").doc(id).delete())}
@@ -1847,7 +1850,7 @@ document.addEventListener("click",e=>{
     case "pauseBill":{const x=get(S.bills);if(x){const f={paused:!x.paused};if(x.paused)f.checked=todayISO();shUpdBill(id,f);commit(x.paused?x.name+" paused":x.name+" resumed")}break}
     case "settleAll":{const bal=sharedBalance();if(Math.abs(bal)<0.01)break;shAddSettle(Math.abs(bal),bal>0?"fromPartner":"toPartner");commit("All square!",true);break}
     case "delSettle":shDelSettle(id);commit("Payment removed");break;
-    case "delTx":{const t=S.tx.find(x=>x.id===id);if(t&&t.split!=null)shDelTx(id);else S.tx=S.tx.filter(x=>x.id!==id);commit("Expense deleted");break}
+    case "delTx":{const t=S.tx.find(x=>x.id===id)||(SH.tx||[]).find(x=>x.id===id);cardCharge(t,-1);if(t&&t.split!=null)shDelTx(id);else S.tx=S.tx.filter(x=>x.id!==id);commit("Expense deleted");break}
     case "mPrev":case "mNext":{const[y,m]=viewMonth.split("-").map(Number);viewMonth=monthKey(new Date(y,m-1+(a==="mPrev"?-1:1),1));render();break}
     case "delCat":if(S.tx.some(t=>t.cat===id)){toast("Can't delete: expenses use this category");break}{const c=S.categories.find(x=>x.id===id);if(c&&c.shared)shDelCat(id);else S.categories=S.categories.filter(x=>x.id!==id)}commit();break;
     case "goalAdd":case "goalTake":{const g=get(S.goals),inp=document.querySelector(`[data-goal-amt="${id}"]`),v=num(inp.value);if(!g||v<=0){toast("Enter an amount first");break}
@@ -2042,14 +2045,17 @@ function qaSave(){
   const tx={id:uid(),date:$("#qaDate").value||todayISO(),cat:QA.cat,amount:amt,type:QA.type,note:$("#qaNote").value.trim(),card:QA.card||""};
   if((S.cards||[]).length)S.lastCard=tx.card;
   rememberMerch(tx.note,tx.cat);
-  if(QA.edit){const old=S.tx.find(x=>x.id===QA.edit);QA.edit=null;if(!old){qaClose();return}
+  if(QA.edit){const old=S.tx.find(x=>x.id===QA.edit)||(SH.tx||[]).find(x=>x.id===QA.edit);QA.edit=null;if(!old){qaClose();return}
+    cardCharge(old,-1);delete old.cc;
     const wasSh=old.split!=null,nowSh=isShared(tx.cat);delete tx.id;
     if(nowSh){tx.split=wasSh?old.split:num(S.split);tx.paidBy=QA.paid}
+    cardCharge(tx,1);
     if(!wasSh&&!nowSh)Object.assign(old,tx);
     else{if(wasSh)shDelTx(old.id);else S.tx=S.tx.filter(x=>x.id!==old.id);
       if(nowSh)shAddTx(tx);else S.tx.push(Object.assign({id:uid()},tx,old.billId?{billId:old.billId}:{}))}
     qaClose();commit("Expense updated");return}
   if(isShared(tx.cat)){tx.split=num(S.split);tx.paidBy=QA.paid}
+  cardCharge(tx,1);
   if(tx.split!=null)shAddTx(tx);else S.tx.push(tx);
   qaClose();commit(QA.type==="want"?"Added. That's a want.":"Added "+fmt(amt));
 }

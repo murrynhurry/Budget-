@@ -133,6 +133,36 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .notice { background: var(--card); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--muted); margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; }
 
 /* Index cards */
+.cbox { position: relative; margin-top: 6px; padding: 14px 12px 16px; border-radius: 18px; background: color-mix(in srgb, #c98a4f 22%, var(--card)); box-shadow: inset 0 3px 10px rgba(0,0,0,.10), var(--shadow); border: 1px solid color-mix(in srgb, #9c6a3a 35%, var(--line)); }
+.dividers { display: flex; gap: 4px; overflow-x: auto; padding: 4px 4px 0; scrollbar-width: none; margin-bottom: -1px; }
+.dividers::-webkit-scrollbar { display: none; }
+.dtab { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid color-mix(in srgb, var(--tc) 55%, #6b5644); border-bottom: 0; border-radius: 12px 12px 0 0; padding: 8px 12px 9px;
+  background: color-mix(in srgb, var(--tc) 70%, var(--card)); color: #3c2f25; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; transform: translateY(6px); transition: transform .15s; white-space: nowrap; }
+.dtab .dn { font-size: 11px; font-weight: 700; background: rgba(255,255,255,.65); border-radius: 999px; padding: 0 6px; line-height: 17px; }
+.dtab[aria-selected="true"] { background: var(--tc); transform: translateY(0); padding-bottom: 12px; z-index: 2; }
+.dtab:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dface { position: relative; z-index: 1; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 16px; border-radius: 0 10px 10px 10px; background: var(--tc);
+  border: 1px solid color-mix(in srgb, var(--tc) 55%, #6b5644); box-shadow: 0 6px 10px -6px rgba(0,0,0,.25); color: #3c2f25; }
+.dface .dtitle { font-family: var(--f-display); font-weight: var(--h-weight); font-size: 20px; letter-spacing: var(--h-track); }
+.dface .dcount { font-size: 12.5px; font-weight: 700; opacity: .75; }
+.stack { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin-top: 14px; }
+.stack .icard { border-left: 6px solid var(--tc); }
+.icard .cattag { align-self: flex-start; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; background: color-mix(in srgb, var(--tc) 55%, var(--card)); color: #3c2f25; border-radius: 6px; padding: 2px 7px; margin-top: 8px; }
+.filed { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.filed select { font: inherit; font-size: 16px; padding: 3px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+@media (max-width: 560px) {
+  .cbox { padding: 10px 8px 12px; margin-inline: -6px; }
+  .stack { display: flex; flex-direction: column; gap: 0; margin-top: 10px; }
+  .stack .icard { min-height: 0; margin-top: -8px; box-shadow: 0 -3px 8px rgba(0,0,0,.08), var(--shadow); }
+  .stack .icard:first-child { margin-top: 0; }
+  .stack .icard .lead, .stack .icard .foot .tag:not(.plan):not(.ex) { display: none; }
+  .stack .icard { padding: 10px 14px 8px; gap: 4px; }
+  .stack .icard h3 { font-size: 19px; margin: -10px -14px 0; padding: 10px 40px 7px 14px; }
+  .stack .icard .star { top: 11px; }
+  .stack .icard .meta { margin-top: 4px; line-height: 20px; }
+  .stack .icard .cattag { margin-top: 6px; }
+  .stack .icard:nth-child(odd) { transform: rotate(-.35deg); } .stack .icard:nth-child(even) { transform: rotate(.3deg); }
+}
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
 .icard { position: relative; text-align: left; border: 0; cursor: pointer; background: var(--card); border-radius: 4px; box-shadow: var(--shadow); padding: 14px 16px 12px; min-height: 170px; display: flex; flex-direction: column; gap: 8px;
   background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 23px, var(--rule) 23px, var(--rule) 24px);
@@ -583,7 +613,7 @@ body.formview .fab { display: none; }
       totalTime: String(d.totalTime || ""), tags: Array.isArray(d.tags) ? d.tags.map(String) : [],
       ingredients: Array.isArray(d.ingredients) ? d.ingredients.map(String) : [],
       steps: Array.isArray(d.steps) ? d.steps.map(String) : [], notes: String(d.notes || ""),
-      favorite: !!d.favorite, planned: !!d.planned, example: !!d.example, createdAt: Number(d.createdAt) || 0,
+      favorite: !!d.favorite, planned: !!d.planned, category: String(d.category || ""), example: !!d.example, createdAt: Number(d.createdAt) || 0,
     };
   }
   function toDoc(r) {
@@ -644,6 +674,7 @@ body.formview .fab { display: none; }
     );
   }
 
+  if (S.divider == null) { try { S.divider = localStorage.getItem("recipebox-divider") || "all"; } catch { S.divider = "all"; } }
   function viewList() {
     const tags = [...new Set(S.recipes.flatMap((r) => r.tags))].sort();
     const q = S.q.toLowerCase();
@@ -673,11 +704,6 @@ body.formview .fab { display: none; }
         h("option", { value: "new", selected: S.sort === "new" }, "Newest first"),
         h("option", { value: "az", selected: S.sort === "az" }, "A to Z"))));
 
-    const chips = h("div", { class: "chips", role: "toolbar", "aria-label": "Filter" },
-      h("button", { class: "chip", type: "button", "aria-pressed": String(!S.tag && !S.favOnly), onclick: () => { S.tag = null; S.favOnly = false; render(); } }, "All"),
-      h("button", { class: "chip", type: "button", "aria-pressed": String(S.favOnly), onclick: () => { S.favOnly = !S.favOnly; render(); } }, "★ Favourites"),
-      tags.map((t) => h("button", { class: "chip", type: "button", "aria-pressed": String(S.tag === t), onclick: () => { S.tag = S.tag === t ? null : t; render(); } }, t)));
-    if (S.recipes.length) frag.append(chips);
 
     if (!S.loaded) { frag.append(h("div", { class: "empty" }, h("p", null, "Opening the recipe box…"))); return frag; }
     if (!S.recipes.length) {
@@ -689,15 +715,63 @@ body.formview .fab { display: none; }
     }
     if (!list.length) { frag.append(h("div", { class: "empty" }, h("p", null, "Nothing matches that search."))); return frag; }
 
-    frag.append(h("div", { class: "grid" }, list.map(card)));
+    frag.append(cardBox(list, !!q));
     return frag;
   }
 
-  function card(r) {
+  // ---------- the card box: divider tabs by category, recipe cards filed behind them ----------
+  const CATS = [
+    { key: "breakfast", label: "Breakfast", color: "#f7c99b", words: ["breakfast", "brunch", "pancake", "waffle", "oatmeal", "porridge", "omelette", "omelet", "frittata", "french toast", "granola", "eggs benedict", "scrambled", "crepe"] },
+    { key: "soups", label: "Soups & Stews", color: "#f4a9a0", words: ["soup", "stew", "chili", "jjigae", "chowder", "bisque", "pho", "ramen", "broth", "gumbo", "congee", "jook", "guk", "tang"] },
+    { key: "mains", label: "Mains", color: "#a9c8ee", words: ["dinner", "main", "mains", "entree", "chicken", "beef", "pork", "steak", "salmon", "fish", "shrimp", "curry", "stir fry", "taco", "tacos", "burger", "roast", "bulgogi", "katsu", "teriyaki", "casserole", "pizza", "bowl", "fried rice"] },
+    { key: "pasta", label: "Pasta & Noodles", color: "#f5dd8d", words: ["pasta", "spaghetti", "noodle", "noodles", "lasagna", "macaroni", "mac and cheese", "penne", "linguine", "fettuccine", "udon", "japchae", "pad thai", "gnocchi", "carbonara", "orzo"] },
+    { key: "sides", label: "Sides & Salads", color: "#b6dcae", words: ["salad", "side", "sides", "slaw", "coleslaw", "roasted vegetables", "mashed potato", "potatoes", "banchan", "kimchi", "pickle", "vegetable", "veggies", "rice"] },
+    { key: "baking", label: "Baking & Desserts", color: "#f6b8cf", words: ["dessert", "baking", "cake", "cookie", "cookies", "brownie", "brownies", "pie", "tart", "muffin", "muffins", "banana bread", "bread", "scone", "cupcake", "pudding", "cheesecake", "loaf", "cinnamon roll", "ice cream"] },
+    { key: "snacks", label: "Snacks & Drinks", color: "#cdb8ee", words: ["snack", "snacks", "dip", "appetizer", "app", "drink", "drinks", "smoothie", "cocktail", "latte", "tea", "lemonade", "popcorn", "bites"] },
+    { key: "other", label: "Other", color: "#d9d3c7", words: [] },
+  ];
+  const CAT = Object.fromEntries(CATS.map((c) => [c.key, c]));
+  const CAT_ORDER = ["baking", "breakfast", "soups", "pasta", "sides", "snacks", "mains"]; // when a title matches more than one, the more specific wins
+  function catOf(r) {
+    if (r.category && CAT[r.category]) return r.category;
+    const has = (text, w) => (" " + toks(text).join(" ") + " ").includes(" " + toks(w).join(" ") + " ");
+    const text = r.title + " " + r.tags.join(" ");
+    for (const k of CAT_ORDER) if (CAT[k].words.some((w) => has(text, w))) return k;
+    return "other";
+  }
+  async function setCategory(r, key) {
+    r.category = key;
+    try { if (S.db && !S.noStore) await S.db.doc("recipes/" + r.id).update({ category: key }); toast("Filed under " + CAT[key].label); }
+    catch { toast("Couldn't save that. Try again."); }
+    render();
+  }
+  function cardBox(list, searching) {
+    const counts = {}; for (const r of S.recipes) { const k = catOf(r); counts[k] = (counts[k] || 0) + 1; }
+    const favN = S.recipes.filter((r) => r.favorite).length;
+    const tabs = [{ key: "all", label: "All", color: "#fffaf1", n: S.recipes.length }]
+      .concat(favN ? [{ key: "fav", label: "★ Favourites", color: "#ffd7a8", n: favN }] : [])
+      .concat(CATS.filter((c) => counts[c.key]).map((c) => ({ ...c, n: counts[c.key] })));
+    let cur = searching ? "all" : (tabs.some((t) => t.key === S.divider) ? S.divider : "all");
+    const curTab = tabs.find((t) => t.key === cur);
+    const shown = cur === "all" ? list : cur === "fav" ? list.filter((r) => r.favorite) : list.filter((r) => catOf(r) === cur);
+    const pick = (k) => { S.divider = k; try { localStorage.setItem("recipebox-divider", k); } catch {} render(); };
+    return h("div", { class: "cbox" },
+      h("div", { class: "dividers", role: "tablist", "aria-label": "Recipe dividers" }, tabs.map((t, i) =>
+        h("button", { class: "dtab", type: "button", role: "tab", "aria-selected": String(t.key === cur), style: `--tc:${t.color}; --i:${i}`,
+          onclick: () => pick(t.key) }, h("span", { class: "dl" }, t.label), h("span", { class: "dn" }, String(t.n))))),
+      h("div", { class: "dface", style: `--tc:${curTab.color}` },
+        h("span", { class: "dtitle" }, searching ? "Search results" : curTab.label),
+        h("span", { class: "dcount" }, shown.length + (shown.length === 1 ? " card" : " cards"))),
+      shown.length ? h("div", { class: "stack" }, shown.map((r) => card(r, cur === "all" || cur === "fav" ? CAT[catOf(r)] : null)))
+        : h("p", { class: "hint", style: "padding: 18px 6px" }, "No cards behind this divider yet."));
+  }
+
+  function card(r, cat) {
     const time = r.totalTime || r.cookTime || r.prepTime;
     const firstIngs = r.ingredients.filter((x) => !isSub(x)).slice(0, 4).map((x) => itemName(x)).join(" · ");
-    return h("button", { class: "icard", type: "button", onclick: () => go("detail", r.id), "aria-label": "Open " + r.title },
+    return h("button", { class: "icard", type: "button", onclick: () => go("detail", r.id), "aria-label": "Open " + r.title, style: "--tc:" + CAT[catOf(r)].color },
       h("h3", null, r.title),
+      cat ? h("span", { class: "cattag" }, cat.label) : null,
       r.favorite ? h("span", { class: "star", "aria-label": "Favourite" }, "★") : null,
       h("div", { class: "meta" },
         time ? h("span", null, "⏱ " + time) : null,
@@ -776,7 +850,10 @@ body.formview .fab { display: none; }
             r.totalTime ? h("span", null, "Total ", h("b", null, r.totalTime)) : null,
             site ? h("span", null, "From ", h("a", { href: r.sourceUrl, target: "_blank", rel: "noopener" }, site)) : null,
             r.example ? h("span", { class: "tag ex" }, "Example") : null,
-            r.tags.map((t) => h("span", { class: "tag" }, t))),
+            r.tags.map((t) => h("span", { class: "tag" }, t)),
+            h("label", { class: "filed" }, "Filed under ",
+              h("select", { "aria-label": "Filed under", onchange: (e) => setCategory(r, e.target.value) },
+                CATS.map((c) => h("option", { value: c.key, selected: catOf(r) === c.key }, c.label))))),
           h("div", { class: "dbar" },
             h("button", { class: "btn" + (r.planned ? "" : " primary"), type: "button", "aria-pressed": String(!!r.planned), onclick: () => togglePlan(r) }, r.planned ? "✓ Planned · on To Buy" : "Plan to make"),
             h("button", { class: "btn", type: "button", onclick: () => toggleFav(r) }, r.favorite ? "★ Favourite" : "☆ Add to favourites"),

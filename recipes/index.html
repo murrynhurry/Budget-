@@ -139,16 +139,18 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .bookcover { position: relative; display: block; width: min(100%, 380px); aspect-ratio: 700 / 1080; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 6px 16px 16px 6px; overflow: visible;
   box-shadow: 8px 10px 0 -2px #fbf6ea, 9px 11px 0 -1px #d9cdb6, 12px 16px 0 -2px #fbf6ea, 13px 17px 0 -1px #d9cdb6, 0 22px 34px rgba(0,0,0,.28); transform-origin: left center; transition: transform .38s ease, opacity .38s; }
 .bookcover img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 6px 16px 16px 6px; }
-.bookcover:hover { transform: rotate(-.6deg) translateY(-2px); }
-.bookcover.opening { transform: perspective(1400px) rotateY(-70deg); opacity: .4; }
+@media (hover: hover) { .bookcover:not(.opening):hover { transform: rotate(-.6deg) translateY(-2px); } }
+.bookcover { -webkit-tap-highlight-color: transparent; }
+.bookcover.opening { transform: scaleX(.15) translateX(-40%); opacity: 0; transition: transform .32s ease-in, opacity .32s ease-in; pointer-events: none; }
 .bookhint { margin: 58px 0 0; font-weight: 700; color: var(--muted); }
 .bribbon { position: absolute; right: 26%; bottom: -46px; width: 22px; height: 64px; background: #f08aa3; clip-path: polygon(0 0,100% 0,100% 100%,50% 82%,0 100%); }
 .bribbon.open { right: 34px; top: -6px; bottom: auto; height: 64px; }
 .bookpage { position: relative; background: #fffaf1; color: #2b2420; border-radius: 6px 16px 16px 6px; min-height: 520px; padding: 26px 26px 30px 34px;
   box-shadow: -7px 0 0 -1px #e7dcc6, -8px 0 0 -1px #cfc0a3, 0 16px 34px rgba(0,0,0,.18); background-image: linear-gradient(90deg, rgba(0,0,0,.09), transparent 22px); transform-origin: left center; }
-.bookpage.turn-next { animation: turnNext .42s ease; } .bookpage.turn-prev { animation: turnPrev .42s ease; }
-@keyframes turnNext { from { transform: perspective(1600px) rotateY(-28deg) translateX(18px); opacity: .2; } to { transform: none; opacity: 1; } }
-@keyframes turnPrev { from { transform: perspective(1600px) rotateY(22deg) translateX(-18px); opacity: .2; } to { transform: none; opacity: 1; } }
+.bookpage.turn-next { animation: turnNext .28s ease-out; } .bookpage.turn-prev { animation: turnPrev .28s ease-out; }
+.bookpage { touch-action: pan-y; }
+@keyframes turnNext { from { transform: translateX(36px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes turnPrev { from { transform: translateX(-36px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .bookpage.turn-next, .bookpage.turn-prev { animation: none; } .bookcover { transition: none; } }
 .bpage h2 { font-family: Georgia, "Times New Roman", serif; font-size: 30px; margin: 0 0 4px; color: #2b2420; letter-spacing: 0; }
 .bpage h2 .linkish { font: inherit; color: inherit; text-align: left; }
@@ -778,7 +780,8 @@ body.formview .fab { display: none; }
   function turnTo(n, dir) {
     const max = bookRecipes().length;
     S.book.page = Math.max(0, Math.min(max, n)); S.book.dir = dir || (n > S.book.page ? 1 : -1); bookSave(); render();
-    const el = document.querySelector(".bookwrap"); if (el) el.scrollIntoView({ block: "start", behavior: "smooth" });
+    // only jump up if the top of the page has scrolled out of view, and without a competing scroll animation
+    const el = document.querySelector(".bookwrap"); if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ block: "start" });
   }
   function viewBook() {
     const recs = bookRecipes();
@@ -786,7 +789,8 @@ body.formview .fab { display: none; }
     if (!B.open) {
       return h("div", { class: "bookwrap closed" },
         h("button", { class: "bookcover", type: "button", "aria-label": "Open the recipe book", onclick: (e) => {
-          e.currentTarget.classList.add("opening"); setTimeout(() => { B.open = true; B.dir = 1; bookSave(); render(); }, 380); } },
+          const c = e.currentTarget; if (c.classList.contains("opening")) return;
+          c.classList.add("opening"); setTimeout(() => { B.open = true; B.page = Math.min(B.page, recs.length); B.dir = 1; bookSave(); render(); }, 320); } },
           h("img", { src: BOOK_COVER, alt: "" }), h("span", { class: "bribbon", "aria-hidden": "true" })),
         h("p", { class: "bookhint" }, "Tap the cover to open · " + recs.length + (recs.length === 1 ? " recipe" : " recipes")));
     }
@@ -825,10 +829,16 @@ body.formview .fab { display: none; }
         h("div", { class: "bopen" }, h("button", { class: "btn primary", type: "button", onclick: () => go("detail", r.id) }, "Open recipe to cook ›")),
         h("span", { class: "curl", "aria-hidden": "true" }));
     }
-    let x0 = null;
+    // Swipe to turn: only a clearly sideways swipe that didn't start on a button counts, so scrolling never turns the page.
+    let t0 = null;
     const page = h("div", { class: "bookpage" + (B.dir > 0 ? " turn-next" : B.dir < 0 ? " turn-prev" : ""),
-      ontouchstart: (e) => { x0 = e.touches[0].clientX; },
-      ontouchend: (e) => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 60) turnTo(pg + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1); } },
+      ontouchstart: (e) => { t0 = e.touches.length === 1 && !e.target.closest("button, a, select, input, label") ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() } : null; },
+      ontouchcancel: () => { t0 = null; },
+      ontouchend: (e) => {
+        if (!t0) return; const c = e.changedTouches[0]; const dx = c.clientX - t0.x, dy = c.clientY - t0.y, dt = Date.now() - t0.t; t0 = null;
+        if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2 || dt > 800) return;
+        const to = pg + (dx < 0 ? 1 : -1); if (to < 0 || to > recs.length) return;
+        turnTo(to, dx < 0 ? 1 : -1); } },
       body, h("span", { class: "bribbon open", "aria-hidden": "true" }));
     B.dir = 0;
     return h("div", { class: "bookwrap" },

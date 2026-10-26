@@ -145,27 +145,27 @@ select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; b
 .bookhint { margin: 58px 0 0; font-weight: 700; color: var(--muted); }
 .bribbon { position: absolute; right: 26%; bottom: -46px; width: 22px; height: 64px; background: #f08aa3; clip-path: polygon(0 0,100% 0,100% 100%,50% 82%,0 100%); }
 .bribbon.open { right: 34px; top: -6px; bottom: auto; height: 64px; }
-.bookpage { position: relative; background: #fffefb; color: #2b2420; border-radius: 6px 16px 16px 6px; min-height: 520px; padding: 26px 26px 30px 34px;
+.bookpage { position: relative; font-family: var(--f-body); background: #fffefb; color: #2b2420; border-radius: 6px 16px 16px 6px; min-height: 520px; padding: 26px 26px 30px 34px;
   box-shadow: -7px 0 0 -1px #f3eee4, -8px 0 0 -1px #e3dacb, 0 14px 30px rgba(0,0,0,.12); background-image: linear-gradient(90deg, rgba(0,0,0,.035), transparent 18px); transform-origin: left center; }
 .bookpage.turn-next { animation: turnNext .18s ease-out; } .bookpage.turn-prev { animation: turnPrev .18s ease-out; }
 .bookpage { touch-action: pan-y; }
 @keyframes turnNext { from { transform: translateX(36px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes turnPrev { from { transform: translateX(-36px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .bookpage.turn-next, .bookpage.turn-prev { animation: none; } .bookcover { transition: none; } }
-.bpage h2 { font-family: Georgia, "Times New Roman", serif; font-size: 30px; margin: 0 0 4px; color: #2b2420; letter-spacing: 0; }
+.bpage h2 { font-family: var(--f-display); font-weight: var(--h-weight); font-size: 30px; margin: 0 0 4px; color: #2b2420; letter-spacing: 0; }
 .bpage h2 .linkish { font: inherit; color: inherit; text-align: left; }
 .bpage .bsub { color: #7a6d62; font-size: 13.5px; margin: 0 0 12px; padding-right: 30px; }
-.bpage .pn { font-family: Georgia, serif; font-size: 13px; color: #7a6d62; }
+.bpage .pn { font-family: var(--f-display); font-size: 13px; color: #7a6d62; }
 .contents .chapter { margin-top: 12px; }
 .contents button { display: flex; align-items: baseline; gap: 6px; width: 100%; background: none; border: 0; padding: 4px 0; cursor: pointer; text-align: left; color: inherit; font: inherit; }
 .contents button i { flex: 1; border-bottom: 2px dotted #e2d9ca; transform: translateY(-4px); }
-.contents .chap { font-family: Georgia, serif; font-weight: 700; font-size: 17px; color: #c9423a; }
+.contents .chap { font-family: var(--f-display); font-weight: 700; font-size: 17px; color: #c9423a; }
 .contents .crow { font-size: 15px; padding-left: 14px; }
 .contents button:hover span:first-child { text-decoration: underline; }
 .rpage .rtop { padding-right: 34px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .rpage .rcat { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; background: var(--tc); color: #3c2f25; border-radius: 6px; padding: 3px 8px; }
 .rpage .bmeta { font-family: var(--f-mono); font-size: 12.5px; color: #7a6d62; margin: 4px 0 6px; }
-.rpage h3 { font-family: Georgia, serif; color: #c9423a; font-size: 16px; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #f0e9dd; }
+.rpage h3 { font-family: var(--f-display); color: #c9423a; font-size: 16px; margin: 16px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #f0e9dd; }
 .bings, .bsteps { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; }
 .bings li.sub { list-style: none; margin-left: -20px; font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: #7a6d62; padding-top: 6px; }
 .bsteps li { margin-bottom: 6px; }
